@@ -1,0 +1,105 @@
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- seo -%}
+  <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
+  <link rel="stylesheet" href="{{ "/assets/css/dark-theme.css" | relative_url }}">
+  
+  <!-- Syntax highlighting CSS -->
+  <link rel="stylesheet" href="{{ "/assets/css/syntax-github.css" | relative_url }}" id="syntax-light">
+  <link rel="stylesheet" href="{{ "/assets/css/syntax-monokai.css" | relative_url }}" id="syntax-dark" disabled>
+  <link rel="stylesheet" href="{{ "/assets/css/code-blocks-base.css" | relative_url }}">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{{ "/assets/images/favicon.ico" | relative_url }}">
+  <!-- <link rel="icon" type="image/png" href="{{ "/assets/images/favicon.png" | relative_url }}"> -->
+  
+  {%- feed_meta -%}
+  {%- if jekyll.environment == 'production' and site.google_analytics -%}
+    {%- include google-analytics.html -%}
+  {%- endif -%}
+  
+  <!-- Theme toggle script (load early to prevent flash) -->
+  <script>
+(function() {
+  // Theme management
+  const STORAGE_KEY = 'theme-preference';
+  
+  const getStoredTheme = () => localStorage.getItem(STORAGE_KEY);
+  // Changed: Default to 'dark' instead of following system preference
+  const getDefaultTheme = () => 'dark';  // Always default to dark
+  const getPreferredTheme = () => getStoredTheme() || getDefaultTheme();
+  
+  let currentTheme = getPreferredTheme();
+  
+  const setTheme = (theme) => {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(STORAGE_KEY, theme);
+    updateButtonText();
+    updateSyntaxTheme();
+  };
+  
+  const updateSyntaxTheme = () => {
+    const lightCSS = document.getElementById('syntax-light');
+    const darkCSS = document.getElementById('syntax-dark');
+    
+    if (lightCSS && darkCSS) {
+      if (currentTheme === 'dark') {
+        lightCSS.disabled = true;
+        darkCSS.disabled = false;
+      } else {
+        lightCSS.disabled = false;
+        darkCSS.disabled = true;
+      }
+    }
+  };
+  
+  const updateButtonText = () => {
+    const toggleButtons = document.querySelectorAll('.theme-toggle');
+    toggleButtons.forEach(button => {
+      button.innerHTML = currentTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    });
+  };
+  
+  const toggleTheme = () => {
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+  };
+  
+  // Set initial theme
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  
+  // Wait for DOM to load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeToggle);
+  } else {
+    initializeToggle();
+  }
+  
+  function initializeToggle() {
+    updateButtonText();
+    updateSyntaxTheme();
+    
+    // Add click handlers to all theme toggle buttons
+    const toggleButtons = document.querySelectorAll('.theme-toggle');
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleTheme();
+      });
+    });
+  }
+  
+  // Optional: Remove system theme change listener since we default to dark
+  // Or keep it but only apply if user hasn't set a preference
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!getStoredTheme()) {
+      // Still respect system changes if user hasn't explicitly set a preference
+      setTheme(e.matches ? 'dark' : 'light');
+    }
+  });
+})();
+</script>
+</head>

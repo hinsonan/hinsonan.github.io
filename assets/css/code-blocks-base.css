@@ -1,0 +1,114 @@
+---
+---
+
+/* Enhanced code block styling for GitHub + Monokai themes */
+.highlight {
+  border-radius: 6px;
+  padding: 16px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.45;
+  border: 1px solid #e1e4e8;
+  position: relative;
+}
+
+/* Dark theme border adjustment for Monokai */
+[data-theme="dark"] .highlight {
+  border-color: #3c3836;
+}
+
+.highlight pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  overflow: visible;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.highlight code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre;
+}
+
+/* Inline code (not in highlights) */
+code {
+  background-color: rgba(175, 184, 193, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.9em;
+}
+
+/* [data-theme="dark"] code {
+  background-color: rgba(110, 118, 129, 0.4);
+} */
+
+/* Language label in top-right corner */
+.highlight::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.1);
+  color: #586069;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .highlight::before {
+  background: rgba(255, 255, 255, 0.1);
+  color: #8b949e;
+}
+
+/* Scrollbar styling for code blocks */
+.highlight::-webkit-scrollbar {
+  height: 8px;
+}
+
+.highlight::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.highlight::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .highlight::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Copy button (if you want to add one later) */
+.code-copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.highlight:hover .code-copy-button {
+  opacity: 1;
+}
+
+[data-theme="dark"] .code-copy-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e6edf3;
+}

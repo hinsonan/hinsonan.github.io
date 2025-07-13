@@ -1,0 +1,37 @@
+services:
+  jekyll:
+    image: jekyll/jekyll:latest
+    command: jekyll serve --watch --force_polling --host 0.0.0.0 --livereload
+    ports:
+      - "4000:4000"
+      - "35729:35729"  # LiveReload port
+    volumes:
+      - .:/srv/jekyll
+      - bundle_cache:/usr/local/bundle
+    environment:
+      - JEKYLL_ENV=development
+    stdin_open: true
+    tty: true
+
+  # Service for running bundle commands
+  bundle:
+    image: jekyll/jekyll:latest
+    command: bundle install
+    volumes:
+      - .:/srv/jekyll
+      - bundle_cache:/usr/local/bundle
+    profiles:
+      - tools
+
+  # Service for creating new Jekyll site
+  init:
+    image: jekyll/jekyll:latest
+    command: jekyll new --skip-bundle . --force
+    volumes:
+      - .:/srv/jekyll
+      - bundle_cache:/usr/local/bundle
+    profiles:
+      - tools
+
+volumes:
+  bundle_cache:

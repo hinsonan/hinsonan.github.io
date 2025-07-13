@@ -1,0 +1,219 @@
+---
+---
+
+/* Dark theme overrides for Minima */
+[data-theme="dark"] {
+  /* Background colors */
+  --background-color: #161b22;
+  --brand-color: #58a6ff;
+  --brand-color-light: #79c0ff;
+  --brand-color-dark: #1f6feb;
+  --site-title-color: #f0f6fc;
+  --text-color: #e6edf3;
+  --grey-color: #8b949e;
+  --grey-color-light: #30363d;
+  --grey-color-dark: #21262d;
+  --table-text-align: left;
+  --table-zebra-color: #262c36;
+  --code-background-color: #21262d;
+  --border-color-01: #30363d;
+  --border-color-02: #21262d;
+  --border-color-03: #8b949e;
+}
+
+/* Apply dark theme */
+[data-theme="dark"] body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .site-header {
+  background-color: var(--grey-color-dark);
+  border-bottom: 1px solid var(--border-color-01);
+}
+
+[data-theme="dark"] .site-title,
+[data-theme="dark"] .site-title:visited {
+  color: var(--site-title-color);
+}
+
+[data-theme="dark"] .site-nav .page-link {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .site-nav .page-link:not(:last-child) {
+  margin-right: 0;
+}
+
+[data-theme="dark"] .footer-heading {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .contact-list,
+[data-theme="dark"] .social-media-list {
+  color: var(--grey-color);
+}
+
+[data-theme="dark"] .footer-col-wrapper {
+  color: var(--grey-color);
+}
+
+[data-theme="dark"] .site-footer {
+  background-color: var(--grey-color-dark);
+  border-top: 1px solid var(--border-color-01);
+}
+
+[data-theme="dark"] .post-meta {
+  color: var(--grey-color);
+}
+
+[data-theme="dark"] .post-link {
+  color: var(--brand-color);
+}
+
+[data-theme="dark"] .post-link:visited {
+  color: var(--brand-color-light);
+}
+
+[data-theme="dark"] .post-link:hover {
+  color: var(--brand-color-dark);
+}
+
+[data-theme="dark"] .post-content h1,
+[data-theme="dark"] .post-content h2,
+[data-theme="dark"] .post-content h3,
+[data-theme="dark"] .post-content h4,
+[data-theme="dark"] .post-content h5,
+[data-theme="dark"] .post-content h6 {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .highlight {
+  background-color: var(--code-background-color);
+}
+
+[data-theme="dark"] .highlighter-rouge .highlight {
+  background-color: var(--code-background-color);
+}
+
+[data-theme="dark"] code {
+  background-color: var(--grey-color-light);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] pre {
+  background-color: var(--code-background-color);
+  border: 1px solid var(--border-color-01);
+}
+
+[data-theme="dark"] blockquote {
+  color: var(--grey-color);
+  border-left: 4px solid var(--border-color-01);
+}
+
+[data-theme="dark"] table {
+  border: 1px solid var(--border-color-01);
+}
+
+[data-theme="dark"] table th,
+[data-theme="dark"] table td {
+  border: 1px solid var(--border-color-01);
+}
+
+[data-theme="dark"] table th {
+  background-color: var(--grey-color-light);
+}
+
+[data-theme="dark"] table tr:nth-child(even) {
+  background-color: var(--table-zebra-color);
+}
+
+/* Force consistent navigation spacing across themes */
+.site-nav .page-link {
+  /* Always maintain consistent margins regardless of theme */
+  margin-right: 20px !important;
+  display: inline-block;
+  vertical-align: baseline;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  transition: color 0.3s ease;
+}
+
+/* Override any theme-specific margin changes */
+[data-theme="dark"] .site-nav .page-link {
+  margin-right: 20px !important;
+}
+
+/* Last link styling - but make sure it doesn't affect our layout */
+.site-nav .page-link:last-child {
+  margin-right: 0 !important;
+}
+
+[data-theme="dark"] .site-nav .page-link:last-child {
+  margin-right: 0 !important;
+}
+
+/* Theme toggle button - no margin since it's last */
+.theme-toggle.page-link {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin-right: 0 !important;
+  cursor: pointer;
+  user-select: none;
+  color: inherit;
+  text-decoration: none;
+  display: inline-block;
+  vertical-align: baseline;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  transition: color 0.3s ease;
+}
+
+/* Ensure dark theme doesn't override our margin fix */
+[data-theme="dark"] .theme-toggle.page-link {
+  margin-right: 0 !important;
+}
+
+.theme-toggle.page-link:hover {
+  color: var(--brand-color, #828282);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .theme-toggle.page-link:hover {
+  color: var(--brand-color, #58a6ff);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Mobile navigation dark mode overrides */
+@media screen and (max-width: 600px) {
+  [data-theme="dark"] .site-nav {
+    background-color: var(--grey-color-dark);
+    border-color: var(--border-color-01);
+  }
+  
+  [data-theme="dark"] .site-nav .menu-icon > svg {
+    fill: var(--text-color);
+  }
+  
+  [data-theme="dark"] .site-nav .menu-icon > svg path {
+    fill: var(--text-color);
+  }
+  
+  [data-theme="dark"] .site-nav .trigger {
+    background-color: var(--grey-color-dark);
+    border-color: var(--border-color-01);
+  }
+  
+  [data-theme="dark"] .site-nav .page-link {
+    color: var(--text-color);
+  }
+}

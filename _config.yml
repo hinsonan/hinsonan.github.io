@@ -28,6 +28,37 @@ url: "https://gradientrage.com" # the base hostname & protocol for your site, e.
 twitter_username: hinsonan
 github_username:  hinsonan
 google_analytics: G-69XDC7FGKK
+author: Andrew Hinson
+
+# SEO and social media
+twitter:
+  username: hinsonan
+  card: summary_large_image
+
+# LinkedIn optimization
+linkedin:
+  username: hinsonan
+
+# Open Graph defaults (works for Facebook, LinkedIn, WhatsApp, etc.)
+og:
+  image: "/assets/images/robot.png"
+  type: "website"
+
+social:
+  name: Andrew Hinson
+  links:
+    - https://x.com/hinsonan
+    - https://github.com/hinsonan
+    - https://linkedin.com/in/hinsonan
+
+# Default meta tags for posts
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      author: "Andrew Hinson"
+      image: "/assets/images/robot.png"
 
 # Build settings
 # remote_theme: pages-themes/midnight

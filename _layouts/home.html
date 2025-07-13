@@ -1,0 +1,39 @@
+---
+layout: default
+---
+
+<div class="home">
+  {%- if page.title -%}
+    <h1 class="page-heading">{{ page.title }}</h1>
+  {%- endif -%}
+
+  {{ content }}
+
+  {%- if site.posts.size > 0 -%}
+    <h2 class="post-list-heading">{{ page.list_title | default: "Posts" }}</h2>
+    <div class="post-grid">
+      {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+      {%- for post in site.posts -%}
+      <article class="post-card">
+        <h3>
+          <a class="post-link" href="{{ post.url | relative_url }}">
+            {{ post.title | escape }}
+          </a>
+        </h3>
+        <div class="post-meta">
+          <time class="dt-published" datetime="{{ post.date | date_to_xmlschema }}">
+            {{ post.date | date: date_format }}
+          </time>
+          {%- if post.author -%}
+            • <span>{{ post.author }}</span>
+          {%- endif -%}
+        </div>
+        <div class="post-excerpt">
+          {{ post.excerpt | strip_html | truncate: 160 }}
+        </div>
+        <a href="{{ post.url | relative_url }}" class="read-more">Continue reading →</a>
+      </article>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+</div>

@@ -1,0 +1,26 @@
+# robots.txt for gradientrage.com
+# Allow all crawlers by default
+User-agent: *
+Allow: /
+Disallow: /assets/
+Disallow: /_site/
+Disallow: /.jekyll-cache/
+
+# Specific rules for AI/LLM crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Sitemap location
+Sitemap: https://gradientrage.com/sitemap.xml

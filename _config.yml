@@ -27,7 +27,6 @@ baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://gradientrage.com" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: hinsonan
 github_username:  hinsonan
-google_analytics: G-69XDC7FGKK
 author: Andrew Hinson
 
 # SEO and social media

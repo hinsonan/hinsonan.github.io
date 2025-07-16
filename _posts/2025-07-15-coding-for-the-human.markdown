@@ -5,7 +5,7 @@ date: 2025-07-15 18:30:00 -0500
 categories: tech
 ---
 
-You just got done sprint planning and you feel depressed and exhausted. The boss needs this new feature cranked out on the pronto so you get busy. You get your coffee and open up your editor only to be confused on where to begin coding. You thought this system would be quick to figure out for that the team knew rouphly where to begin but alas it's up to you figure it all out again. This is the 900th maze you have had to navigate this year.
+You just got done sprint planning and you feel depressed. The boss needs this new feature cranked out on the pronto so you get busy. You get your coffee and open up your editor only to be confused on where to begin coding. You thought this system would be quick to figure out for that the team knew rouphly where to begin but alas it's up to you figure it all out again. This is the 900th maze you have had to navigate this year.
 
 Every line is an abraction and you are now 7 layers deep into what was one simple function call. You are lost in the sauce and no one is coming to save you. Not even the lead dev understands where you are. You panic and run to the `README.md` but nothing. the `README.md` ironically has nothing to read. Nothing at all on how to spin up the system or debug it. You spend hours upt to days just figuring out how current events work. You beg for relief from your LLM but it's spitting nonsense and the context length is too long. You start asking around for developers who have been working around this codebase. Turns out everyone around you just laughs and says "yeah, this codebase is a mess" then they trail off. No one is taking the time to fix things or document the project. After a long week if your lucky you get your feature done but you lost a part of your soul in the process.
 
@@ -248,3 +248,28 @@ did you just wrap a standard string operation in your own function? Are you tryi
 
 
 ### Less Abstract Art
+
+Just cut the crap out and make the function transparent and clear
+
+```python
+def clean_username_and_email(username, email):
+    if not username:
+        raise UserValidationError("Username cannot be empty")
+    
+    if not email or '@' not in email:
+        raise UserValidationError("Email must contain @ symbol")
+    
+    cleaned_username = ''.join(char for char in username if char.isalnum())
+
+    cleaned_email = email.strip().lower()
+
+    user_id = _generate_user_id(clean_username)
+    
+    return {
+        'id': user_id,
+        'username': clean_username,
+        'email': clean_email
+    }
+```
+
+We can break things out when we need to but do not create endless abstractions becuase you might need them in the future. Be direct and code with your chest out. The only function worth keeping from a flow of the program perspective in the `_generate_user_id` since that does do more things and is easier to test when isolated. Please keep in mind that this is not a good way to get a user id. There are many flaws in this whole program but today we mainly talked about the flow as a developer reading the code.

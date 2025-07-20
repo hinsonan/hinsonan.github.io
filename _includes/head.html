@@ -162,4 +162,23 @@
   });
 })();
 </script>
+<!-- MathJax Configuration -->
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      processEscapes: true,
+      processEnvironments: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  };
+</script>
+
+<!-- Load MathJax locally -->
+<script type="text/javascript" id="MathJax-script" async
+  src="{{ '/assets/js/mathjax/es5/tex-mml-chtml.js' | relative_url }}">
+</script>
 </head>

@@ -1,0 +1,15 @@
+# environment.yml
+# Conda environment file for SMOTE vs ADASYN comparison
+# Usage: conda env create -f environment.yml
+
+name: blog-code-examples
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  
+  # Install pip packages
+  - pip:
+    - -r requirements.txt

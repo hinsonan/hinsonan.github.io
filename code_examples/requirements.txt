@@ -1,0 +1,17 @@
+numpy
+pandas
+scikit-learn
+imbalanced-learn
+matplotlib
+seaborn
+plotly
+kaleido
+jupyter
+notebook
+ipykernel
+ipywidgets
+pytest
+black
+flake8
+numba
+tabulate

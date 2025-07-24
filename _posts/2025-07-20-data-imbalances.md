@@ -178,3 +178,137 @@ Congrats we have solved the imbalanced dataset problem. Our dataset is now balan
 - Tons of information is lost in this case due to removing large amounts of the normal class
 - Risk of underfitting
 - May have removed important data points
+
+### Bring in the Synthetic
+
+Synthetic data can be blessing and a curse. It should be approached with caution because it can cause more problems than it can solve in certain domains. You need to understand you are introducing new data to the dataset but that new data is not real. It does not fit the exact same patterns and features as the real data. In many computer vision domains synthetic data can cause your models to perform worse in the real world. If you are working in some niche area like medical X ray or sonar you have to be extra careful making synthetic data and honestly you should try to avoid it if possible.
+
+In other domains synthetic data can be very beneficial. This domain of anomaly detection with tabular credit charges it can be an effective tool. My one caveat is that no matter the domain you need to physically look at your synthetic data and be aware of the potential issues it could cause. If it shifts all the statistics in a major way from the real data you may want to evaluate if your new data is viable.
+
+### Throw Caution to the Wind: Data go BRRR
+
+**SMOTE (Synthetic Minority Oversampling Technique)**
+
+[Paper](https://arxiv.org/pdf/1106.1813)
+
+This method came out around 2011. This is from the paper and a good summary of how it works
+
+
+>We propose an over-sampling approach in which the minority class is over-sampled by creating “synthetic” examples rather than by over-sampling with replacement. This approach
+>is inspired by a technique that proved successful in handwritten character recognition (Ha
+>& Bunke, 1997). They created extra training data by performing certain operations on
+>real data. In their case, operations like rotation and skew were natural ways to perturb
+>the training data. We generate synthetic examples in a less application-specific manner, by
+>operating in “feature space” rather than “data space”. The minority class is over-sampled
+>by taking each minority class sample and introducing synthetic examples along the line
+>segments joining any/all of the k minority class nearest neighbors. Depending upon the
+>amount of over-sampling required, neighbors from the k nearest neighbors are randomly
+>chosen. Our implementation currently uses five nearest neighbors. For instance, if the
+>amount of over-sampling needed is 200%, only two neighbors from the five nearest neighbors are chosen and one sample is generated in the direction of each. Synthetic samples
+>are generated in the following way: Take the difference between the feature vector (sample)
+>under consideration and its nearest neighbor. Multiply this difference by a random number
+>between 0 and 1, and add it to the feature vector under consideration. This causes the
+>selection of a random point along the line segment between two specific features. This
+>approach effectively forces the decision region of the minority class to become more general.
+
+Duplication strategies have their issues and this method can be a great tool to try. I will summarize some of the key benefits.
+
+* Tries to make the minority class more general in its features compared to being extremely specific
+* The examples that this method generate should be along line segments between the minority neighbors
+* Attempts to fix the overfitting issue of duplication
+
+In order to help visualize this I will use PCA to reduce this dataset down to two features just so it appears neatly on a plot. You could choose only 2 or 3 of the features to plot but when you run PCA with two components the plot looks nice and you can see the effects of SMOTE
+
+![SMOTE_DATA](/assets/images/smote_comparison.png)
+
+![SMOTE_FEATURE_COMPARISON](/assets/images/smote_features.png)
+
+```
+=== TOP 5 FEATURES WITH LARGEST DIFFERENCES ===
+Largest MEAN differences:
+  V14: Original=-7.3060, Synthetic=-8.0206, Diff=0.7145
+  V12: Original=-7.6222, Synthetic=-8.2018, Diff=0.5796
+  V2: Original=2.8113, Synthetic=3.2466, Diff=0.4354
+  V10: Original=-4.8290, Synthetic=-5.2241, Diff=0.3950
+  V3: Original=-4.5798, Synthetic=-4.9639, Diff=0.3841
+
+Largest STD DEV differences:
+  V2: Original=1.7124, Synthetic=0.8127, Diff=0.8996
+  V17: Original=3.9913, Synthetic=3.1306, Diff=0.8606
+  V12: Original=2.5273, Synthetic=1.8131, Diff=0.7142
+  V11: Original=2.0488, Synthetic=1.3462, Diff=0.7026
+  V3: Original=2.2002, Synthetic=1.5492, Diff=0.6510
+```
+
+This method is a great tool to try and get more reasonable minority classes. You can use this tool in your ML experiments and see if it helps with your dataset and domain. Keep in mind that this method is still not adding real world data points and relying on synthetic data can bias your model. Here is the cool thing. This is just one of the methods. There are other methods that have built upon SMOTE and may be better for your problem.
+
+### Other Methods
+
+List of other popular methods:
+
+Based on the documentation I found, here's a concise explanation of these imbalanced-learn methods:
+
+#### Over Sampling Methods
+
+- **ADASYN** - Adaptive Synthetic Sampling that generates more synthetic data for minority class samples that are harder to learn compared to those that are easier to learn, using density distribution as a criterion
+
+- **BorderlineSMOTE** - Variant of SMOTE that identifies borderline samples and uses them to generate new synthetic samples, focusing on samples near the decision boundary between classes
+
+- **SVMSMOTE** - Uses an SVM algorithm to detect samples for generating new synthetic samples, focusing on support vectors found by the SVM
+
+#### Undersampling Methods
+
+- **NearMiss** - Controlled undersampling with 3 versions: NearMiss-1 selects majority samples with smallest average distance to k nearest minority samples; NearMiss-2 selects majority samples with smallest average distance to farthest minority samples; NearMiss-3 uses a 2-step algorithm
+
+- **TomekLinks** - Removes Tomek's links - pairs of samples from different classes that are each other's nearest neighbors, helping clean noisy boundary samples
+
+- **EditedNearestNeighbours** - Removes samples if most of their k-nearest neighbors belong to a different class, helping eliminate noisy or misclassified samples
+
+## Combination Methods
+
+- **SMOTEENN** - Combines SMOTE oversampling with Edited Nearest Neighbours cleaning to both generate synthetic samples and remove noisy ones
+- **SMOTETomek** - Combines SMOTE oversampling with Tomek links cleaning to generate synthetic samples and remove noisy boundary pairs
+
+### Example Code Using These Methods
+
+I highly reccomend `imblearn` library in python for experimenting and playing with these methods.
+
+Here is some code you can build off of to try these methods out
+
+```python
+# Imbalanced-Learn Methods Demo
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, SVMSMOTE, RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler, NearMiss, TomekLinks, EditedNearestNeighbours
+from imblearn.combine import SMOTEENN, SMOTETomek
+
+# Create imbalanced dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.1, 0.9], 
+                          n_informative=3, n_redundant=1, random_state=42)
+print(f"Original: {Counter(y)}")
+
+# Oversampling Methods
+methods = {
+    'SMOTE': SMOTE(random_state=42),
+    'ADASYN': ADASYN(random_state=42),
+    'BorderlineSMOTE': BorderlineSMOTE(random_state=42),
+    'SVMSMOTE': SVMSMOTE(random_state=42),
+    'RandomOverSampler': RandomOverSampler(random_state=42),
+    
+    # Undersampling Methods
+    'RandomUnderSampler': RandomUnderSampler(random_state=42),
+    'NearMiss': NearMiss(version=1, n_neighbors=3),
+    'TomekLinks': TomekLinks(),
+    'EditedNearestNeighbours': EditedNearestNeighbours(),
+    
+    # Combination Methods
+    'SMOTEENN': SMOTEENN(random_state=42),
+    'SMOTETomek': SMOTETomek(random_state=42)
+}
+
+# Apply each method and show results
+for name, sampler in methods.items():
+    X_resampled, y_resampled = sampler.fit_resample(X, y)
+    print(f"{name:20}: {Counter(y_resampled)}")
+```

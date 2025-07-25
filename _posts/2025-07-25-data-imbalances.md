@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "A Well Balanced Dataset Doesn't Exist: Handling Imbalances in Data"
-date: 2025-07-20
+date: 2025-07-25
 categories: ML
 ---
 
@@ -113,7 +113,7 @@ The correlation coefficient has these important characteristics:
 
 </details>
 
-Here are plots showing top 10 correlations and correlations of every feature
+Here are plots showing top 10 correlations and correlations of every feature.
 
 ![top10](/assets/images/top_10_correlations.png)
 
@@ -246,32 +246,31 @@ This method is a great tool to try and get more reasonable minority classes. You
 
 List of other popular methods:
 
-Based on the documentation I found, here's a concise explanation of these imbalanced-learn methods:
-
 #### Over Sampling Methods
 
-- **ADASYN** - Adaptive Synthetic Sampling that generates more synthetic data for minority class samples that are harder to learn compared to those that are easier to learn, using density distribution as a criterion
+- **[ADASYN](https://www.researchgate.net/publication/224330873_ADASYN_Adaptive_Synthetic_Sampling_Approach_for_Imbalanced_Learning)** - Adaptive Synthetic Sampling generates more synthetic data for minority class samples that are deemed harder to learn, using density distribution as a way to pick the harder classes.
 
-- **BorderlineSMOTE** - Variant of SMOTE that identifies borderline samples and uses them to generate new synthetic samples, focusing on samples near the decision boundary between classes
+- **[BorderlineSMOTE](https://www.mdpi.com/1996-1073/15/13/4751)** - Variant of SMOTE That uses the borderline data points in order to create synthetic data points.
 
-- **SVMSMOTE** - Uses an SVM algorithm to detect samples for generating new synthetic samples, focusing on support vectors found by the SVM
+- **SVMSMOTE** - Uses an SVM algorithm (obviously) to detect samples for generating new synthetic samples.
 
 #### Undersampling Methods
 
-- **NearMiss** - Controlled undersampling with 3 versions: NearMiss-1 selects majority samples with smallest average distance to k nearest minority samples; NearMiss-2 selects majority samples with smallest average distance to farthest minority samples; NearMiss-3 uses a 2-step algorithm
+- **[NearMiss](https://www.sciencedirect.com/science/article/pii/S0957417422005280)** - [Controlled undersampling with 3 versions](https://machinelearningmastery.com/undersampling-algorithms-for-imbalanced-classification/): "NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples. NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples. NearMiss-3: Majority class examples with minimum distance to each minority class example."
 
-- **TomekLinks** - Removes Tomek's links - pairs of samples from different classes that are each other's nearest neighbors, helping clean noisy boundary samples
 
-- **EditedNearestNeighbours** - Removes samples if most of their k-nearest neighbors belong to a different class, helping eliminate noisy or misclassified samples
+- **[TomekLinks](https://www.researchgate.net/publication/326590590_Classification_of_Imbalance_Data_using_Tomek_Link_T-Link_Combined_with_Random_Under-sampling_RUS_as_a_Data_Reduction_Method)** - Removes Tomek's links - pairs of samples from different classes that are each other's nearest neighbors
+
+- **[EditedNearestNeighbours](https://www.researchgate.net/publication/220870570_Edited_Nearest_Neighbor_Rule_for_Improving_Neural_Networks_Classifications)** - Removes samples if most of their k-nearest neighbors belong to a different class.
 
 ## Combination Methods
 
-- **SMOTEENN** - Combines SMOTE oversampling with Edited Nearest Neighbours cleaning to both generate synthetic samples and remove noisy ones
-- **SMOTETomek** - Combines SMOTE oversampling with Tomek links cleaning to generate synthetic samples and remove noisy boundary pairs
+- **[SMOTEENN](https://www.researchgate.net/publication/346282224_SMOTE-ENN-Based_Data_Sampling_and_Improved_Dynamic_Ensemble_Selection_for_Imbalanced_Medical_Data_Classification)** - Combines SMOTE oversampling with Edited Nearest Neighbours cleaning to both generate synthetic samples and remove similiar ones that could add more noise.
+- **[SMOTETomek](https://arxiv.org/html/2501.06491v1)** - Combines SMOTE oversampling with Tomek links cleaning to generate synthetic samples and have more distinct samples.
 
 ### Example Code Using These Methods
 
-I highly reccomend `imblearn` library in python for experimenting and playing with these methods.
+I highly recommend `imblearn` library in python for experimenting and playing with these methods.
 
 Here is some code you can build off of to try these methods out
 
@@ -312,3 +311,9 @@ for name, sampler in methods.items():
     X_resampled, y_resampled = sampler.fit_resample(X, y)
     print(f"{name:20}: {Counter(y_resampled)}")
 ```
+
+## With Great Power...
+
+You can use all these tools to help solve your data problems but no tool is a silver bullet. Some of these methods may make your model perform worse. It is up to you to experiment and understand these methods when applied to your domain. These methods are more tailored toward tabular data or vector data. If you have image data then you have to use some other techniques and honestly the problem exponentially increases in difficulty. We may explore image data imbalances later. Keep in mind that these methods are all working on the data. We have not talked about model specific algorithms that can help with imbalances. This is something else we can explore later. If you are interested in a certain topic make sure to contact me and let me know what you want covered next.
+
+[full code for the visuals](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/imbalanced_dataset/imbalanced_datasets.ipynb)

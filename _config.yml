@@ -102,3 +102,4 @@ exclude:
   - CLAUDE.md
   - docker-compose.yaml
   - README.md
+  - assets/js/mathjax/README.md

@@ -70,6 +70,9 @@ plugins:
 
 # Syntax highlighting configuration
 highlighter: rouge
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
 
 # Rouge configuration
 rouge:
@@ -99,3 +102,4 @@ exclude:
   - CLAUDE.md
   - docker-compose.yaml
   - README.md
+  - assets/js/mathjax/README.md

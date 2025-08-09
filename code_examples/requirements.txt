@@ -15,3 +15,5 @@ black
 flake8
 numba
 tabulate
+torch
+torchvision

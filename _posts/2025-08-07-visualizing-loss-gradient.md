@@ -140,15 +140,13 @@ Here are some times to use this loss visual:
 
 Here are some other solutions we will dive into later. These can be used to help you debug and trouble shoot models without running into some of the problems with loss gradient planes.
 
-1) Gradient norm tracking
+1) **Gradient norm tracking** - Monitor the magnitude of gradients during training to detect vanishing gradients (too small to learn) or exploding gradients (causing instability), helping you adjust learning rates or add normalization layers.
 
-2) Weight update ratios
+2) **Activation statistics** - Analyze the distribution of neuron activations across layers to identify dead neurons (always zero), saturated activations (always at maximum), or shifting distributions that indicate training instability.
 
-3) Activation statistics
+3) **Gradient magnitudes per layer** - Examine how gradient strength varies across network depth to identify which layers are learning effectively and which might be stuck, particularly useful for diagnosing problems in very deep networks.
 
-4) Gradient magnitudes per layer
-
-5) Sharpness metrics
+4) **Sharpness metrics** - Measure how sensitive your loss is to small parameter perturbations; flatter minima (low sharpness) typically generalize better than sharp minima, helping you choose between different trained models or optimizers.
 
 These are some other tools that can be used to help understand the training of a model. ML is all about knowing when to use a certain tool. As always there is no free lunch.
 

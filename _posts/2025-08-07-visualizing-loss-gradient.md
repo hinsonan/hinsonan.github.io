@@ -150,4 +150,4 @@ Here are some other solutions we will dive into later. These can be used to help
 
 All these tools that can be used to help understand the training of a model. ML is all about knowing when to use a certain tool. As always there is no free lunch.
 
-[Code for Visuals](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/probing_gradients/mnist_gradient_loss_visuals.ipynb)
+[Code for Visuals](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/gradient_loss_visuals/mnist_gradient_loss_visuals.ipynb)

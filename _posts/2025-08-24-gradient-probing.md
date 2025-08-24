@@ -1,11 +1,11 @@
 ---
 layout: post
 title: "Probing Gradients 👽"
-date: 2025-08-25
+date: 2025-08-24
 categories: ML
 ---
 
-You wake up in a blurry haze. Zuck has unzipped his human flesh skin suit and you are face to face with the real lizard man. He begins to probe you in multiple ways. He wants all your information and he wont stop until you tell him everything. This is exactly what we are about to do to our neural networks. We are about to shine the light on them and make them confess to us why they refuse to learn.
+You wake up in a blurry haze. Zuck has unzipped his human flesh skin suit and you are face to face with the real lizard man. He begins to probe you for all your cringe posts on facebook. He wants all your information and he wont stop until you tell him everything. This is exactly what we are about to do to our neural networks. We are about to shine the light on them and make them confess to us why they refuse to learn.
 
 We are going to focus on non visual methods to do this. The reason for this is that million param models are hard to visualize and in the last article we looked at some visual methods and discussed their pros and cons. These methods discussed today can be used on large models and really any gradient based learning method.
 
@@ -333,4 +333,4 @@ This can be another useful metric to track alongside of SNR. If you have high va
 
 ## Conclusion
 
-These are all ways in which you can explore gradients. Remember you are the investigator and it is up to you to build the tools needed to diagnose why a model may not be learning. It is difficult to know exactly why a model is struggling but you can slowly chip away at it over time. There are other techniques besides the ones mentioned in this article. Many people do not use these methods and they struggle when it comes to debugging their models. So hop aboard the next UFO and begin to probe your model.
+These are all ways in which you can explore gradients. Remember you are the investigator and it is up to you to build the tools needed to diagnose why a model may not be learning. It is difficult to know exactly why a model is struggling but you can slowly chip away at it over time. Many people do not use these methods and they struggle when it comes to debugging their models. So hop aboard the next UFO and begin to probe your model.

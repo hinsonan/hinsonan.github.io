@@ -18,7 +18,6 @@ try:
     import algorithms_cpp
 except ImportError as e:
     print(f"ERROR: C++ module 'algorithms_cpp' not found!")
-    print(f"Please build the module first: python setup.py build_ext --inplace")
     sys.exit(1)
 
 # Import Python implementations
@@ -161,9 +160,10 @@ def main():
     # Final message
     print("\n" + "=" * 70)
     avg_speedup = total_py / total_cpp if total_cpp > 0 else float('inf')
-    print(f"🚀 C++ with pybind11 is on average {avg_speedup:.1f}x faster than pure Python!")
+    print(f"C++ with pybind11 is on average {avg_speedup:.1f}x faster than pure Python!")
     print("=" * 70)
 
 
 if __name__ == "__main__":
     main()
+    

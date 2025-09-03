@@ -390,7 +390,7 @@ namespace std {
 %template(pairdi) std::pair<double,int>;
 ```
 
-Those last two lines you have to define these templates for all the possible scenarios and it can be a pain to upkeep. If you forget one then you are out of luck. Let's move on to some better options for most people.
+Those last two lines show that you have to define these templates for all the possible scenarios and it can be a pain to upkeep. If you forget one then you are out of luck. Let's move on to some better options for most people.
 
 # Conquering the Dark Arts
 
@@ -452,7 +452,7 @@ Now the Python
 'Hello from California! Please come soon!'
 ```
 
-Well this seems a lot better and it is. The issue with Boost is incorporating it into the build process like `cmake` or your companies devops pipelines...Your cmake will need a lot of Boost dependencies and your docker images will have to suffer with the bloat. This is much better and can be a great option if you need other boost libraries in your program. If you do not need boost then their is a lighter weight more commonly used option called `pybind11`.
+Well this seems a lot better and it is. The issue with Boost is incorporating it into the build process like `cmake` or your companies devops pipelines...Your cmake will need a lot of Boost dependencies and your docker images will have to suffer with the bloat. This is much better and can be a great option if you need other boost libraries in your program. If you do not need boost then there is a lighter weight more commonly used option called `pybind11`.
 
 ## PyBind11
 
@@ -491,3 +491,312 @@ import example
 example.add(1, 2)
 3
 ```
+
+This is pretty minimal and powerful. This macro is binding the python to the C call `PYBIND11_MODULE(example, m, py::mod_gil_not_used())`. Another neat thing is in python 3.13+ you can take advantage of free-threading. With all this power you can avoid the GIL. This is experimental and means you have to put on the big boy pants and make sure that you C++ code is thread safe.
+
+## Super Saiyan Speed 
+
+Let's write our own binding. We will write a C++ program that will perform a few different algorithms and then we will bind that to python. We will do a speed test and write these algorithms again in pure python to compare.
+
+**C++**
+```C++
+#include "algorithms.h"
+#include <cmath>
+#include <random>
+#include <unordered_map>
+#include <algorithm>
+
+std::vector<int> find_primes(int limit) {
+    std::vector<bool> is_prime(limit + 1, true);
+    std::vector<int> primes;
+    
+    is_prime[0] = is_prime[1] = false;
+    
+    for (int i = 2; i * i <= limit; ++i) {
+        if (is_prime[i]) {
+            for (int j = i * i; j <= limit; j += i) {
+                is_prime[j] = false;
+            }
+        }
+    }
+    
+    for (int i = 2; i <= limit; ++i) {
+        if (is_prime[i]) {
+            primes.push_back(i);
+        }
+    }
+    
+    return primes;
+}
+
+std::vector<double> matrix_multiply(const std::vector<double>& a,
+                                   const std::vector<double>& b,
+                                   int n) {
+    std::vector<double> c(n * n, 0.0);
+    
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            double sum = 0.0;
+            for (int k = 0; k < n; ++k) {
+                sum += a[i * n + k] * b[k * n + j];
+            }
+            c[i * n + j] = sum;
+        }
+    }
+    
+    return c;
+}
+
+long long fibonacci(int n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+```
+
+**PYTHON**
+```python
+def find_primes(limit):
+    """Sieve of Eratosthenes in pure Python"""
+    is_prime = [True] * (limit + 1)
+    is_prime[0] = is_prime[1] = False
+    
+    for i in range(2, int(limit**0.5) + 1):
+        if is_prime[i]:
+            for j in range(i*i, limit + 1, i):
+                is_prime[j] = False
+    
+    return [i for i in range(2, limit + 1) if is_prime[i]]
+
+def matrix_multiply(a, b, n):
+    """Matrix multiplication in pure Python"""
+    c = [0.0] * (n * n)
+    
+    for i in range(n):
+        for j in range(n):
+            sum_val = 0.0
+            for k in range(n):
+                sum_val += a[i * n + k] * b[k * n + j]
+            c[i * n + j] = sum_val
+    
+    return c
+
+def fibonacci(n):
+    """Fibonacci with memoization in pure Python"""
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+```
+
+### Timing Results
+
+benchmark code
+
+```python
+#!/usr/bin/env python3
+"""
+Performance benchmark comparing pure Python implementations with C++ bindings.
+Demonstrates the performance benefits of using pybind11 for computationally intensive tasks.
+"""
+
+import time
+import random
+import sys
+import os
+from typing import Tuple, Any, List
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import C++ module
+try:
+    import algorithms_cpp
+except ImportError as e:
+    print(f"ERROR: C++ module 'algorithms_cpp' not found!")
+    sys.exit(1)
+
+# Import Python implementations
+from algorithms import find_primes, matrix_multiply, fibonacci
+
+
+def time_function(func, *args, **kwargs) -> Tuple[float, Any]:
+    """
+    Time a function execution.
+    
+    Returns:
+        Tuple of (execution_time_in_seconds, function_result)
+    """
+    start = time.perf_counter()
+    result = func(*args, **kwargs)
+    elapsed = time.perf_counter() - start
+    return elapsed, result
+
+
+def format_comparison(py_time: float, cpp_time: float) -> str:
+    """
+    Format the performance comparison between Python and C++.
+    
+    Args:
+        py_time: Python execution time in seconds
+        cpp_time: C++ execution time in seconds
+    
+    Returns:
+        Formatted speedup string
+    """
+    if cpp_time > 0:
+        speedup = py_time / cpp_time
+        return f"{speedup:.1f}x"
+    return "∞"
+
+
+def print_header(title: str) -> None:
+    """Print a formatted section header."""
+    print(f"\n{title}")
+    print("-" * len(title))
+
+
+def run_benchmark(name: str, py_func, cpp_func, *args, **kwargs) -> Tuple[float, float]:
+    """
+    Run a single benchmark comparing Python and C++ implementations.
+    
+    Args:
+        name: Benchmark name for display
+        py_func: Python function to benchmark
+        cpp_func: C++ function to benchmark
+        *args, **kwargs: Arguments to pass to both functions
+    
+    Returns:
+        Tuple of (python_time, cpp_time) in seconds
+    """
+    print_header(name)
+    
+    # Run Python version
+    py_time, py_result = time_function(py_func, *args, **kwargs)
+    print(f"Python:  {py_time:8.4f} seconds", end="")
+    
+    # Run C++ version
+    cpp_time, cpp_result = time_function(cpp_func, *args, **kwargs)
+    
+    # Display results
+    speedup = format_comparison(py_time, cpp_time)
+    print(f"  │  C++: {cpp_time:8.4f} seconds  │  Speedup: {speedup:>6}")
+    
+    # Verify results match (if they're comparable)
+    if hasattr(py_result, '__len__') and hasattr(cpp_result, '__len__'):
+        if len(py_result) != len(cpp_result):
+            print(f"⚠️  Warning: Result mismatch! Python: {len(py_result)}, C++: {len(cpp_result)}")
+    
+    return py_time, cpp_time
+
+
+def main():
+    """Run all benchmarks and display summary."""
+    
+    print("=" * 70)
+    print(" " * 15 + "PYTHON vs C++ PERFORMANCE BENCHMARK")
+    print(" " * 20 + "Using pybind11 bindings")
+    print("=" * 70)
+    
+    results: List[Tuple[str, float, float]] = []
+    
+    # Benchmark 1: Prime Numbers
+    py_time, cpp_time = run_benchmark(
+        "Prime Numbers (up to 100,000)",
+        find_primes, algorithms_cpp.find_primes,
+        100000
+    )
+    results.append(("Prime Sieve", py_time, cpp_time))
+    
+    # Benchmark 2: Matrix Multiplication
+    n = 100
+    matrix_a = [random.random() for _ in range(n * n)]
+    matrix_b = [random.random() for _ in range(n * n)]
+    
+    py_time, cpp_time = run_benchmark(
+        f"Matrix Multiplication ({n}x{n})",
+        matrix_multiply, algorithms_cpp.matrix_multiply,
+        matrix_a, matrix_b, n
+    )
+    results.append(("Matrix Multiply", py_time, cpp_time))
+    
+    # Benchmark 3: Fibonacci
+    fib_n = 35
+    py_time, cpp_time = run_benchmark(
+        f"Fibonacci (n={fib_n})",
+        fibonacci, algorithms_cpp.fibonacci,
+        fib_n
+    )
+    results.append(("Fibonacci", py_time, cpp_time))
+    
+    # Display summary
+    print("\n" + "=" * 70)
+    print(" " * 30 + "SUMMARY")
+    print("=" * 70)
+    
+    # Table header
+    print(f"\n{'Algorithm':<20} {'Python (s)':>12} {'C++ (s)':>12} {'Speedup':>10}")
+    print("-" * 56)
+    
+    # Individual results
+    total_py = 0.0
+    total_cpp = 0.0
+    
+    for name, py_t, cpp_t in results:
+        speedup = format_comparison(py_t, cpp_t)
+        print(f"{name:<20} {py_t:12.4f} {cpp_t:12.4f} {speedup:>10}")
+        total_py += py_t
+        total_cpp += cpp_t
+    
+    # Total row
+    print("-" * 56)
+    total_speedup = format_comparison(total_py, total_cpp)
+    print(f"{'TOTAL':<20} {total_py:12.4f} {total_cpp:12.4f} {total_speedup:>10}")
+    
+    # Final message
+    print("\n" + "=" * 70)
+    avg_speedup = total_py / total_cpp if total_cpp > 0 else float('inf')
+    print(f"C++ with pybind11 is on average {avg_speedup:.1f}x faster than pure Python!")
+    print("=" * 70)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Let's look at the results
+
+```
+======================================================================
+               PYTHON vs C++ PERFORMANCE BENCHMARK
+                    Using pybind11 bindings
+======================================================================
+
+Prime Numbers (up to 100,000)
+-----------------------------
+Python:    0.0047 seconds  │  C++:   0.0005 seconds  │  Speedup:   9.9x
+
+Matrix Multiplication (100x100)
+-------------------------------
+Python:    0.0667 seconds  │  C++:   0.0007 seconds  │  Speedup:  92.8x
+
+Fibonacci (n=35)
+----------------
+Python:    0.8162 seconds  │  C++:   0.0081 seconds  │  Speedup: 101.0x
+
+======================================================================
+                              SUMMARY
+======================================================================
+
+Algorithm              Python (s)      C++ (s)    Speedup
+--------------------------------------------------------
+Prime Sieve                0.0047       0.0005       9.9x
+Matrix Multiply            0.0667       0.0007      92.8x
+Fibonacci                  0.8162       0.0081     101.0x
+--------------------------------------------------------
+TOTAL                      0.8876       0.0093      95.7x
+
+======================================================================
+C++ with pybind11 is on average 95.7x faster than pure Python!
+======================================================================
+```
+
+These results are pretty stunning. Sometimes I forget just how slow python is. Granted when possible I try to write python in a way that is uses a lot of C bindings like numpy and other high performant libraries. You can and should try hard to not write sucky slow python code. You should try to be an adult and solve problems all the way through. Sometimes its just impossible to write the python code to be as performant as you want and now with `Boost` and `PyBind11` you have the tools to solve this problem. 

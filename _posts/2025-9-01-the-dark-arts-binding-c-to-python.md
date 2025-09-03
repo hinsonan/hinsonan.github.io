@@ -480,7 +480,7 @@ PYBIND11_MODULE(example, m, py::mod_gil_not_used()) {
 }
 ```
 
-The beauty of this header library is we don'y have to link any special libs.
+The beauty of this header library is we don't have to link any special libs.
 
 `$ c++ -O3 -Wall -shared -std=c++11 -fPIC $(python3 -m pybind11 --includes) example.cpp -o example$(python3 -m pybind11 --extension-suffix)`
 

@@ -799,4 +799,34 @@ C++ with pybind11 is on average 95.7x faster than pure Python!
 ======================================================================
 ```
 
-These results are pretty stunning. Sometimes I forget just how slow python is. Granted when possible I try to write python in a way that is uses a lot of C bindings like numpy and other high performant libraries. You can and should try hard to not write sucky slow python code. You should try to be an adult and solve problems all the way through. Sometimes its just impossible to write the python code to be as performant as you want and now with `Boost` and `PyBind11` you have the tools to solve this problem. 
+These results are pretty stunning. Sometimes I forget just how slow python is. Granted when possible I try to write python in a way that is uses a lot of C bindings like numpy and other high performant libraries. You can and should try hard to not write sucky slow python code. You should try to be an adult and solve problems all the way through. Sometimes its just impossible to write the python code to be as performant as you want and now with `Boost` and `PyBind11` you have the tools to solve this problem.
+
+# Dark Arts Fire Back
+
+Congrats you made it down this dark path of segfaults and dangling pointers. You have now made your stand as the go to guy when everything sucks and performance is awful. Casting these dark arts comes with a price. You now have to maintain a completely different ecosystem. You are not just in python world anymore. You finally made your escape into an actual programming language but unfortunately you have to come running back to python since no one knows how to use anything else. It is now up to you to manage this package and create build scripts and setup scripts that allow users to install this package. Remember now that you casted this dark magic you force users to compile and build the C code.
+
+In the above example I did something kinda crappy. 
+
+```python
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import C++ module
+try:
+    import algorithms_cpp
+except ImportError as e:
+    print(f"ERROR: C++ module 'algorithms_cpp' not found!")
+    sys.exit(1)
+```
+
+This is not a good way to find the shared object file. It is brittle and can easily break. In order to have the shared object file compile and in the correct location for the python import statements you need to make sure you create a proper pip package that will build the shared library and put it in the correct place during the package install.
+
+Assuming this is used in a production setting or an important setting you now have to add test and a whole other executable and build script for testing. If you choose to use something like gtest then you will need to build out a cmake and executable. This means you now have to maintain both python test and C++ test.
+
+Some docker images will need to increase in size since you have to add all the C libs. Hope your DevOps team is ready for this new python package that needs C libs. It's better if you just make the whole pipeline for them but sometimes that is not possible.
+
+# Conclusion: Dark Arts Grant Power and Death
+
+As much as I can't stand python in many cases it is best if you can keep your application using python without traveling down this binding road. Don't write crap solutions in python. Solve the problems in a meaningful and purposeful manner. If you can vectorize with numpy do that. If you can use a JIT to compile certain operations go for it. This keeps your python env cleaner and reduces the amount of complexity and insanity you have to upkeep. Just because you made something work does not mean you solved all the problems.
+
+Even when you try all of these options sometimes you still need to reach for the monster that calls your name. C++ will always be there for when you are ready to grow up and become an adult. At least now you know you can turn around and pick up that dusty black wizard robe and begin casting spells.

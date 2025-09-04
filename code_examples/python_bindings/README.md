@@ -10,7 +10,7 @@ This is a small program demonstrating how to build and call a C++ program from p
 
 ## How the Build Process Happens
 
-The setup calls the compiler and builds a algorithms_cpp module
+The setup calls the compiler and builds an algorithms_cpp module
 
 ```python
 from setuptools import setup, Extension

@@ -1,0 +1,11 @@
+services:
+  benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development
+    image: pybind11-demo:latest
+    container_name: pybind11-benchmark
+    command: python3 python/benchmark.py
+    environment:
+      - PYTHONUNBUFFERED=1

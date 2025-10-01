@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Batch Normalization: I just want to fit in"
-date: 2025-10-03
+date: 2025-10-01
 categories: ML
 ---
 
@@ -13,25 +13,25 @@ What is going on with batch normalization in 2025? What is the purpose of this t
 
 ## What does this technique do?
 
-Batch normalization shifts the mean to 0 and variance to 1 for each feature independently but that's not all. Batch normalization contains learnable parameters `gamma` and `beta`
+Batch normalization shifts the mean to 0 and variance to 1 for each feature independently but that's not all. Batch normalization contains learnable parameters $$\gamma , \beta$$
 
 Gamma controls the **standard deviation** of the output:
 
-$$\gamma = 1: \text{ keeps the normalized variance of 1}$$
+$$\gamma = 1:\text{ keeps the normalized variance of 1}$$
 
-$$\gamma > 1: \text{ increases the spread of values}$$
+$$\gamma > 1:\text{ increases the spread of values}$$
 
-$$\gamma < 1: \text{ decreases the spread of values}$$
+$$\gamma < 1:\text{ decreases the spread of values}$$
 
-$$\gamma = 0: \text{ collapses all values to the same point (rarely useful)}$$
+$$\gamma = 0:\text{ collapses all values to the same point (rarely useful)}$$
 
 Beta controls the **mean** of the output:
 
-$$\beta = 0: \text{ keeps the normalized mean of 0}$$
+$$\beta = 0:\text{ keeps the normalized mean of 0}$$
 
-$$\beta > 0: \text{ shifts the distribution to positive values}$$
+$$\beta > 0:\text{ shifts the distribution to positive values}$$
 
-$$\beta < 0: \text{ shifts the distribution to negative values}$$
+$$\beta < 0:\text{ shifts the distribution to negative values}$$
 
 These parameters can **recover the original pre-normalization distribution** if needed:
 
@@ -46,16 +46,16 @@ This means Batch Normalization can learn to "undo" itself if the original distri
 If normalized input $\hat{x} = [-1.5, -0.5, 0.5, 1.5]$ (mean=0, std=1):
 
 With $\gamma = 2, \beta = 3$:
-$$y = 2 \cdot \hat{x} + 3 = [0, 2, 4, 6] \text{ (mean=3, std=2)}$$
+$$y = 2 \cdot \hat{x} + 3 = [0, 2, 4, 6]\text{ (mean=3, std=2)}$$
 
 With $\gamma = 0.5, \beta = -1$:
-$$y = 0.5 \cdot \hat{x} - 1 = [-1.75, -1.25, -0.75, -0.25] \text{ (mean=-1, std=0.5)}$$
+$$y = 0.5 \cdot \hat{x} - 1 = [-1.75, -1.25, -0.75, -0.25]\text{ (mean=-1, std=0.5)}$$
 
 ## Why do we need these learnable params?
 
 All that math is too hard to read after a few tylenol hit your bloodstream. Essentially if you were to make the mean 0 with a variance of 1 all the time that could result in information loss for certain layers. If larger positive values were important learned features then you will destroy that with normal standardization.
 
-It helps keep training stable. This method means the model can gradually update `gamma` and `beta`
+It helps keep training stable. This method means the model can gradually update the params $$\gamma,\beta$$
 
 ## Why this Technique is Important
 
@@ -100,11 +100,11 @@ The paper [How Does Batch Normalization Help Optimization?](https://arxiv.org/pd
 
 3) batch norm with noise added to each layer during training. The noise has a non-zero mean and non-unit variance
 
-Number 3 should introduce shifting and make the model perform worse or make it harder to train. Instead it performed similar to mode two and both two and three did better than mode 1.
+Number three should introduce shifting and make the model perform worse or make it harder to train. Instead it performed similar to mode two and both two and three did better than mode one.
 
 ### My gradients still Explode
 
-The paper [A Mean Field Theory of Batch Normalization](https://openreview.net/pdf?id=SyMDXnCcF7) notes that feed forward networks can still have exploding gradients with batch norm
+The paper [A Mean Field Theory of Batch Normalization](https://openreview.net/pdf?id=SyMDXnCcF7) notes that feed forward networks can still have exploding gradients with batch norm.
 
 Really deep batch norm models can still have exploding/vanishing gradients. This paper used plain old feed forward networks and showed that even when using batch norm you got exploding gradients no matter how you tuned the activations and other parameters.
 
@@ -114,7 +114,7 @@ The authors propose that this counter-intuitive finding is why skip connections 
 
 A dominant theory is that the power of batch norm is from the smoothing of the gradient.
 
-Lipschitzness refers to how much a function can change relative to changes in its input. A function is Lipschitz continuous if there's a bound on how steeply it can change - mathematically, if `|f(x) - f(y)| ≤ L|x - y| for some constant L`.
+Lipschitzness refers to how much a function can change relative to changes in its input. A function is Lipschitz continuous if there's a bound on how steeply it can change - mathematically, if $$\|f(x) - f(y)\| \leq L\|x - y\|$$ for some constant $$L$$
 
 β-smoothness is a specific type of Lipschitzness applied to gradients. A function is β-smooth if its gradients are Lipschitz continuous with constant β. In summary, this means the gradients don't change too rapidly.
 

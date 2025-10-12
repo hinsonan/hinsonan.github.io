@@ -8,8 +8,8 @@ channels:
   - defaults
 dependencies:
   - python=3.12
+  - nvidia/label/cuda-12.8.1::cuda-toolkit
   - pip
-  
   # Install pip packages
   - pip:
     - -r requirements.txt

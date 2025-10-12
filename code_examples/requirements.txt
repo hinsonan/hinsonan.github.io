@@ -17,3 +17,4 @@ numba
 tabulate
 torch
 torchvision
+cupy-cuda12x

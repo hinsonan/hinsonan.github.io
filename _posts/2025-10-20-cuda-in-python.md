@@ -441,3 +441,19 @@ from the [wiki](https://en.wikipedia.org/wiki/Singular_value_decomposition)
 
 You can do the bidiagonalization in parallel but when you get to the sequential part you have to wait and there is nothing the GPU can do there. Due to these factors and the algorithm not being fully parralellized CPUs are able to complete this algorithm in similiar speeds. While the GPU is still faster this just goes to show that the GPU is not suited for all algorithms.
 
+## CuPy Conclusion
+
+If your project is already numpy and scipy heavy and you need a boost in speed then using CuPy is an easy way to get access to the power of your GPU without writing custom CUDA kernels. You got that expensive GPU for a reason so might as well burn it up.
+
+# Numba for CUDA
+
+I have a love hate relationship with Numba. I have seen some awful code slapped with a numba jit decorator sending up unanswered prayers to the JIT to somehow make the crappy code run faster. Now this is not a Numba issue this is abuse from other devs.
+
+Regardless let's dive in and prepare to get rekt by CUDA problems. CUDA 12 broke these guys and now there are several outdated guides on installing numba. They just straight up made a new package. Here is the [old guide](https://numba.readthedocs.io/en/stable/user/installing.html) in case it still applies to you. This did not work for me and instead I had to install the new package via pip and specify my cuda version
+
+`pip install numba-cuda[cu12]`
+
+So after all this nonsense I hope you have it installed on whatever hardware you own.
+
+Numba is a JIT (just-in-time) compiler for python that translates python code into machine code at runtime. For instance loops are slow in python but with numba you can speed them up and in some cases get pretty close to the speed of C.
+

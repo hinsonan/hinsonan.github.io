@@ -18,3 +18,4 @@ tabulate
 torch
 torchvision
 cupy-cuda12x
+numba-cuda[cu12]

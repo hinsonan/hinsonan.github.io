@@ -7,7 +7,7 @@ categories: ML
 
 We all know Python is slow but everyone knows the secret to python programming is to try and avoid python at all cost and call a C/Rust binding beneath the hood.
 
-Since we are all ML nerds let's take this a step further and use python to call gpu accelerated libraries or even write CUDA code. Many people know about using numpy or fast cpu operations and we know Pytorch allows you to easily put models on the gpu but it goes deeper than that.
+Since we are all ML nerds let's take this a step further and use python to call gpu accelerated libraries or even write CUDA code. Many people know about using numpy for fast cpu operations and we know Pytorch allows you to easily put models on the gpu but it goes deeper than that.
 
 If you are doing intense computations you don't need to feel that you can only write optimized cpu algorithms in python. You can utilize the speed of the gpu when you have algorithms suited for parallel processing.
 
@@ -433,5 +433,11 @@ The reason is that SVD is not an easy algorithm to parrallelize. Also there has 
 
 SVD uses QR iterations where each step needs wait for the previous one. Now there are still parts of this algorithm that can be done is parrallel which is why the GPU is still faster but parts of the algorithm have the wait. This [repo](https://github.com/emchinn/bidiagonalization-golub-kahan/blob/master/Golub-Kahan.ipynb) has a good example of the algorithm.
 
-You can do the bidiagonalization in parallel but when you get to the sequential part you have to wait and there is nothing the GPU can do there.
+This [article](https://gregorygundersen.com/blog/2018/12/10/svd/) explains SVD in a way that is easier to comprehend than the traditional mathmatical definition.
+
+from the [wiki](https://en.wikipedia.org/wiki/Singular_value_decomposition) 
+
+>The SVD of a matrix⁠ is typically computed by a two-step procedure. In the first step, the matrix is reduced to a bidiagonal matrix.⁠The second step is to compute the SVD of the bidiagonal matrix. This step can only be done with an iterative method
+
+You can do the bidiagonalization in parallel but when you get to the sequential part you have to wait and there is nothing the GPU can do there. Due to these factors and the algorithm not being fully parralellized CPUs are able to complete this algorithm in similiar speeds. While the GPU is still faster this just goes to show that the GPU is not suited for all algorithms.
 

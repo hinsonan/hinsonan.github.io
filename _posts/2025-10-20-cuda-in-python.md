@@ -457,3 +457,102 @@ So after all this nonsense I hope you have it installed on whatever hardware you
 
 Numba is a JIT (just-in-time) compiler for python that translates python code into machine code at runtime. For instance loops are slow in python but with numba you can speed them up and in some cases get pretty close to the speed of C.
 
+Let's demonstrate how to add two vectors in pure python, numba on the cpu, and numba on the gpu
+
+```python
+import numpy as np
+from numba import jit, cuda
+import time as time_module
+
+# 1. Pure Python version (baseline - slowest)
+def vector_add_python(a, b, c):
+    for i in range(len(a)):
+        c[i] = a[i] + b[i]
+
+# 2. Numba CPU version (JIT compiled)
+@jit(nopython=True)
+def vector_add_numba_cpu(a, b, c):
+    for i in range(len(a)):
+        c[i] = a[i] + b[i]
+
+# 3. Numba CUDA version (GPU kernel)
+@cuda.jit
+def vector_add_cuda_kernel(a, b, c):
+    idx = cuda.grid(1)
+    if idx < c.size:
+        c[idx] = a[idx] + b[idx]
+
+def vector_add_cuda(a, b):
+    d_a = cuda.to_device(a)
+    d_b = cuda.to_device(b)
+    d_c = cuda.device_array_like(a)
+    
+    threads_per_block = 256
+    blocks_per_grid = (a.size + threads_per_block - 1) // threads_per_block
+    
+    vector_add_cuda_kernel[blocks_per_grid, threads_per_block](d_a, d_b, d_c)
+    
+    c = d_c.copy_to_host()
+    return c
+
+def vector_add_cuda_no_transfer(d_a, d_b, d_c, threads_per_block, blocks_per_grid):
+    """GPU kernel without memory transfers - data already on GPU"""
+    vector_add_cuda_kernel[blocks_per_grid, threads_per_block](d_a, d_b, d_c)
+    cuda.synchronize()
+
+def benchmark(func, *args, name="Function", warmup=True):
+    if warmup:
+        func(*args)
+    
+    times = []
+    for _ in range(5):
+        start = time_module.perf_counter()
+        result = func(*args)
+        end = time_module.perf_counter()
+        times.append(end - start)
+    
+    avg_time = np.mean(times)
+    return avg_time, result
+```
+
+Let's test this by adding `10 million` vectors and see the results.
+
+```
+Vector Addition Benchmark: 10,000,000 elements
+
+┌─────────────────────────────┬──────────┬──────────────┬─────────────┐
+│ Method                      │ Time     │ vs Python    │ vs CPU      │
+├─────────────────────────────┼──────────┼──────────────┼─────────────┤
+│ Pure Python                 │ 698.90ms │ 1.0x         │ -           │
+│ Numba CPU                   │   3.21ms │ 218x faster │ -           │
+│ GPU (with transfer)         │  12.13ms │ 58x faster │   0.3x slower │
+│ GPU (kernel only)           │   0.08ms │ 9124x faster │    42x faster 
+└─────────────────────────────┴──────────┴──────────────┴─────────────┘
+```
+
+The slowness of python is exposed to our naked eye and we witness just how nice a JIT can be. Numba can be a useful tool for developers to use in order to speed up their algorithms. As with any GPU operation is not always a clear winner. If you notice that GPU with transfer is slower. The reason for this is that we are transferring the data onto and off the cpu once we have completed the whole vector addition operation. This transfer time cannot be taken for granted. The kernel only operation is extremely quick but we still have to transfer the data back to cpu in most real world cases.
+
+Overall in this case the Numba CPU operation is the fastest. The GPU can still be faster in a lot of scenarios but it is not a silver bullet. 
+
+Let's scale the number of operations and see how the cpu and gpu speeds react. In this case an operation is one pass over the whole vector array. So essentially we are saying add 10 million vectors `x` amount of times
+
+```
+Scaling Benchmark: CPU vs GPU (10,000,000 elements)
+
+┌──────────────┬────────────┬────────────┬──────────────┬──────────────┐
+│ # Operations │  CPU Time  │  GPU Time  │   Speedup    │    Winner    │
+├──────────────┼────────────┼────────────┼──────────────┼──────────────┤
+│            1 │    2.93 ms │    7.12 ms │  2.43x slower │     CPU      │
+│            2 │    6.68 ms │    6.97 ms │  1.04x slower │     CPU      │
+│            5 │   15.69 ms │    7.18 ms │  2.18x faster │     GPU      │
+│           10 │   32.47 ms │    6.93 ms │  4.69x faster │     GPU      │
+│           20 │   62.38 ms │    7.95 ms │  7.85x faster │     GPU      │
+│           50 │  152.07 ms │    9.55 ms │ 15.93x faster │     GPU      │
+│          100 │  319.62 ms │   12.99 ms │ 24.61x faster │     GPU      │
+│          200 │  631.49 ms │   19.58 ms │ 32.26x faster │     GPU      │
+│          500 │ 1536.38 ms │   39.60 ms │ 38.80x faster │     GPU      │
+└──────────────┴────────────┴────────────┴──────────────┴──────────────┘
+```
+
+Here we start to see the power of the gpu on display. After 5 or more operations it becomes faster. Once again this highlights that when scaling to larger problems that can be done in parrallel the GPU will eventually win.
+

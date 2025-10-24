@@ -1,22 +1,19 @@
 ---
 layout: post
-title: "GPU Programming in Python: We gotta go fast"
-date: 2025-10-20
+title: "GPU Programming in Python Part 1: Who is this CUDA you speak of"
+date: 2025-10-24
 categories: ML
 ---
 
-We all know Python is slow but everyone knows the secret to python programming is to try and avoid python at all cost and call a C/Rust binding beneath the hood.
+We all know Python is slow, but everyone knows the secret to Python programming is to try and avoid Python at all costs and call a C/Rust binding beneath the hood.
 
-Since we are all ML nerds let's take this a step further and use python to call gpu accelerated libraries or even write CUDA code. Many people know about using numpy for fast cpu operations and we know Pytorch allows you to easily put models on the gpu but it goes deeper than that.
+Since we are all ML nerds, let's take this a step further and use Python to call GPU-accelerated libraries or even write CUDA code. Many people know about using NumPy for fast CPU operations, and we know PyTorch allows you to easily put models on the GPU, but it goes deeper than that.
 
-If you are doing intense computations you don't need to feel that you can only write optimized cpu algorithms in python. You can utilize the speed of the gpu when you have algorithms suited for parallel processing.
+If you are doing intense computations, you don't need to feel that you can only write optimized CPU algorithms in Python. You can utilize the speed of the GPU when you have algorithms suited for parallel processing.
 
 # GPU vs CPU Recap
 
 {% mermaid %}
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1a1a1a','primaryTextColor':'#ffffff','primaryBorderColor':'#ffffff','lineColor':'#ffffff','secondaryColor':'#000000','tertiaryColor':'#333333','fontSize':'16px','fontFamily':'Arial'}}}%%
-
 graph TB
     START["Array of 10,000 elements - Task: Add 10 to each"]
     
@@ -88,31 +85,30 @@ graph TB
     
     style CPU_RES fill:#00aa00,stroke:#00ff00,stroke-width:4px,color:#ffffff
     style GPU_RES fill:#aa00aa,stroke:#ff00ff,stroke-width:4px,color:#ffffff
-```
 {% endmermaid %}
 
 CPUs have very powerful cores and are responsible for managing a lot more than a GPU core. CPUs can handle many different types of operations, branchings, etc...
 
-GPUs are have a lot of "dumb" cores that are really meant to process calculations and do operations in parallel. While CPUs have SIMD (Single Instruction Multiple Data) and can perform parallel operations they do not scale at the level GPUs do.
+GPUs have a lot of "dumb" cores that are really meant to process calculations and do operations in parallel. While CPUs have SIMD (Single Instruction Multiple Data) and can perform parallel operations, they do not scale at the level GPUs do.
 
-GPUs use SIMT (Single Instruction Multiple Threads) which as you can guess means they treat operations and parallel processing as a high priority.
+GPUs use SIMT (Single Instruction Multiple Threads), which, as you can guess, means they treat operations and parallel processing as a high priority.
 
-You can go really deep into this topic but we want to look at how we can use this in our day to day lives as we are stuck in python land. The gist of this is that GPUs can perform calculations much quicker than a CPU can due to having more cores. There are some caveats such as the process needs to be non-blocking or no branching in order to take full advantage of the GPU.
+You can go really deep into this topic, but we want to look at how we can use this in our day-to-day lives as we are stuck in Python land. The gist of this is that GPUs can perform calculations much quicker than a CPU can due to having more cores. There are some caveats, such as the process needs to be non-blocking or have no branching in order to take full advantage of the GPU.
 
-CPUs can be faster than the GPU but if you have a operation that can be done in parallel then the GPU is much faster. This is why ML models run on GPUs since they are running thousands of matrix operations on repeat.
+CPUs can be faster than the GPU, but if you have an operation that can be done in parallel, then the GPU is much faster. This is why ML models run on GPUs since they are running thousands of matrix operations on repeat.
 
 ><span style="color: red; font-weight: bold;">⚠️ Warning:</span>
-> Everything in this article assumes CUDA and Nvidia GPUs. I am sorry fellow AMD GPU owners. I am forever rooting for you
+> Everything in this article assumes CUDA and NVIDIA GPUs. I am sorry, fellow AMD GPU owners. I am forever rooting for you.
 
 # CuPy
 
-[CuPy](https://cupy.dev/) is a "drop in" replacement for numpy and scipy calls. It is a higher level library and if you have pure numpy or scipy algorithms being called it can be cheap to replace them with `CuPy`. For those that work in ML you may already have a large portion of numpy/scipy calls that could be ran on the GPU if you run into performance issues.
+[CuPy](https://cupy.dev/) is a "drop-in" replacement for NumPy and SciPy calls. It is a higher-level library, and if you have pure NumPy or SciPy algorithms being called, it can be cheap to replace them with `CuPy`. For those that work in ML, you may already have a large portion of NumPy/SciPy calls that could be run on the GPU if you run into performance issues.
 
-Like every gpu library in python it calls CUDA beneath the hood. This library is easy to use if all you are doing is drop in numpy replacements. Let's take some quick benchmarks. 
+Like every GPU library in Python, it calls CUDA beneath the hood. This library is easy to use if all you are doing is drop-in NumPy replacements. Let's take some quick benchmarks. 
 
 ## Numpy vs CuPy
 
-><span style="color: yellow; font-weight: bold;">These benchmarks are using a 285k i9 and 5090 RTX so speeds may vary for you</span>
+><span style="color: yellow; font-weight: bold;">These benchmarks are using a 285K i9 and 5090 RTX, so speeds may vary for you.</span>
 
 We are going to benchmark three operations:
 
@@ -212,7 +208,7 @@ def reduction_cupy(size):
     return cp.sum(a), cp.mean(a), cp.std(a)
 ```
 
-We warmup the gpu first to make sure we capture execution time and not other things like memory allocation, compiling kernels, etc...
+We warm up the GPU first to make sure we capture execution time and not other things like memory allocation, compiling kernels, etc.
 
 The results show the obvious. GPU go burrrr
 
@@ -255,11 +251,11 @@ Size            NumPy (ms)      CuPy (ms)       Speedup (x times faster)
 
 ![Cupy_vs_Numpy](/assets/images/cupy_vs_numpy_benchmark.png)
 
-Clearly for these operations you get some good speedups when using the GPU. You always have to weigh the viability of these benchmarks. Perhaps in your use case these speedups are not worth adding another dependency to your codebase. Another issue is you introduce complexity of managing if the servers or users have a GPU or not.
+Clearly, for these operations, you get some good speedups when using the GPU. You always have to weigh the viability of these benchmarks. Perhaps in your use case, these speedups are not worth adding another dependency to your codebase. Another issue is you introduce complexity of managing whether the servers or users have a GPU or not.
 
 ## Scipy vs CuPy
 
-Now we will do something similar for Scipy vs CuPy. We will test the following operations
+Now we will do something similar for SciPy vs CuPy. We will test the following operations:
 
 * FFT (Fast Fourier Transform)
 * Linear Equations
@@ -407,57 +403,63 @@ Size            SciPy (ms)      CuPy (ms)       Speedup (x times faster)
 
 ![Cupy_vs_Scipy](/assets/images/scipy_vs_cupy_benchmark.png)
 
-><span style="color: yellow; font-weight: bold;">Values above 1 mean the GPU is faster. Below 1 means the CPU is faster</span>
+><span style="color: yellow; font-weight: bold;">Values above 1 mean the GPU is faster. Below 1 means the CPU is faster.</span>
 
-Here we get some more interesting results. In the case of Sparse Matrix Multiplication it is slower with the smaller data points. The reason you see this with small data points is the overhead between data transfer from gpu to cpu. Another issue is with the sparse multiplication with a density of 0.01. This means most of the values are 0.
+Here we get some more interesting results. In the case of Sparse Matrix Multiplication, it is slower with the smaller data points. The reason you see this with small data points is the overhead between data transfer from GPU to CPU. Another issue is with the sparse multiplication with a density of 0.01. This means most of the values are 0.
 
-These matrices are not laid out well for parrallel processing. CSR format stores data as:
+These matrices are not laid out well for parallel processing. CSR format stores data as:
 
 1) data: actual non-zero values
+
 2) indices: column positions of non-zeros
+
 3) indptr: pointers to where each row starts
 
 When GPU threads process rows in parallel:
 
 1) Thread 0 reads indices[0] → jumps to random column position
+
 2) Thread 1 reads indices[1] → jumps to different random position
+
 3) Thread 2 reads indices[2] → another random jump
 
 This creates scattered memory access and makes it difficult for the SIMT instructions that GPUs are built on.
 
-Eventaully with larger samples the speed of the GPU will blow past the CPU for sparse multiplication
+Eventually, with larger samples, the speed of the GPU will blow past the CPU for sparse multiplication.
 
-**SVD (Single Value Decomposition)** is faster at the smaller size but then the margin gets thinner and the CPU times start getting close to the GPU. It is still faster on the GPU but the gap closes.
+**SVD (Singular Value Decomposition)** is faster at the smaller size, but then the margin gets thinner and the CPU times start getting close to the GPU. It is still faster on the GPU, but the gap closes.
 
-The reason is that SVD is not an easy algorithm to parrallelize. Also there has been a lot of work optimizing SVD on the CPU and using the CPU cache blocks.
+The reason is that SVD is not an easy algorithm to parallelize. Also, there has been a lot of work optimizing SVD on the CPU and using the CPU cache blocks.
 
-SVD uses QR iterations where each step needs wait for the previous one. Now there are still parts of this algorithm that can be done is parrallel which is why the GPU is still faster but parts of the algorithm have the wait. This [repo](https://github.com/emchinn/bidiagonalization-golub-kahan/blob/master/Golub-Kahan.ipynb) has a good example of the algorithm.
-
-This [article](https://gregorygundersen.com/blog/2018/12/10/svd/) explains SVD in a way that is easier to comprehend than the traditional mathmatical definition.
-
-from the [wiki](https://en.wikipedia.org/wiki/Singular_value_decomposition) 
-
->The SVD of a matrix⁠ is typically computed by a two-step procedure. In the first step, the matrix is reduced to a bidiagonal matrix.⁠The second step is to compute the SVD of the bidiagonal matrix. This step can only be done with an iterative method
-
-You can do the bidiagonalization in parallel but when you get to the sequential part you have to wait and there is nothing the GPU can do there. Due to these factors and the algorithm not being fully parralellized CPUs are able to complete this algorithm in similiar speeds. While the GPU is still faster this just goes to show that the GPU is not suited for all algorithms.
+><span style="color: cyan; font-weight: bold;">Why SVD Closes the GPU/CPU Gap</span>
+>
+>SVD uses QR iterations where each step needs to wait for the previous one. Now, there are still parts of this algorithm that can be done in parallel, which is why the GPU is still faster, but parts of the algorithm have to wait. This [repo](https://github.com/emchinn/bidiagonalization-golub-kahan/blob/master/Golub-Kahan.ipynb) has a good example of the algorithm.
+>
+>This [article](https://gregorygundersen.com/blog/2018/12/10/svd/) explains SVD in a way that is easier to comprehend than the traditional mathematical definition.
+>
+>From the [wiki](https://en.wikipedia.org/wiki/Singular_value_decomposition):
+>
+>>The SVD of a matrix⁠ is typically computed by a two-step procedure. In the first step, the matrix is reduced to a bidiagonal matrix.⁠The second step is to compute the SVD of the bidiagonal matrix. This step can only be done with an iterative method
+>
+>You can do the bidiagonalization in parallel, but when you get to the sequential part, you have to wait and there is nothing the GPU can do there. Due to these factors and the algorithm not being fully parallelized, CPUs are able to complete this algorithm in similar speeds. While the GPU is still faster, this just goes to show that the GPU is not suited for all algorithms.
 
 ## CuPy Conclusion
 
-If your project is already numpy and scipy heavy and you need a boost in speed then using CuPy is an easy way to get access to the power of your GPU without writing custom CUDA kernels. You got that expensive GPU for a reason so might as well burn it up.
+If your project is already NumPy and SciPy heavy and you need a boost in speed, then using CuPy is an easy way to get access to the power of your GPU without writing custom CUDA kernels. You got that expensive GPU for a reason, so might as well burn it up.
 
 # Numba for CUDA
 
-I have a love hate relationship with Numba. I have seen some awful code slapped with a numba jit decorator sending up unanswered prayers to the JIT to somehow make the crappy code run faster. Now this is not a Numba issue this is abuse from other devs.
+I have a love-hate relationship with Numba. I have seen some awful code slapped with a Numba JIT decorator sending up unanswered prayers to the JIT to somehow make the crappy code run faster. Now, this is not a Numba issue—this is abuse from other devs.
 
-Regardless let's dive in and prepare to get rekt by CUDA problems. CUDA 12 broke these guys and now there are several outdated guides on installing numba. They just straight up made a new package. Here is the [old guide](https://numba.readthedocs.io/en/stable/user/installing.html) in case it still applies to you. This did not work for me and instead I had to install the new package via pip and specify my cuda version
+Regardless, let's dive in and prepare to get rekt by CUDA problems. CUDA 12 broke these guys, and now there are several outdated guides on installing Numba. They just straight up made a new package. Here is the [old guide](https://numba.readthedocs.io/en/stable/user/installing.html) in case it still applies to you. This did not work for me, and instead I had to install the new package via pip and specify my CUDA version:
 
 `pip install numba-cuda[cu12]`
 
-So after all this nonsense I hope you have it installed on whatever hardware you own.
+So after all this nonsense, I hope you have it installed on whatever hardware you own.
 
-Numba is a JIT (just-in-time) compiler for python that translates python code into machine code at runtime. For instance loops are slow in python but with numba you can speed them up and in some cases get pretty close to the speed of C.
+Numba is a JIT (just-in-time) compiler for Python that translates Python code into machine code at runtime. For instance, loops are slow in Python, but with Numba you can speed them up and in some cases get pretty close to the speed of C.
 
-Let's demonstrate how to add two vectors in pure python, numba on the cpu, and numba on the gpu
+Let's demonstrate how to add two vectors in pure Python, Numba on the CPU, and Numba on the GPU:
 
 ```python
 import numpy as np
@@ -530,11 +532,11 @@ Vector Addition Benchmark: 10,000,000 elements
 └─────────────────────────────┴──────────┴──────────────┴─────────────┘
 ```
 
-The slowness of python is exposed to our naked eye and we witness just how nice a JIT can be. Numba can be a useful tool for developers to use in order to speed up their algorithms. As with any GPU operation is not always a clear winner. If you notice that GPU with transfer is slower. The reason for this is that we are transferring the data onto and off the cpu once we have completed the whole vector addition operation. This transfer time cannot be taken for granted. The kernel only operation is extremely quick but we still have to transfer the data back to cpu in most real world cases.
+The slowness of Python is exposed to our naked eye and we witness just how nice a JIT can be. Numba can be a useful tool for developers to use in order to speed up their algorithms. As with any GPU operation, it is not always a clear winner. If you notice, GPU with transfer is slower. The reason for this is that we are transferring the data onto and off the CPU once we have completed the whole vector addition operation. This transfer time cannot be taken for granted. The kernel-only operation is extremely quick, but we still have to transfer the data back to CPU in most real-world cases.
 
-Overall in this case the Numba CPU operation is the fastest. The GPU can still be faster in a lot of scenarios but it is not a silver bullet. 
+Overall, in this case, the Numba CPU operation is the fastest. The GPU can still be faster in a lot of scenarios, but it is not a silver bullet.
 
-Let's scale the number of operations and see how the cpu and gpu speeds react. In this case an operation is one pass over the whole vector array. So essentially we are saying add 10 million vectors `x` amount of times
+Let's scale the number of operations and see how the CPU and GPU speeds react. In this case, an operation is one pass over the whole vector array. So essentially we are saying add 10 million vectors `x` amount of times:
 
 ```
 Scaling Benchmark: CPU vs GPU (10,000,000 elements)
@@ -554,5 +556,13 @@ Scaling Benchmark: CPU vs GPU (10,000,000 elements)
 └──────────────┴────────────┴────────────┴──────────────┴──────────────┘
 ```
 
-Here we start to see the power of the gpu on display. After 5 or more operations it becomes faster. Once again this highlights that when scaling to larger problems that can be done in parrallel the GPU will eventually win.
+Here we start to see the power of the GPU on display. After 5 or more operations, it becomes faster. Once again, this highlights that when scaling to larger problems that can be done in parallel, the GPU will eventually win.
+
+# Conclusion
+
+You no longer have to be bound by the CPU in Python. All those long-running pre/post-processing methods can be unchained and put on the GPU. Far too often, I have seen people live with suboptimal solutions. Sometimes this is okay in certain circumstances. The issue is when people are waiting on these long processes and developers never bother to attempt to fix it. Hopefully, you now have some extra tools to apply on the job.
+
+In summary, if you have direct NumPy and SciPy calls you want on the GPU, then choose `CuPy`. When you need some more customization and control, choose `Numba`. There is still one other option for developers to choose from, and that will be explored in the next article. NVIDIA has cooked up official CUDA bindings in their library `cuda-python`. We will look at this next.
+
+[Code used in Article](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/python_and_cuda)
 

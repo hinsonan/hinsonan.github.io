@@ -13,7 +13,7 @@ If you are doing intense computations, you don't need to feel that you can only 
 
 # GPU vs CPU Recap
 
-{% mermaid %}
+<div class="mermaid">
 graph TB
     START["Array of 10,000 elements - Task: Add 10 to each"]
     
@@ -85,7 +85,7 @@ graph TB
     
     style CPU_RES fill:#00aa00,stroke:#00ff00,stroke-width:4px,color:#ffffff
     style GPU_RES fill:#aa00aa,stroke:#ff00ff,stroke-width:4px,color:#ffffff
-{% endmermaid %}
+</div>
 
 CPUs have very powerful cores and are responsible for managing a lot more than a GPU core. CPUs can handle many different types of operations, branchings, etc...
 

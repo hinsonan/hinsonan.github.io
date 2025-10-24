@@ -181,4 +181,18 @@
 <script type="text/javascript" id="MathJax-script" async
   src="{{ '/assets/js/mathjax/es5/tex-mml-chtml.js' | relative_url }}">
 </script>
+<!-- Mermaid Support -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get current theme from your theme toggle
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: currentTheme === 'dark' ? 'dark' : 'default',
+      securityLevel: 'loose'
+    });
+  });
+</script>
 </head>

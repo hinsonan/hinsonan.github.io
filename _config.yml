@@ -59,6 +59,9 @@ defaults:
       author: "Andrew Hinson"
       image: "/assets/images/robot.png"
 
+mermaid:
+  src: 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'
+
 # Build settings
 # remote_theme: pages-themes/midnight
 theme: minima
@@ -67,6 +70,7 @@ plugins:
   - jekyll-remote-theme
   - jekyll-sitemap
   - jekyll-seo-tag
+  - jekyll-mermaid
 
 # Syntax highlighting configuration
 highlighter: rouge

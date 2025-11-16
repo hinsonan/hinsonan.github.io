@@ -19,7 +19,7 @@ As you can expect it is literally CUDA in python. What a wild trip this is. [Cud
 * numba.cuda: Numba's target for CUDA GPU programming by directly compiling a restricted subset of Python code into CUDA kernels and device functions following the CUDA execution model.
 * nvmath-python: Pythonic access to NVIDIA CPU & GPU Math Libraries, with both host and device (nvmath.device) APIs. It also provides low-level Python bindings to host C APIs (nvmath.bindings).
 
-for this article we are going to focus on `cuda.bindings` and `cuda.core`
+For this article we are going to focus on `cuda.bindings` and `cuda.core`
 
 # Installing
 
@@ -31,7 +31,7 @@ as of time of this writing I am using `cuda-bindings==12.9.3`, `cuda-python==12.
 
 # Gaussian Blur with CUDA Python
 
-Our goal will be to perform a gaussian using cuda bindings and cuda core. 
+Our goal will be to perform a gaussian blur using cuda bindings and cuda core. 
 
 ## Going Low Level with CUDA Bindings
 
@@ -160,7 +160,7 @@ void gaussian_blur(const unsigned char* input,
 }
 ```
 
-The power of a GPU is the parallel processing. For a CPU based approach, gaussian blur requires sequential operations. you need to loop through the rows and columns and apply the filter for all pixels. For the GPU we can process the blur for each pixel simultaneously using all the threads that are available on the GPU.
+The power of a GPU is the parallel processing. For a CPU based approach, gaussian blur requires sequential operations. You need to loop through the rows and columns and apply the filter for all pixels. For the GPU we can process the blur for each pixel simultaneously using all the threads that are available on the GPU.
 
 Now in order to use this kernel code we have to do the following steps
 
@@ -230,7 +230,7 @@ minor = checkCudaErrors(driver.cuDeviceGetAttribute(
 ```
 ## PTX Code Incoming
 
-These are the bindings that tell CUDA your gpu card and the CUDA capabilities that GPU has. Now lets go over the how to compile our beautiful C++ string that we created.
+These are the bindings that tell CUDA your GPU card and the CUDA capabilities that GPU has. Now let's go over how to compile our beautiful C++ string that we created.
 
 ```python
 # Reference: https://docs.nvidia.com/cuda/nvrtc/index.html
@@ -305,7 +305,10 @@ These are the bindings that tell CUDA your gpu card and the CUDA capabilities th
     print("="*60 + "\n")
 ```
 
-Since our code is self contained we don't need additional headers. If you had macros or other functions you could add them. Notice how for our output we have some PTX (Parallel Thread Execution) virtual assembly language. This is the most portable option and can be used across different GPUs. It is also human readable and can be stepped through and checked for any potential issues. Below is our code
+Since our code is self contained we don't need additional headers. If you had macros or other functions you could add them. Notice how for our output we have some PTX (Parallel Thread Execution) virtual assembly language. This is the most portable option and can be used across different GPUs. It is also human readable and can be stepped through and checked for any potential issues.
+
+<details>
+<summary>PTX Code</summary>
 
 ```
 ============================================================
@@ -814,5 +817,511 @@ $L__BB0_3:
 
 }
 ```
+</details>
+
 
 There are other options to compile to. NVRTC can be compiled down to binary for better performance but this makes it specific to the GPU architecture that you are using.
+
+## Launching the Kernel
+
+Now we will launch this kernel and blur our image.
+
+```python
+# ============================================================
+    # Step 6: Configure and Launch Kernel
+    # ============================================================
+    # Reference: https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__EXEC.html
+    print(f"\n{'='*60}")
+    print("Step 6: Launch Kernel")
+    print(f"{'='*60}")
+    
+    # Configure 2D grid of thread blocks for parallel image processing
+    # Each thread processes exactly one pixel
+    # Grid = collection of blocks, Block = collection of threads
+    
+    # Block dimensions: threads per block in each dimension
+    # 16×16 = 256 threads per block (common choice for 2D workloads)
+    # Block size affects:
+    #   - Occupancy (threads per SM)
+    #   - Register usage per thread
+    #   - Shared memory per block
+    # Typical block sizes: 16×16, 32×8, or 256×1
+    BLOCK_SIZE_X = 16
+    BLOCK_SIZE_Y = 16
+    
+    # Grid dimensions: number of blocks needed to cover entire image
+    # Formula: ceil(dimension / block_size) = (dimension + block_size - 1) // block_size
+    # This ensures we have enough threads even if image size isn't divisible by block size
+    # Example: width=800, BLOCK_SIZE_X=16 → GRID_SIZE_X = (800+15)//16 = 50 blocks
+    # Some threads in the last block may be out of bounds (handled by kernel)
+    GRID_SIZE_X = (width + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X
+    GRID_SIZE_Y = (height + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
+    
+    print(f"  Grid:  {GRID_SIZE_X} × {GRID_SIZE_Y} blocks")
+    print(f"  Block: {BLOCK_SIZE_X} × {BLOCK_SIZE_Y} threads")
+    print(f"  Total: {GRID_SIZE_X * GRID_SIZE_Y * BLOCK_SIZE_X * BLOCK_SIZE_Y:,} threads")
+    
+    # ============================================================
+    # Prepare Kernel Arguments (NumPy approach)
+    # Reference: https://nvidia.github.io/cuda-python/cuda-bindings/latest/overview.html#preparing-kernel-arguments
+    # ============================================================
+    
+    # Kernel signature (from generated CUDA code):
+    # extern "C" __global__ void gaussian_blur(
+    #     const unsigned char* input,    // Pointer → np.intp
+    #     unsigned char* output,         // Pointer → np.intp
+    #     int width,                     // Integer → np.int32
+    #     int height,                    // Integer → np.int32
+    #     int channels)                  // Integer → np.int32
+    
+    # CRITICAL: Each argument must be wrapped in a NumPy array
+    # This provides a stable memory location and ctypes.data attribute
+    # Type mapping reference:
+    #   - Pointers (any type*): np.intp (platform-aware pointer size)
+    #   - int: np.int32
+    #   - unsigned int: np.uint32
+    #   - float: np.float32
+    #   - double: np.float64
+    
+    # Prepare each kernel argument as a NumPy array
+    args_data = [
+        # Argument 1: input pointer (GPU memory address)
+        # int(d_input) converts CUdeviceptr to Python int
+        # np.array([...], dtype=np.intp) wraps in platform-aware pointer type
+        # On 64-bit systems: np.intp = np.int64
+        # On 32-bit systems: np.intp = np.int32
+        np.array([int(d_input)], dtype=np.intp),
+        
+        # Argument 2: output pointer (GPU memory address)
+        np.array([int(d_output)], dtype=np.intp),
+        
+        # Argument 3: width (image width in pixels)
+        # np.int32 matches C int type (4 bytes, signed)
+        np.array([width], dtype=np.int32),
+        
+        # Argument 4: height (image height in pixels)
+        np.array([height], dtype=np.int32),
+        
+        # Argument 5: channels (number of color channels: 1, 3, or 4)
+        np.array([channels], dtype=np.int32)
+    ]
+    
+    # Create contiguous array of pointers to each argument
+    # cuLaunchKernel expects: void** kernelParams (pointer to array of pointers)
+    # arg.ctypes.data gives memory address of each NumPy array
+    # We create an array containing these addresses
+    # Conceptually: void* args[] = {&input, &output, &width, &height, &channels}
+    # Then kernelParams points to args
+    args = np.array([arg.ctypes.data for arg in args_data], dtype=np.intp)
+    
+    # cuLaunchKernel(f, gridDimX, gridDimY, gridDimZ, blockDimX, blockDimY, blockDimZ,
+    #                sharedMemBytes, hStream, kernelParams, extra)
+    # Launch CUDA kernel with specified configuration
+    # Reference: https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__EXEC.html#group__CUDA__EXEC_1gb8f3dc3031b40da29d5f9a7139e52e15
+    #
+    # f: Kernel function handle from cuModuleGetFunction
+    # gridDimX, gridDimY, gridDimZ: Grid dimensions (blocks per grid)
+    #   - Total blocks = gridDimX × gridDimY × gridDimZ
+    #   - We use 2D grid (gridDimZ=1) for image processing
+    # blockDimX, blockDimY, blockDimZ: Block dimensions (threads per block)
+    #   - Total threads per block = blockDimX × blockDimY × blockDimZ
+    #   - Max threads per block: typically 1024 (depends on GPU)
+    # sharedMemBytes: Dynamic shared memory per block in bytes (0 = none)
+    #   - Static shared memory declared in kernel doesn't count toward this
+    # hStream: Stream to execute kernel in (for async execution)
+    # kernelParams: Pointer to array of argument pointers (void**)
+    #   - Must point to contiguous array in memory
+    #   - Each element is a pointer to an argument
+    # extra: Reserved parameter (must be 0, for future CUDA versions)
+    #
+    # Returns: (CUresult, None) - error code and no return value
+    # Kernel launch is asynchronous - returns immediately
+    checkCudaErrors(driver.cuLaunchKernel(
+        kernel,                    # Function: Compiled kernel to execute
+        GRID_SIZE_X,               # Grid X: Blocks in X dimension
+        GRID_SIZE_Y,               # Grid Y: Blocks in Y dimension
+        1,                         # Grid Z: 1 (2D grid, not 3D)
+        BLOCK_SIZE_X,              # Block X: Threads per block in X
+        BLOCK_SIZE_Y,              # Block Y: Threads per block in Y
+        1,                         # Block Z: 1 (2D block, not 3D)
+        0,                         # Shared memory: 0 bytes (none needed)
+        stream,                    # Stream: Execute in this command queue
+        args.ctypes.data,          # Arguments: Pointer to argument array
+        0))                        # Extra: Reserved (must be 0)
+    
+    print(f"  Kernel launched")
+```
+
+The first thing we need to grasp is the blocks and grid size. 
+
+| Concept | What It Is | Size Limits | Can Communicate? | Where It Runs | Example |
+|---------|-----------|-------------|------------------|---------------|---------|
+| **Thread** | Single execution unit | N/A (smallest unit) | With threads in same block only | Inside a block on an SM | Thread 5 processes pixel (85, 160) |
+| **Block** | Group of threads | 1-1,024 threads<br/>Max dimensions: 1024×1024×64 | Threads within block can sync/share | Entire block on one SM | Block (5,10) with 256 threads processes 16×16 pixel region |
+| **Grid** | All blocks in kernel | X: 2³¹-1 blocks<br/>Y,Z: 65,535 blocks | Blocks are independent | Distributed across all SMs | Grid of 1,900 blocks covers entire 800×600 image |
+| **Warp** | 32 consecutive threads | Always 32 threads | Execute same instruction | Scheduled together on SM | Threads 0-31 in a block = 1 warp |
+| **SM** | Streaming Multiprocessor | Hardware unit | N/A | Physical GPU chip | RTX 5090 has 170 SMs, each runs multiple blocks |
+
+### Helpful Definitions
+
+**Thread**: A thread is a unit of execution and each thread will operate on different data
+
+**Block**: A group of threads that can be executed sequentially or in parallel. Threads in the same block can share some memory and communicate
+
+**Grid**: CUDA blocks are grouped together and form grids
+
+**Warp**: GPUs execute groups of threads known as warps. Warps are always 32 parallel threads that execute the same instruction simultaneously. (NVIDIA has always used 32 threads in order to be backwards compatible and performant when grabbing memory)
+
+**SM (Streaming Multiprocessor)**: Blocks get distributed among the amount of SMs that your GPU has.
+
+Here is a flow of how this blur will work on a 5090.
+
+<div class="mermaid">
+graph TB
+    GPU["<b>NVIDIA RTX 5090 (Blackwell)</b><br/>170 SMs × 128 CUDA cores/SM = 21,760 CUDA cores<br/>32 GB GDDR7 @ 1,792 GB/s bandwidth<br/>575W TGP"]
+    
+    Image["<b>IMAGE: 800×600 RGB</b><br/>480,000 pixels × 3 channels<br/>1,440,000 bytes"]
+    
+    subgraph Kernel["<b>7×7 GAUSSIAN KERNEL</b>"]
+        K1["<b>49 weights per pixel</b><br/>Centered at target pixel<br/>Larger kernel = more blur"]
+    end
+    
+    subgraph GridLevel["<b>GRID: 50×38 blocks</b>"]
+        Grid["<b>1,900 blocks total</b><br/>Cover entire 800×600 image<br/>(800÷16) × (600÷16)"]
+    end
+    
+    subgraph BlockLevel["<b>BLOCK: 16×16 threads</b>"]
+        Block["<b>256 threads per block</b><br/>Each thread = 1 pixel<br/>Organized in 8 warps of 32 threads"]
+    end
+    
+    subgraph ThreadWork["<b>EACH THREAD:</b>"]
+        T1["<b>Position:</b> x = blockIdx.x×16 + threadIdx.x<br/>y = blockIdx.y×16 + threadIdx.y"]
+        T2["<b>Read:</b> 49 neighbor pixels<br/>7×7 window around (x,y)"]
+        T3["<b>Compute:</b> Weighted sum<br/>pixel[i,j] × kernel[i,j]<br/>for all 49 positions"]
+        T4["<b>Write:</b> Normalized result<br/>sum ÷ kernel_total"]
+    end
+    
+    subgraph Parallel["<b>RTX 5090 EXECUTION:</b>"]
+        SM["<b>170 SMs available</b><br/>Each SM runs multiple warps<br/>~15,200 warps total<br/>(1,900 blocks × 8 warps/block)"]
+        Concurrent["<b>Parallelism:</b><br/>486,400 threads launched<br/>Thousands execute simultaneously"]
+    end
+    
+    GPU --> Image
+    Image --> Kernel
+    Kernel --> Grid
+    Grid --> Block
+    Block --> T1
+    T1 --> T2
+    T2 --> T3
+    T3 --> T4
+    T4 --> SM
+    SM --> Concurrent
+    
+    style GPU fill:#2c3e50,stroke:#3498db,stroke-width:5px,color:#ecf0f1
+    style Image fill:#34495e,stroke:#95a5a6,stroke-width:4px,color:#ecf0f1
+    style Kernel fill:#e8f4f8,stroke:#5dade2,stroke-width:4px,color:#2c3e50
+    style K1 fill:#d6eaf8,stroke:#5dade2,stroke-width:3px,color:#2c3e50
+    style GridLevel fill:#e8f8f5,stroke:#52be80,stroke-width:4px,color:#196f3d
+    style Grid fill:#d5f4e6,stroke:#52be80,stroke-width:3px,color:#196f3d
+    style BlockLevel fill:#fef9e7,stroke:#f39c12,stroke-width:4px,color:#7d6608
+    style Block fill:#fcf3cf,stroke:#f39c12,stroke-width:3px,color:#7d6608
+    style ThreadWork fill:#fdecea,stroke:#e74c3c,stroke-width:4px,color:#922b21
+    style T1 fill:#fadbd8,stroke:#e74c3c,stroke-width:3px,color:#922b21
+    style T2 fill:#fadbd8,stroke:#e74c3c,stroke-width:3px,color:#922b21
+    style T3 fill:#fadbd8,stroke:#e74c3c,stroke-width:3px,color:#922b21
+    style T4 fill:#fadbd8,stroke:#e74c3c,stroke-width:3px,color:#922b21
+    style Parallel fill:#f4ecf7,stroke:#8e44ad,stroke-width:4px,color:#4a235a
+    style SM fill:#ebdef0,stroke:#8e44ad,stroke-width:3px,color:#4a235a
+    style Concurrent fill:#ebdef0,stroke:#8e44ad,stroke-width:3px,color:#4a235a
+</div>
+
+## Viewing Our Results
+
+I may have asked for a png image to be generated using shapes in the theme of Dragon Ball Z. This is currently SOTA shape creation so do not complain about artistic abilities. Once we launch our kernel we can finally see the results of our effort.
+
+![blur](/assets/images/gaussian_blur_comparison.png)
+
+It worked we now have a blurry image. Now let's examine the same thing but using the higher level more pythonic library called cuda core
+
+# Cuda Core
+
+Cuda core offers a higher level API than cuda bindings. It's a bit more pythonic so if you love python you may like this more.
+
+One of the larger differences between the two is the compiling and launching code
+
+```python
+# Generate CUDA C++ kernel source code as string
+    # This function creates a templated kernel with Gaussian weights embedded
+    kernel_code = generate_gaussian_kernel_code_cuda_core(kernel_size, sigma)
+    
+    # Get architecture string for compilation
+    # compute_capability is a tuple (major, minor), e.g., (7, 5)
+    # We join them to create "75" for sm_75 architecture flag
+    arch = "".join(f"{i}" for i in dev.compute_capability)
+    
+    # ProgramOptions - Specify compiler options for NVRTC
+    # This is a dataclass that holds compilation settings
+    # Parameters:
+    #   std: C++ standard to use (e.g., "c++11", "c++14", "c++17", "c++20")
+    #   arch: Target GPU architecture (e.g., "sm_75" for compute capability 7.5)
+    #        Format: "sm_XY" where X=major, Y=minor
+    #   Other options can include: optimize, debug, include_paths, etc.
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.ProgramOptions.html
+    program_options = ProgramOptions(
+        std="c++17",           # Use C++17 standard (for modern C++ features)
+        arch=f"sm_{arch}"      # Target specific GPU architecture
+    )
+    
+    # Program() - Create a program object from source code
+    # This represents a compilation unit (similar to nvrtcCreateProgram in cuda.bindings)
+    # Parameters:
+    #   code: Source code as string (CUDA C++ kernel code)
+    #   code_type: Type of source code
+    #       - "c++": CUDA C++ source (most common)
+    #       - "ptx": PTX assembly
+    #       - "cubin": Binary CUBIN
+    #   options: ProgramOptions object with compiler settings
+    # The Program object manages the NVRTC program lifecycle
+    # No compilation happens yet - that's done by compile()
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.Program.html
+    prog = Program(
+        kernel_code,           # CUDA C++ source code string
+        code_type="c++",       # Specify source is C++ (not PTX/CUBIN)
+        options=program_options  # Compiler options
+    )
+    
+    # compile() - Compile the program to binary format
+    # This performs the actual compilation using NVRTC
+    # Parameters:
+    #   target_type: Output format
+    #       - "cubin": Compile to CUBIN (binary, GPU-specific, faster to load)
+    #       - "ptx": Compile to PTX (assembly, portable across GPUs)
+    #       - "ltoir": LTO-IR for link-time optimization
+    #   name_expressions: Tuple of kernel/function names to compile
+    #       - For templates, specify instantiation: "kernel<float>"
+    #       - Can compile multiple: ("kernel<float>", "kernel<int>")
+    #       - Only specified templates are compiled (saves time/space)
+    # Returns: ObjectCode object containing the compiled binary
+    # The ObjectCode can be used to extract kernels
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.Program.html#cuda.core.experimental.Program.compile
+    module = prog.compile(
+        "cubin",  # Compile to CUBIN (binary format, faster than PTX)
+        name_expressions=("gaussian_blur<unsigned char>",)  # Template instantiation
+    )
+    
+    # get_kernel() - Extract a specific kernel from compiled code
+    # Parameters:
+    #   name: Kernel function name (must match what was compiled)
+    #         For templates, use full instantiated name: "kernel<type>"
+    # Returns: Kernel object that can be launched
+    # Unlike cuda.bindings (cuModuleGetFunction), no need for bytes encoding
+    # The Kernel object is a managed wrapper around CUfunction
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.Kernel.html
+    kernel = module.get_kernel("gaussian_blur<unsigned char>")
+    
+    print(f"  Kernel compiled successfully")
+```
+
+Notice how in this example we compile to binary instead of PTX just to change it up.Now we can launch the kernel
+
+## Launching the Kernel
+
+```python
+# ============================================================
+    # Step 4: Configure and Launch Kernel
+    # ============================================================
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.launch.html
+    print(f"\n{'='*60}")
+    print("Step 4: Launch Kernel")
+    print(f"{'='*60}")
+    
+    # Configure 2D grid of thread blocks for parallel image processing
+    # Each thread processes exactly one pixel
+    
+    # Block dimensions: threads per block in each dimension
+    # 16×16 = 256 threads per block (common for 2D image processing)
+    BLOCK_SIZE_X = 16
+    BLOCK_SIZE_Y = 16
+    
+    # Grid dimensions: number of blocks needed to cover entire image
+    # Formula: ceil(dimension / block_size)
+    # This ensures enough threads even if image size isn't divisible by block size
+    GRID_SIZE_X = (width + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X
+    GRID_SIZE_Y = (height + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
+    
+    print(f"  Grid:  {GRID_SIZE_X} x {GRID_SIZE_Y} blocks")
+    print(f"  Block: {BLOCK_SIZE_X} x {BLOCK_SIZE_Y} threads")
+    print(f"  Total: {GRID_SIZE_X * GRID_SIZE_Y * BLOCK_SIZE_X * BLOCK_SIZE_Y:,} threads")
+    
+    # LaunchConfig - Configure kernel launch parameters (Pythonic!)
+    # This replaces the complex grid/block parameter passing in cuda.bindings
+    # Parameters:
+    #   grid: Grid dimensions as tuple or int
+    #       - Tuple: (grid_x, grid_y, grid_z) for 2D/3D grids
+    #       - Int: grid_x (for 1D grid)
+    #   block: Block dimensions as tuple or int
+    #       - Tuple: (block_x, block_y, block_z) for 2D/3D blocks
+    #       - Int: block_x (for 1D block)
+    #   shared_mem: Dynamic shared memory per block in bytes (default: 0)
+    #   stream: Stream to execute in (default: None = default stream)
+    # Much cleaner than cuda.bindings' 11-parameter cuLaunchKernel!
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.LaunchConfig.html
+    config = LaunchConfig(
+        grid=(GRID_SIZE_X, GRID_SIZE_Y),   # 2D grid dimensions
+        block=(BLOCK_SIZE_X, BLOCK_SIZE_Y)  # 2D block dimensions
+    )
+    
+    # launch() - Launch CUDA kernel (the Pythonic way!)
+    # This is the high-level kernel launch function
+    # Parameters:
+    #   stream: Stream to execute kernel in
+    #   config: LaunchConfig object with grid/block configuration
+    #   kernel: Kernel object to execute
+    #   *args: Kernel arguments (variable length)
+    # 
+    # Kernel argument passing:
+    #   - For GPU pointers: Use .data.ptr from CuPy arrays
+    #       d_input.data.ptr gets the GPU memory address
+    #   - For scalars: Pass Python int/float directly
+    #       cuda.core automatically converts to correct C type
+    #   - For CuPy types: Use cp.int32(), cp.uint64(), etc. for explicit types
+    # 
+    # Type mapping (automatic):
+    #   Python int → C int (usually int32)
+    #   Python float → C double
+    #   cp.int32(x) → C int32_t
+    #   cp.uint64(x) → C uint64_t
+    #   cp.float32(x) → C float
+    # 
+    # No manual argument preparation needed!
+    # Compare to cuda.bindings:
+    #   - No need to wrap args in NumPy arrays
+    #   - No need to create args array with ctypes.data
+    #   - No need to manually convert pointers to integers
+    # 
+    # The kernel signature in CUDA C++:
+    #   __global__ void gaussian_blur(
+    #       const unsigned char* input,   // d_input.data.ptr
+    #       unsigned char* output,        // d_output.data.ptr  
+    #       int width,                    // width (Python int → C int)
+    #       int height,                   // height (Python int → C int)
+    #       int channels)                 // channels (Python int → C int)
+    # 
+    # Returns: None
+    # Kernel launch is asynchronous - returns immediately
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental.launch.html
+    launch(
+        stream,              # Stream: Execute kernel in this stream
+        config,              # Config: Grid and block configuration
+        kernel,              # Kernel: Compiled kernel to execute
+        d_input.data.ptr,    # Arg 1: Input GPU pointer (unsigned char*)
+        d_output.data.ptr,   # Arg 2: Output GPU pointer (unsigned char*)
+        width,               # Arg 3: Image width (int)
+        height,              # Arg 4: Image height (int)
+        channels             # Arg 5: Number of channels (int)
+    )
+    
+    print(f"  Kernel launched")
+    
+    # ============================================================
+    # Step 5: Synchronize and Retrieve Results
+    # ============================================================
+    print(f"\n{'='*60}")
+    print("Step 5: Synchronize and Get Results")
+    print(f"{'='*60}")
+    
+    # sync() - Synchronize stream (wait for all operations to complete)
+    # This blocks the CPU thread until all operations in the stream finish
+    # Operations include:
+    #   - Kernel launches
+    #   - Memory copies
+    #   - Any other async operations
+    # Similar to cuStreamSynchronize in cuda.bindings
+    # After sync(), d_output contains the blurred image on GPU
+    # Reference: https://nvidia.github.io/cuda-python/cuda-core/latest/generated/cuda.core.experimental._stream.Stream.html#cuda.core.experimental._stream.Stream.sync
+    stream.sync()
+    
+    print(f"  Stream synchronized")
+    
+    # cp.asnumpy() - Convert CuPy array back to NumPy (copy GPU→CPU)
+    # This automatically:
+    #   1. Copies data from GPU to CPU (like cuMemcpyDtoH)
+    #   2. Returns a NumPy array
+    # The copy is synchronous - waits for GPU to finish
+    # CuPy GPU memory remains allocated until d_output is garbage collected
+    output_array = cp.asnumpy(d_output)
+    
+    print(f"  Result copied to CPU: {output_array.nbytes:,} bytes")
+```
+
+One benefit over cuda core is you do not have to manually clean up the memory like we had to do for the bindings.
+
+## Viewing Result
+
+Again the image is the same
+
+![blur](/assets/images/gaussian_blur_comparison.png)
+
+
+## Timing Comparisons
+
+GPUs go burrr
+
+```
+====================================================================================================
+SUMMARY
+====================================================================================================
+Image Size           CPU (ms)     Bindings (ms)   Core (ms)    Bindings     Core        
+                                  (PTX)           (CUBIN)      Speedup      Speedup     
+----------------------------------------------------------------------------------------------------
+400×300                    1.56           0.08         0.09        19.12x        16.45x
+800×600                    6.13           0.35         0.30        17.31x        20.30x
+1280×720 (HD)             14.12           0.50         0.49        28.29x        28.60x
+1920×1080 (Full HD)       30.68           0.78         0.90        39.34x        34.21x
+2560×1440 (2K)            62.76           1.36         1.57        46.20x        39.93x
+====================================================================================================
+
+AVERAGE PERFORMANCE ACROSS ALL SIZES:
+  CPU:            23.05 ms
+  cuda.bindings:  0.61 ms  (37.50x speedup)
+  cuda.core:      0.67 ms  (34.31x speedup)
+```
+
+![timings](/assets/images/cuda_python_timings.png)
+
+So we can see that cuda bindings and cuda core are much faster. The question is when do we choose to use PTX or CUBIN. The answer to this question is it depends on the amount of cold starts you think you will have in the system. If you think the first initial run being slower will have large issues in your system then CUBIN is the better option.
+
+## Timing Cold Start
+
+The difference is pretty large on cold starts.
+
+```
+================================================================================
+RESULTS
+================================================================================
+Metric                              PTX (JIT)       CUBIN (Pre-compiled)
+--------------------------------------------------------------------------------
+Cold-start time                     97.515          14.766          ms
+Warm per-launch                     4.386           4.395           µs
+```
+
+![cold_start](/assets/images/cold_start_cuda_times.png)
+
+When using CUBIN you dont have to use a JIT which takes a while on a cold start. Cold starts happen for a variety of reasons, new container/process, serverless function got invoked, services were rebooted, etc...
+
+If this is an issue that you need to mitigate then this would be when you want to prioritize CUBIN if this type of problem is very common for you.
+
+After everything is "warmed up" then both are very fast. Warming up is a term for allocating and caching all of the modules, memory, and hardware states. These are the major areas that are "warmed up" and make it so any other runs are extremely quick
+
+1) JIT compilation cache (PTX only)
+2) GPU module cache (both)
+3) GPU memory allocator pools (both)
+4) GPU context initialization (both)
+
+Once all these operations are done or cached subsequent operations are very fast and you will hit super sonic speeds.
+
+# Conclusion
+
+Now we have covered multiple tools for you to use when you need more speed and power to your algorithms. GPUs provide a level of parallel operations that transcend the CPU and allow for algorithms to run at speeds that make your head spin. Running algorithms on the GPU is not an automatic win. GPUs work best when the algorithm or stages of the algorithm can be done in parallel.
+
+You are not handcuffed by the slowness of python anymore. You have been unchained and know more tools that you can use when necessary. CuPy, Numba, and cuda python are all very valuable to those that care about performance. Granted you won't ever break free of that ball and chain called python. ML/AI industry is cursed and bound by blood to a snake.

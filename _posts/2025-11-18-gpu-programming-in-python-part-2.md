@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "GPU Programming in Python Part 2: Merging with the Green Machine using cuda-python"
-date: 2025-11-16
+date: 2025-11-18
 categories: ML
 ---
 
@@ -1379,3 +1379,5 @@ Once all these operations are done or cached subsequent operations are very fast
 Now we have covered multiple tools for you to use when you need more speed and power to your algorithms. GPUs provide a level of parallel operations that transcend the CPU and allow for algorithms to run at speeds that make your head spin. Running algorithms on the GPU is not an automatic win. GPUs work best when the algorithm or stages of the algorithm can be done in parallel.
 
 You are not handcuffed by the slowness of python anymore. You have been unchained and know more tools that you can use when necessary. CuPy, Numba, and cuda python are all very valuable to those that care about performance. Granted you won't ever break free of that ball and chain called python. ML/AI industry is cursed and bound by blood to a snake.
+
+[Code used in Article](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/python_and_cuda/cuda-gaussian-blur.ipynb)

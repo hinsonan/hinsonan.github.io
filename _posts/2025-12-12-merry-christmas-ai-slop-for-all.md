@@ -1,11 +1,15 @@
 ---
 layout: post
 title: "Merry Christmas: Santa is Bringing AI Slop"
-date: 2025-12-18
+date: 2025-12-12
 categories: ML
 ---
 
-Ho Ho Ho to all vibe coders and all those failing production pipelines. Santa is coming to town and this year he's checking his AI generated naughty and nice list and didn't review it beforehand. His fat self is sliding down your dirty chimney and your present this year is a toy that looks correct at a glance but the more you look at it you realize Santa just gave you Mrs. Claus's faulty elf action figure with 12 fingers and a message attached that says "LGTM I pushed this +500 changes through to prod. My agent workflow told me it was high quality". Santa climbs his way to the roof and heads off but instead of doing his normal route that uses `A*` search and plans an optimal path he is using a new sleek agent workflow that charted his path. The agents said he was absolutely right about this being better than old crusty `A*`. The only issue is it cost thousands of dollars to make this new route and the agent workflow had a hiccup and kept saying Santa isn't real and refused to make a route for him to follow. Now due to this new expensive route planning tool he had to layoff some elves and he is now vibing his way through your neighborhoods with no plan. Your fake girlfriend doll is never coming but it's ok arch linux is still there for you.
+Ho Ho Ho to all vibe coders and all those failing production pipelines. Santa is coming to town and this year he's checking his AI generated naughty and nice list and didn't review it beforehand. His fat self is sliding down your dirty chimney and your present this year is a toy that looks correct at a glance but the more you look at it you realize Santa just gave you Mrs. Claus's faulty elf action figure with 12 fingers and a message attached that says "LGTM I pushed this +500 changes through to prod. My agent workflow told me it was high quality". 
+
+Santa climbs his way to the roof and heads off but instead of doing his normal route that uses `A*` search and plans an optimal path he is using a new sleek agent workflow that charted his path. The agents said he was absolutely right about this being better than old crusty `A*`. The only issue is it cost thousands of dollars to make this new route and the agent workflow had a hiccup and kept saying Santa isn't real and refused to make a route for him to follow. 
+
+Now due to this new expensive route planning tool he had to layoff some elves and he is now vibing his way through your neighborhoods with no plan. Your fake girlfriend doll is never coming but it's ok arch linux is still there for you.
 
 
 # Tech Industry Woes
@@ -32,8 +36,7 @@ def quicksort(arr):
 This isn't right since quicksort is an inplace algorithm and is not supposed to create extra memory with all those arrays. Now I know the AI bros will come out of the woodworks and begin to chant in their robes about me not prompting correctly. Sure the model can make a proper quicksort algorithm if you tell it to. In fact sometimes Opus 4.5 will give a longer response that looks like this
 
 ```python
-Here's a classic quicksort implementation in Python:
-pythondef quicksort(arr):
+def quicksort(arr):
     if len(arr) <= 1:
         return arr
     
@@ -43,11 +46,16 @@ pythondef quicksort(arr):
     right = [x for x in arr if x > pivot]
     
     return quicksort(left) + middle + quicksort(right)
+```
+```
 Usage:
 pythonnums = [3, 6, 8, 10, 1, 2, 1]
 print(quicksort(nums))  # [1, 1, 2, 3, 6, 8, 10]
 If you need an in-place version (more memory efficient):
-pythondef quicksort_inplace(arr, low=0, high=None):
+```
+
+```python
+def quicksort_inplace(arr, low=0, high=None):
     if high is None:
         high = len(arr) - 1
     
@@ -67,6 +75,9 @@ def partition(arr, low, high):
     
     arr[i + 1], arr[high] = arr[high], arr[i + 1]
     return i + 1
+```
+
+```
 Usage:
 pythonnums = [3, 6, 8, 10, 1, 2, 1]
 quicksort_inplace(nums)
@@ -89,13 +100,21 @@ increases completion time by 19%—AI tooling slowed developers down.](https://a
 
 I can already hear the LLM fan boys saying that models have gotten better since the studies. This is true but they have not grown that much better. We can all feel the plateau. I know I have experienced this a lot with the newest models. I feel very fast at the beginning especially if it's a new project but then the sins begin to add up or I have to keep prompting to get what I want. In many cases if I would have done the work myself or just use a light layer of generated code I would have been much faster.
 
-So if AI isn't the real reason then why are there all these layoffs? AI is a great excuse to pull the outsource trigger and trim the fat. Let's not disillusion ourselves. Big companies do not operate fast or efficiently. Some teams within them do but those are pretty rare. There are a lot of economic factors at play but this environment gives them a great excuse to get rid of teams that are not as critical and cut some middle management layers. The darker angle is that these companies do layoffs then post jobs in other countries and try to bring the salaries for engineer/developer positions down. Outsourcing has been a thing for a long time and it gets abused heavily in tech. At some point things will return to a more stable level but it is hard to predict how long this will last.
+So if AI isn't the real reason then why are there all these layoffs? AI is a great excuse to pull the outsource trigger and trim the fat. Let's not disillusion ourselves. Big companies do not operate fast or efficiently. Some teams within them do but those are pretty rare. There are a lot of economic factors at play but this environment gives them a great excuse to get rid of teams that are not as critical and cut some middle management layers. 
+
+The darker angle is that these companies do layoffs then post jobs in other countries and try to bring the salaries for engineer/developer positions down. Outsourcing has been a thing for a long time and it gets abused heavily in tech. At some point things will return to a more stable level but it is hard to predict how long this will last.
 
 ## Interviews Have Become Stupid
 
-The candidate pool has become saturated from all these events. If you work in the USA you have to compete with all the people that got laid off along with the rest of the world that is competing for your job. If you are a new grad it is very hard since there are many experienced developers in the pool right now. It feels like devs are expected to know the world in order to write some web app or design a highly scalable flawless system at the drop of a hat. Don't get me wrong I actually enjoy some leetcode and I enjoy system design a lot. The issue is when you get shafted with an area you may not be strong in or know much about. It may be hard to design a signal analysis system if you have never worked with radars before. I have seen interviews where certain people are asked off the wall questions like prove this theorem just so there is an excuse not to hire them. These leetcode style interviews are bad filters in order to try and reduce the amount of people that big companies have to see.
+The candidate pool has become saturated from all these events. If you work in the USA you have to compete with all the people that got laid off along with the rest of the world that is competing for your job. If you are a new grad it is very hard since there are many experienced developers in the pool right now. It feels like devs are expected to know the world in order to write some web app or design a highly scalable flawless system at the drop of a hat. 
 
-There are many better interview tactics that let you know how well the person will work out technically. Drill down interviews work infinitely better in my experience than leetcode style. The issue with DSA rounds is you can have people perform well on them but you gain no extra insight into how they will do at the job. Interviewing is difficult no matter the method. Drill downs allow people to pick a topic the person knows well and continue to go deep into the depths. This tells me exactly where they are at and their problem solving abilities. It is a great system for interviews. It is also very challenging and many may prefer DSA style interviews. Perhaps we can go deeper on this topic in another post.
+Don't get me wrong I actually enjoy some leetcode and I enjoy system design a lot. The issue is when you get shafted with an area you may not be strong in or know much about. It may be hard to design a signal analysis system if you have never worked with radars before. I have seen interviews where certain people are asked off the wall questions like prove this theorem just so there is an excuse not to hire them. These leetcode style interviews are bad filters in order to try and reduce the amount of people that big companies have to see.
+
+There are many better interview tactics that let you know how well the person will work out technically. Drill down interviews work infinitely better in my experience than leetcode style. 
+
+The issue with DSA rounds is you can have people perform well on them but you gain no extra insight into how they will do at the job. Interviewing is difficult no matter the method. Drill downs allow people to pick a topic the person knows well and continue to go deep into the depths. 
+
+This tells me exactly where they are at and their problem solving abilities. It is a great system for interviews. It is also very challenging and many may prefer DSA style interviews. Perhaps we can go deeper on this topic in another post.
 
 ## Slop Has Infested Education
 
@@ -105,7 +124,9 @@ One of the issues is the students have offloaded their thinking to an LLM and do
 
 You can't fight this either. You can't ban it. LLMs are here to stay. The way to go about this when designing your CS courses is to have the courses be more engaging and thoughtful. LLMs mean you can't assign certain types of homework or have any writing assignments that can easily be done with LLMs.
 
-The real problem is that students seem to get by with LLM generated answers or heavy assistance from them. I understand programming 101 cannot be that hard but you almost have to account for LLM help in all assignments. Now in my experience the students will not have the knowledge to ask the right questions so most of your programming assignments beyond "write a for loop" or "write a class" will have some interesting answers to say the least. You would think LLMs could do basic programming homework but many times students ask wild questions that lead to crazy code snippets. Your class should be more open in the problems that it solves (more end-to-end solutions) and exams should be done one-on-one if possible. The way to tackle this issue is to make sure even with LLM assistance students still have to dig deep and understand the concepts. You cannot be a lazy professor and yes this means you have to redo your curriculums.
+The real problem is that students seem to get by with LLM generated answers or heavy assistance from them. I understand programming 101 cannot be that hard but you almost have to account for LLM help in all assignments. Now in my experience the students will not have the knowledge to ask the right questions so most of your programming assignments beyond "write a for loop" or "write a class" will have some interesting answers to say the least. 
+
+You would think LLMs could do basic programming homework but many times students ask wild questions that lead to crazy code snippets. Your class should be more open in the problems that it solves (more end-to-end solutions) and exams should be done one-on-one if possible. The way to tackle this issue is to make sure even with LLM assistance students still have to dig deep and understand the concepts. You cannot be a lazy professor and yes this means you have to redo your curriculums.
 
 Students, you need to lock in and brace yourself for absolute chaos. Your grades do not matter but your knowledge does. You can get an A and be an absolute idiot. Forget the grades and understand the theory and execution. Your grades will be fine if you do this. You need to be asking your professor why and how all this works. Ask and engage with the material. If there is a chance to work on a real or semi real project do it. Start a project and ask the teacher for input or code review. The time of just passing by is over. You need to be alert and get your head in the game.
 
@@ -113,7 +134,11 @@ I will point out that after teaching I am not worried at all about job security.
 
 ## Consumer Markets are Cooked
 
-I am not even going to address the GPU prices and supply issues. We all know those are issues. Now the AI grim reaper has destroyed the ability to buy DDR5 RAM. RAM...The part of your PC that you could always buy for cheap has in many cases overshot the prices of CPUs and some GPUs. The 64 GB RAM kit I bought one year ago for ~$150 is now sitting around ~$755. How is this even allowed? What world am I living in where RAM is more than my CPU? No one can afford to build a PC now with all these past years of shenanigans. This is the final straw for a lot of people. I don't know what to tell people who want to build an affordable PC. The reason for all of this is so resources can go to fund data centers and frontier model development. You can't afford anything because we need to send these valuable resources to OpenAI so we can have a model hallucinate (this term used to be called being wrong) about how to sort an array. My fear is that this drives people into being forced to rent their computers from cloud services or people get marketed to move everything to the cloud where you can rent 64GB of RAM. What an awful world to live in. You can hate AI all you want but you are being affected either way. You will own nothing and be happy.
+I am not even going to address the GPU prices and supply issues. We all know those are issues. Now the AI grim reaper has destroyed the ability to buy DDR5 RAM. RAM...The part of your PC that you could always buy for cheap has in many cases overshot the prices of CPUs and some GPUs. The 64 GB RAM kit I bought one year ago for ~$150 is now sitting around ~$755. How is this even allowed? What world am I living in where RAM is more than my CPU? 
+
+No one can afford to build a PC now with all these past years of shenanigans. This is the final straw for a lot of people. I don't know what to tell people who want to build an affordable PC. The reason for all of this is so resources can go to fund data centers and frontier model development. You can't afford anything because we need to send these valuable resources to OpenAI so we can have a model hallucinate (this term used to be called being wrong) about how to sort an array. 
+
+My fear is that this drives people into being forced to rent their computers from cloud services or people get marketed to move everything to the cloud where you can rent 64GB of RAM. What an awful world to live in. You can hate AI all you want but you are being affected either way. You will own nothing and be happy.
 
 ## Awful AI Integration
 
@@ -235,7 +260,9 @@ These are all areas you can go deep in and if you can demonstrate some of these 
 
 ## Sanity Will Return so be a Cockroach
 
-At some point (not next year) sanity will come back. The market will bounce back and developers will have a more favorable market. The trick is to survive the great culling and stick around. The way to survive is to adapt and continue to be in demand. It may look different if all the markets are saturated and you may need to adjust expectations. If you are used to only working in large companies like fortune 500 or big tech and they are all not hiring or outsourcing large amounts of roles it may be time to go to the medium or smaller size companies. At the end of the day you have to eat. Remember it's not about who will show up it's about who's left. Push through these hard times and eventually you will make it through and be in a better position.
+At some point (not next year) sanity will come back. The market will bounce back and developers will have a more favorable market. The trick is to survive the great culling and stick around. The way to survive is to adapt and continue to be in demand. It may look different if all the markets are saturated and you may need to adjust expectations. 
+
+If you are used to only working in large companies like fortune 500 or big tech and they are all not hiring or outsourcing large amounts of roles it may be time to go to the medium or smaller size companies. At the end of the day you have to eat. Remember it's not about who will show up it's about who's left. Push through these hard times and eventually you will make it through and be in a better position.
 
 # Conclusion
 

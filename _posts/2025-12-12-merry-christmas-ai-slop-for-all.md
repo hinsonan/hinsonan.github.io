@@ -134,7 +134,7 @@ I will point out that after teaching I am not worried at all about job security.
 
 ## Consumer Markets are Cooked
 
-I am not even going to address the GPU prices and supply issues. We all know those are issues. Now the AI grim reaper has destroyed the ability to buy DDR5 RAM. RAM...The part of your PC that you could always buy for cheap has in many cases overshot the prices of CPUs and some GPUs. The 64 GB RAM kit I bought one year ago for ~$150 is now sitting around ~$755. How is this even allowed? What world am I living in where RAM is more than my CPU? 
+I am not even going to address the GPU prices and supply issues. We all know those are issues. Now the AI grim reaper has destroyed the ability to buy DDR5 RAM. RAM...The part of your PC that you could always buy for cheap has in many cases overshot the prices of CPUs and some GPUs. The 64 GB RAM kit I bought one year ago for 150 dollars is now sitting around 755 dollars. How is this even allowed? What world am I living in where RAM is more than my CPU? 
 
 No one can afford to build a PC now with all these past years of shenanigans. This is the final straw for a lot of people. I don't know what to tell people who want to build an affordable PC. The reason for all of this is so resources can go to fund data centers and frontier model development. You can't afford anything because we need to send these valuable resources to OpenAI so we can have a model hallucinate (this term used to be called being wrong) about how to sort an array. 
 

@@ -523,4 +523,4 @@ Now we can see that the model and all the parameters are based on the checkpoint
 
 There is so much that goes into a good ML experiment. It takes a lot of effort to make solid training tools for teams to use. This is just one checkpoint file that we talked about. This is an important piece to get right and there are so many other items related to the model that we will talk about at a later time. Remember pickles are from the devil and always save good checkpoints.
 
-[Code used in Article](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/tracking-models-designing-checkpoints/tracking_models.ipynbb)
+[Code used in Article](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/tracking-models-designing-checkpoints/tracking_models.ipynb)

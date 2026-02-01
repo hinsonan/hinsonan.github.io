@@ -254,6 +254,8 @@ class MLPProjection(torch.nn.Module):
     Linear(vision_dim → llm_dim) → GELU → Linear(llm_dim → llm_dim).
     Preserves all patch tokens. Both linear layers use llm_dim — there is
     no expanded intermediate dimension.
+
+    Paper: https://arxiv.org/abs/2310.03744 (Liu et al., 2023 - Improved Baselines with Visual Instruction Tuning)
     """
     def __init__(self, vision_dim: int, llm_dim: int):
         super().__init__()
@@ -273,6 +275,8 @@ class QFormerProjection(torch.nn.Module):
     Learnable query tokens self-attend and cross-attend to visual tokens.
     Cross-attention is inserted every `cross_attn_every` layers — BLIP-2
     defaults to every other layer, not every layer.
+
+    Paper: https://arxiv.org/abs/2301.12597 (Li et al., 2023 - BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models)
     """
     def __init__(self, vision_dim: int, llm_dim: int,
                  num_queries: int = 32, num_layers: int = 12,
@@ -325,6 +329,8 @@ class PerceiverResamplerProjection(torch.nn.Module):
     K and V are derived from cat(visual_tokens, latents), so latents implicitly
     attend to each other within the same cross-attention op — no separate
     self-attention block. Pre-norm throughout, matching the Flamingo source.
+
+    Paper: https://arxiv.org/abs/2204.14198 (Alayrac et al., 2022 - Flamingo: a Visual Language Model for Few-Shot Learning)
     """
     def __init__(self, vision_dim: int, llm_dim: int,
                  num_latents: int = 64, num_layers: int = 2, num_heads: int = 8):

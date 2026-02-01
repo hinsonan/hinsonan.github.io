@@ -20,3 +20,6 @@ torchvision
 cupy-cuda12x
 numba-cuda[cu12]
 mlflow
+loguru
+transformers
+datasets

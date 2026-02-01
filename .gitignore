@@ -6,3 +6,4 @@ vendor
 CLAUDE.md
 .vscode
 *.csv
+__pycache__

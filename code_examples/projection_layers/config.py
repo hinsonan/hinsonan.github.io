@@ -10,7 +10,7 @@ class Config:
     # Model settings
     projection_type: str = "mlp"  # mlp | qformer | perceiver
     freeze_vision: bool = True
-    freeze_llm: bool = False
+    freeze_llm: bool = True
     
     # Training settings
     batch_size: int = 8
@@ -22,12 +22,13 @@ class Config:
     
     # Data settings
     max_length: int = 512
-    num_workers: int = 4
-    prefetch_size: int = 16
+    num_workers: int = 8          # DataLoader workers for parallel data loading
+    prefetch_size: int = 64       # Number of images to prefetch ahead
+    prefetch_workers: int = 16    # Concurrent async download tasks per DataLoader worker
     system_prompt: str = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
     user_prompt: str = "Describe this image."
-    train_max_samples: int = 64  # -1 = use all, >0 = limit train set for testing
-    val_max_samples: int = 64   # Max validation samples (-1 for all)
+    train_max_samples: int = 1000  # -1 = use all, >0 = limit train set for testing
+    val_max_samples: int = 1000   # Max validation samples (-1 for all)
     
     # Validation settings
     val_interval: int = 1  # Validate every N epochs

@@ -1,4 +1,8 @@
 """Training script for multimodal model with projection layers."""
+import os
+# Disable tkinter backend for matplotlib/PIL to prevent multiprocessing crashes
+os.environ.setdefault('MPLBACKEND', 'Agg')
+
 import argparse
 import json
 import logging
@@ -9,6 +13,8 @@ import torch
 from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
 from tqdm import tqdm
+import matplotlib
+matplotlib.use('Agg')  # Set backend before importing pyplot
 import matplotlib.pyplot as plt
 
 from config import Config

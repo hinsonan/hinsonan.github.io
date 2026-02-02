@@ -23,3 +23,5 @@ mlflow
 loguru
 transformers
 datasets
+aiohttp
+pillow

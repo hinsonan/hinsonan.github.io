@@ -252,18 +252,68 @@ def plot_metrics(metrics_history: List[dict], output_dir: Path):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Train multimodal model with projection layers")
+
+    # Checkpoint
     parser.add_argument("--resume", type=str, help="Path to checkpoint to resume from")
+
+    # Model settings
     parser.add_argument(
         "--projection_type",
         type=str,
-        default="mlp",
         choices=["mlp", "qformer", "perceiver"],
         help="Type of projection layer to use",
     )
+    parser.add_argument("--freeze_vision", type=lambda x: x.lower() == "true", help="Freeze vision model weights")
+    parser.add_argument("--freeze_llm", type=lambda x: x.lower() == "true", help="Freeze LLM weights")
+
+    # Training settings
+    parser.add_argument("--batch_size", type=int, help="Batch size for training")
+    parser.add_argument("--num_epochs", type=int, help="Number of training epochs")
+    parser.add_argument("--lr", type=float, help="Learning rate")
+    parser.add_argument("--weight_decay", type=float, help="Weight decay")
+    parser.add_argument("--grad_clip", type=float, help="Gradient clipping value")
+    parser.add_argument("--warmup_steps", type=int, help="Number of warmup steps")
+
+    # Data settings
+    parser.add_argument("--max_length", type=int, help="Maximum sequence length")
+    parser.add_argument("--num_workers", type=int, help="DataLoader workers for parallel data loading")
+    parser.add_argument("--prefetch_size", type=int, help="Number of images to prefetch ahead")
+    parser.add_argument("--prefetch_workers", type=int, help="Concurrent async download tasks per worker")
+    parser.add_argument("--system_prompt", type=str, help="System prompt for the model")
+    parser.add_argument("--user_prompt", type=str, help="User prompt for image description")
+    parser.add_argument("--train_max_samples", type=int, help="Max training samples (-1 for all)")
+    parser.add_argument("--val_max_samples", type=int, help="Max validation samples (-1 for all)")
+
+    # Validation settings
+    parser.add_argument("--val_interval", type=int, help="Validate every N epochs")
+
+    # System settings
+    parser.add_argument("--device", type=str, help="Device to use (cuda/cpu)")
+    parser.add_argument("--mixed_precision", type=lambda x: x.lower() == "true", help="Enable mixed precision training")
+    parser.add_argument("--seed", type=int, help="Random seed")
+
+    # Logging settings
+    parser.add_argument("--output_dir", type=str, help="Output directory for checkpoints and logs")
+    parser.add_argument("--log_interval", type=int, help="Steps between logging")
+    parser.add_argument("--save_interval", type=int, help="Epochs between checkpoints")
+    parser.add_argument("--keep_last_n", type=int, help="Keep last N checkpoints")
+
+    # Inference settings
+    parser.add_argument("--max_new_tokens", type=int, help="Max tokens to generate during validation")
+    parser.add_argument("--temperature", type=float, help="Sampling temperature")
+    parser.add_argument("--top_p", type=float, help="Nucleus sampling top-p value")
+    parser.add_argument("--do_sample", type=lambda x: x.lower() == "true", help="Enable sampling during generation")
+
     args = parser.parse_args()
 
+    # Create config with defaults
     config = Config()
+
+    # Override config with CLI arguments
+    for key, value in vars(args).items():
+        if key != "resume" and value is not None:
+            setattr(config, key, value)
 
     output_dir = Path(config.output_dir)
     output_dir.mkdir(exist_ok=True)
@@ -282,7 +332,7 @@ def main() -> None:
     logging.info(f"Using device: {device}")
 
     logging.info("Creating model...")
-    model = MultiModalModel(config, projection_type=args.projection_type).to(device)
+    model = MultiModalModel(config, projection_type=config.projection_type).to(device)
 
     if config.freeze_vision:
         for param in model.vision_model.parameters():

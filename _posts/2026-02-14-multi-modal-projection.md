@@ -5,7 +5,7 @@ date: 2026-02-06
 categories: ML
 ---
 
-Remember in bloodborne how your character gains insight and you can start to see all this "hidden" creatures that were there the whole time. Well in some ways those creatures were projected into a space in which you could begin to comprehend them. It may be a little stretch but this is how you can make models "understand" multiple data modalities. Multi Modal models are very powerful and you need to understand how they work and how to create them.
+Remember in bloodborne how your character gains insight and you can start to see all these "hidden" creatures that were there the whole time. Well in some ways those creatures were projected into a space in which you could begin to comprehend them. It may be a little stretch but this is how you can make models "understand" multiple data modalities. Multi-modal models are very powerful and you need to understand how they work and how to create them.
 
 ## Multi Modal Understanding
 
@@ -161,6 +161,8 @@ The `<image>` token acts as a placeholder that gets expanded into 576 actual ima
 ## Cross Attention
 
 Cross Attention works a bit differently. Instead of packing all the image tokens into the context (which can overload or saturate the context) you can perform attention across the image and pull out the most relevant information to put into the prompt. It is kinda like 20 questions where you are learning what questions or features to take from the image and use those learned tokens in the prompt.
+
+Models like [Flamingo](https://arxiv.org/pdf/2204.14198) use this technique
 
 ### The Cross Attention Formula
 
@@ -344,7 +346,7 @@ flowchart TB
 
 ### What is a Codebook?
 
-A codebook is a fixed set of tokens that are learned for images or other modalities. It is essential like adding a language pack to the LLM or adding extra vocabulary to the model.
+A codebook is a fixed set of tokens that are learned for images or other modalities. It is essentially like adding a language pack to the LLM or adding extra vocabulary to the model.
 
 In short it works like this:
 - **8,192 visual patterns** (Generally 8-16k depending on model and this is similar to a visual alphabet)
@@ -392,7 +394,7 @@ flowchart TB
     style TOKENS fill:#702459,stroke:#f687b3,stroke-width:3px,color:#fff
 </div>
 
-This method turns the image into numbers that the LLM can learn. This has a big advantage in that this can also be used to generate text-to-image. You can use this approach and generate images since the image is just a number and the model and predict the next image token when trained this way. Models like [Chameleon](https://arxiv.org/pdf/2405.09818) and [Janus-Pro](https://arxiv.org/pdf/2501.17811) use this technique.
+This method turns the image into numbers that the LLM can learn. This has a big advantage in that this can also be used to generate text-to-image. You can use this approach and generate images since the image is just a number and the model can predict the next image token when trained this way. Models like [Chameleon](https://arxiv.org/pdf/2405.09818) and [Janus-Pro](https://arxiv.org/pdf/2501.17811) use this technique.
 
 ### Pros/Cons of Codebooks
 

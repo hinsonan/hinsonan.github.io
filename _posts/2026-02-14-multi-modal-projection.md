@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "Granting Vision to LLMs: How to make models multi modal"
-date: 2026-01-10
+title: "Granting Vision to LLMs: How to Make Models Multi Modal"
+date: 2026-02-06
 categories: ML
 ---
 
@@ -68,6 +68,8 @@ flowchart TB
     style OUT fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff
 </div>
 
+When you project the image into the same shape and embedding space of the LLM then the LLM can learn what these image tokens mean. Let's look at a more detailed explanation.
+
 ### How Text and Images Combine
 
 The way this works is that there is generally an `<image>` token in the sentence that gets replaced with the real tokens. For example `Describe this image: <image>`. Each token would be replaced with the embedding size of the LLM and the image token will be replaced with all of its tokens.
@@ -75,7 +77,7 @@ The way this works is that there is generally an `<image>` token in the sentence
 <div class="mermaid">
 flowchart TB
     subgraph UserPrompt["1. User Prompt with Placeholder"]
-        PROMPT["Describe this image: <image><br/><br/>The LLM sees a special marker<br/> where the image will go"]
+        PROMPT["Describe this image: &lt;image&gt;<br/><br/>The LLM sees a special marker<br/> where the image will go"]
     end
     
     subgraph Tokenization["2. Tokenize the Sentence"]
@@ -94,7 +96,7 @@ flowchart TB
     subgraph Expansion["4. The Expansion Step"]
         direction TB
         BEFORE["Before:<br/>[Describe, this, image, :, PLACEHOLDER]<br/>5 tokens total"]
-        ARROW["Replace <image> with 576<br/>projected image tokens"]
+        ARROW["Replace &lt;image&gt; with 576<br/>projected image tokens"]
         AFTER["After:<br/>[Describe, this, image, :, IMG₀, IMG₁, ..., IMG₅₇₅]<br/>580 tokens total"]
     end
     
@@ -340,14 +342,16 @@ flowchart TB
     style RESULT fill:#2d5a2d,stroke:#68d391,stroke-width:3px,color:#fff
 </div>
 
-### The Codebook Concept
+### What is a Codebook?
 
-The key insight is the **codebook** - a fixed set of visual patterns learned during training:
-- **8,192 visual patterns** (like a visual alphabet)
+A codebook is a fixed set of tokens that are learned for images or other modalities. It is essential like adding a language pack to the LLM or adding extra vocabulary to the model.
+
+In short it works like this:
+- **8,192 visual patterns** (Generally 8-16k depending on model and this is similar to a visual alphabet)
 - Each image patch gets matched to the closest pattern
 - Results in discrete integers (tokens) the LLM can process
 
-### Inside the Codebook: How Quantization Works
+### How Codebook Quantization Works
 
 <div class="mermaid">
 flowchart TB
@@ -389,3 +393,50 @@ flowchart TB
 </div>
 
 This method turns the image into numbers that the LLM can learn. This has a big advantage in that this can also be used to generate text-to-image. You can use this approach and generate images since the image is just a number and the model and predict the next image token when trained this way. Models like [Chameleon](https://arxiv.org/pdf/2405.09818) and [Janus-Pro](https://arxiv.org/pdf/2501.17811) use this technique.
+
+### Pros/Cons of Codebooks
+
+Codebooks are very powerful and they provide a more "natural" tokenization where the LLM only has to learn this new vocabulary. As always there is no free lunch and this method has its pros/cons.
+
+**Pros:**
+
+1. **Unified Representation**
+   - Images become discrete integer tokens just like text
+   - Enables both understanding AND generation (text-to-image) in a single model
+
+2. **Computational Efficiency**
+   - Discrete tokenization offers computational efficiency
+   - VQ can compress weight and KV cache tensors with greater ratios
+
+3. **Strong Compression with Quality**
+   - Learns a codebook of context-rich visual parts with high perceptual quality
+
+**Cons:**
+
+1. **Information Loss**
+   - Quantization inevitably discards some information
+   - Not ideal for OCR or tasks requiring pixel-perfect accuracy
+
+2. **Training Challenges**
+   - Codebook collapse issues during training
+   - Unstable gradient estimation through the quantization bottleneck
+
+### Image Generation with VQ-GAN
+
+Using a VQ-GAN you can now generate images with this model and not just text. This makes this method very powerful. This works by having this auto-regressive codebook to lookup. To generate an image you are simply generating image codes/tokens. For example image token `<IMG_100>` may represent blue skies and the next token may be a token that corresponds to clouds in the sky. These tokens will be decoded into patches and a CNN or some other model may scale them back to a certain shape.
+
+## When to Use Projection/Cross Attention/VQ-GAN
+
+Depending on your goals each of these methods can be used to great success. Here are some tasks where each method can succeed or fail
+
+| Method | Excels At | Struggles With |
+|--------|-----------|----------------|
+| **Projection Layers** | • OCR and text-heavy documents<br/>• Dense document understanding<br/>• Tasks requiring fine-grained visual details<br/>• General vision-language understanding | • Very long context windows (uses 576+ tokens per image)<br/>• Memory-constrained environments<br/>• Batch processing many images<br/>• Real-time applications with limited compute |
+| **Cross Attention** | • General visual question answering<br/>• Context-efficient multimodal understanding<br/>• Long-form visual reasoning<br/>• Flexible content querying<br/>• Processing multiple images in limited context | • OCR and fine-grained text recognition<br/>• Tasks requiring complete spatial information<br/>• Pixel-level precision tasks<br/>• Dense document layouts<br/>• Detailed chart/diagram analysis |
+| **VQ-GAN / Codebook** | • Image generation (text-to-image)<br/>• Unified understanding + generation models<br/>• Creative visual tasks<br/>• Style transfer and manipulation<br/>• Learning cross-modal representations | • OCR and precise text recognition<br/>• Fine-grained visual details<br/>• Tasks requiring pixel-perfect accuracy |
+
+## Conclusion
+
+Now we know how models can learn to accept different modalities than just the one modality it was originally trained on or meant to understand. There are new papers every month about different ideas for improving models abilities to understand multiple domains.
+
+In the next article we will use some of these techniques to train our own model to understand different domains.

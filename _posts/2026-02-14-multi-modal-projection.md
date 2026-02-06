@@ -158,7 +158,7 @@ The `<image>` token acts as a placeholder that gets expanded into 576 actual ima
 
 ## Cross Attention
 
-Cross Attention works a bit differently. Instead of packing all the image tokens into the context (which can overload or saturate the context) you can perform attention across the image and pull out the most relevant information to put into the prompt. It is kinda like 20 questions where yoy are learning what questions or features to take from the image and use those learned tokens in the prompt.
+Cross Attention works a bit differently. Instead of packing all the image tokens into the context (which can overload or saturate the context) you can perform attention across the image and pull out the most relevant information to put into the prompt. It is kinda like 20 questions where you are learning what questions or features to take from the image and use those learned tokens in the prompt.
 
 ### The Cross Attention Formula
 
@@ -266,11 +266,24 @@ flowchart LR
 
 The softmax function will create a heatmap over the image that relate to the words that you input to grab the most relevant parts of the image related to the text query.
 
+### Token Efficiency Comparison
+
+Here is a table that breaks down the number of tokens used by projection vs cross attention.
+
+| Aspect | Projection Layers | Cross Attention |
+|--------|------------------|-----------------|
+| **Text Tokens** | 4 tokens<br/>"Describe this image :" | 4 tokens<br/>"Describe this image :" |
+| **Image Processing** | All 576 image patches<br/>projected into LLM space | 576 patches stay in<br/>image encoder space |
+| **Tokens in LLM Context** | 4 + 576 = **580 tokens** | 4 + 64 = **68 tokens**<br/>(learned query tokens) |
+| **Context Usage** | High - full image in context | Low - only compressed queries |
+| **Information Flow** | One-time projection,<br/>then self-attention | Continuous cross-attention<br/>at each layer |
+| **Flexibility** | Fixed once projected | Dynamic - queries adapt<br/>per layer |
+
 **Main Differences:**
 - **Projection layers**: Convert image features once to match LLM embeddings, then process together
 - **Cross attention**: Text and image features interact at all layers through attention
 
-This makes cross attention more flexible and helps manage context since you only learn a fixed number of tokens that is much less than projecting the whole image into the prompt. The trade-off is cross-attention is computationally expensive and it can take longer to train.
+This makes cross attention more flexible and helps manage context since you only learn a fixed number of tokens that is much less than projecting the whole image into the prompt. The trade-off is cross-attention is computationally expensive and it can take longer to train. Due to how cross attention works it is not the best method for **OCR** task since you are only querying a handful of the image tokens. Depending on your use case each of these methods has its place
 
 ## VQ-GAN (Image Tokens, Audio Tokens, etc...)
 
@@ -339,7 +352,7 @@ The key insight is the **codebook** - a fixed set of visual patterns learned dur
 <div class="mermaid">
 flowchart TB
     subgraph Image["Input: Simple Image"]
-        IMG["[Image of a sunset]<br/><br/>Top: Blue sky<br/>Middle: Orange clouds<br/>Bottom: Dark ground"]
+        IMG["[Image of a sunset]<br/><br/>Top: Blue sky<br/> Middle: Orange clouds<br/> Bottom: Dark ground"]
     end
     
     subgraph EncodeStep["Step 1: Encode Image"]

@@ -458,7 +458,7 @@ Cross attention gives you the best results for image understanding compared to V
 Now we know how models can learn to accept different modalities than just the one modality they were originally trained on or meant to understand.
 
 **Multi Modal Recap**: 
-- projection layers preserve the most visual detail and are best for OCR and document understanding.
+- Projection layers preserve the most visual detail and are best for OCR and document understanding.
 - Cross attention gives you context efficiency by querying only the most relevant image features.
 - VQ-GAN unlocks image generation by turning images into discrete tokens the LLM can predict.
 

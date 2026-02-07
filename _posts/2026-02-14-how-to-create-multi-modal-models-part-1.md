@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Granting Vision to LLMs: How to Make Models Multi Modal"
+title: "How to Create Multi Modal Models Part 1"
 date: 2026-02-06
 categories: ML
 ---

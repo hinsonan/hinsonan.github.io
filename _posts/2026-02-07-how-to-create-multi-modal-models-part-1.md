@@ -14,7 +14,9 @@ How do some of these modern models process data of different modalities? How can
 Three main ways this can be done are
 
 1) Projection Layers
+
 2) Cross Attention
+
 3) VQ-GAN (Image Tokens, Audio Tokens, etc...)
 
 There are always new research papers coming out that try new things, but these are some of the better established methods.

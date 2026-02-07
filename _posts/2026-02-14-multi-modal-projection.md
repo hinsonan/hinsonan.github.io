@@ -407,7 +407,7 @@ Codebooks are very powerful and they provide a more "natural" tokenization where
    - Enables both understanding AND generation (text-to-image) in a single model
 
 2. **Computational Efficiency**
-   - Discrete tokenization offers computational efficiency
+   - Discrete tokenization is more efficient
    - VQ can compress weight and KV cache tensors with greater ratios
 
 3. **Strong Compression with Quality**
@@ -416,7 +416,7 @@ Codebooks are very powerful and they provide a more "natural" tokenization where
 **Cons:**
 
 1. **Information Loss**
-   - Quantization inevitably discards some information
+   - Quantization discards information
    - Not ideal for OCR or tasks requiring pixel-perfect accuracy
 
 2. **Training Challenges**

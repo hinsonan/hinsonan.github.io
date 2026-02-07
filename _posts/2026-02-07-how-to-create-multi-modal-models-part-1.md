@@ -1,33 +1,33 @@
 ---
 layout: post
 title: "How to Create Multi Modal Models Part 1"
-date: 2026-02-06
+date: 2026-02-07
 categories: ML
 ---
 
-Remember in bloodborne how your character gains insight and you can start to see all these "hidden" creatures that were there the whole time. Well in some ways those creatures were projected into a space in which you could begin to comprehend them. It may be a little stretch but this is how you can make models "understand" multiple data modalities. Multi-modal models are very powerful and you need to understand how they work and how to create them.
+Remember in Bloodborne how your character gains insight and you can start to see all these "hidden" creatures that were there the whole time? Well, in some ways those creatures were projected into a space in which you could begin to comprehend them. It may be a little stretch, but this is how you can make models "understand" multiple data modalities. Multi-modal models are very powerful and you need to understand how they work and how to create them.
 
 ## Multi Modal Understanding
 
-How do some of these modern models process data of different modalities? How can I give an llm an image or audio and it "understand" those data types? There are a few ways this can be done and each technique has multiple different methods you can perform and try to get a model to understand multiple domains. 
+How do some of these modern models process data of different modalities? How can I give an LLM an image or audio and it "understand" those data types? There are a few ways this can be done, and each technique has multiple different methods you can perform to get a model to understand multiple domains.
 
-Three main ways this can be done is
+Three main ways this can be done are
 
 1) Projection Layers
 2) Cross Attention
 3) VQ-GAN (Image Tokens, Audio Tokens, etc...)
 
-There are always new research papers coming out that try new things but these are some of the better established methods
+There are always new research papers coming out that try new things, but these are some of the better established methods.
 
 ## Projection Layers
 
-This was the first large scale successful method and its very simple and intuitive. This became popular from [LLaVA](https://llava-vl.github.io/). Honestly without these guys open source contributions I do not think multi modal models would be where they are today. Many researchers still use their methods and insights to create these models.
+This was the first large-scale successful method, and it's very simple and intuitive. This became popular from [LLaVA](https://llava-vl.github.io/). Honestly, without their open-source contributions, I do not think multi-modal models would be where they are today. Many researchers still use their methods and insights to create these models.
 
 ### How it works
 
-You can take a pre-trained vision models like CLIP and a text only model like qwen/llama then "combine" them together to have a model that can understand images. The image is projected into the text embedding space. The reason for this is the LLM has built powerful encodings and is trained with a certain fixed size embedding space.
+You can take a pre-trained vision model like CLIP and a text-only model like Qwen/Llama, then "combine" them together to have a model that can understand images. The image is projected into the text embedding space. The reason for this is the LLM has built powerful encodings and is trained with a certain fixed-size embedding space.
 
-The LLM can only understand what is in this embedding space. The image you have must be projected into this embedding space so the model can "see" it. Essentially the LLM only talks a certain language and you need to get the image to be in this "language"
+The LLM can only understand what is in this embedding space. The image you have must be projected into this embedding space so the model can "see" it. Essentially, the LLM only talks a certain language and you need to get the image to be in this "language."
 
 <div class="mermaid">
 flowchart TB
@@ -68,7 +68,7 @@ flowchart TB
     style OUT fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff
 </div>
 
-When you project the image into the same shape and embedding space of the LLM then the LLM can learn what these image tokens mean. Let's look at a more detailed explanation.
+When you project the image into the same shape and embedding space of the LLM, then the LLM can learn what these image tokens mean. Let's look at a more detailed explanation.
 
 ### How Text and Images Combine
 
@@ -160,9 +160,9 @@ The `<image>` token acts as a placeholder that gets expanded into 576 actual ima
 
 ## Cross Attention
 
-Cross Attention works a bit differently. Instead of packing all the image tokens into the context (which can overload or saturate the context) you can perform attention across the image and pull out the most relevant information to put into the prompt. It is kinda like 20 questions where you are learning what questions or features to take from the image and use those learned tokens in the prompt.
+Cross Attention works a bit differently. Instead of packing all the image tokens into the context (which can overload or saturate the context), you can perform attention across the image and pull out the most relevant information to put into the prompt. It is like 20 questions where you are learning what questions or features to take from the image and use those learned tokens in the prompt.
 
-Models like [Flamingo](https://arxiv.org/pdf/2204.14198) use this technique
+Models like [Flamingo](https://arxiv.org/pdf/2204.14198) use this technique.
 
 ### The Cross Attention Formula
 
@@ -185,7 +185,7 @@ flowchart LR
     end
     
     subgraph Output["Output"]
-        ENRICHED["Enriched Text:<br/>'cat' now knows its orange"]
+        ENRICHED["Enriched Text:<br/>'cat' now knows it's orange"]
     end
     
     TEXT --> STEP1
@@ -268,7 +268,7 @@ flowchart LR
 - **Value (V)** comes from the **image** → "What information do I provide?"
 - **$d_k$** = dimension of the keys (used for scaling to prevent softmax saturation)
 
-The softmax function will create a heatmap over the image that relate to the words that you input to grab the most relevant parts of the image related to the text query.
+The softmax function will create a heatmap over the image that relates to the words that you input to grab the most relevant parts of the image related to the text query.
 
 ### Token Efficiency Comparison
 
@@ -287,7 +287,7 @@ Here is a table that breaks down the number of tokens used by projection vs cros
 - **Projection layers**: Convert image features once to match LLM embeddings, then process together
 - **Cross attention**: Text and image features interact at all layers through attention
 
-This makes cross attention more flexible and helps manage context since you only learn a fixed number of tokens that is much less than projecting the whole image into the prompt. The trade-off is cross-attention is computationally expensive and it can take longer to train. Due to how cross attention works it is not the best method for **OCR** task since you are only querying a handful of the image tokens. Depending on your use case each of these methods has its place
+This makes cross attention more flexible and helps manage context since you only learn a fixed number of tokens, which is much less than projecting the whole image into the prompt. The trade-off is cross-attention is computationally expensive and it can take longer to train. Due to how cross attention works, it is not the best method for **OCR** tasks since you are only querying a handful of the image tokens. Depending on your use case, each of these methods has its place.
 
 ## VQ-GAN (Image Tokens, Audio Tokens, etc...)
 
@@ -348,7 +348,7 @@ flowchart TB
 
 A codebook is a fixed set of tokens that are learned for images or other modalities. It is essentially like adding a language pack to the LLM or adding extra vocabulary to the model.
 
-In short it works like this:
+In short, it works like this:
 - **8,192 visual patterns** (Generally 8-16k depending on model and this is similar to a visual alphabet)
 - Each image patch gets matched to the closest pattern
 - Results in discrete integers (tokens) the LLM can process
@@ -398,7 +398,7 @@ This method turns the image into numbers that the LLM can learn. This has a big 
 
 ### Pros/Cons of Codebooks
 
-Codebooks are very powerful and they provide a more "natural" tokenization where the LLM only has to learn this new vocabulary. As always there is no free lunch and this method has its pros/cons.
+Codebooks are very powerful, and they provide a more "natural" tokenization where the LLM only has to learn this new vocabulary. As always, there is no free lunch, and this method has its pros/cons.
 
 **Pros:**
 
@@ -425,11 +425,11 @@ Codebooks are very powerful and they provide a more "natural" tokenization where
 
 ### Image Generation with VQ-GAN
 
-Using a VQ-GAN you can now generate images with this model and not just text. This makes this method very powerful. This works by having this auto-regressive codebook to lookup. To generate an image you are simply generating image codes/tokens. For example image token `<IMG_100>` may represent blue skies and the next token may be a token that corresponds to clouds in the sky. These tokens will be decoded into patches and a CNN or some other model may scale them back to a certain shape.
+Using a VQ-GAN, you can now generate images with this model and not just text. This makes this method very powerful. This works by having an auto-regressive codebook to look up. To generate an image, you are simply generating image codes/tokens. For example, image token `<IMG_100>` may represent blue skies and the next token may be a token that corresponds to clouds in the sky. These tokens will be decoded into patches and a CNN or some other model may scale them back to a certain shape.
 
 ## When to Use Projection/Cross Attention/VQ-GAN
 
-Depending on your goals each of these methods can be used to great success. Here are some tasks where each method can succeed or fail
+Depending on your goals, each of these methods can be used to great success. Here are some tasks where each method can succeed or fail.
 
 | Method | Excels At | Struggles With |
 |--------|-----------|----------------|
@@ -437,8 +437,29 @@ Depending on your goals each of these methods can be used to great success. Here
 | **Cross Attention** | • General visual question answering<br/>• Context-efficient multimodal understanding<br/>• Long-form visual reasoning<br/>• Flexible content querying<br/>• Processing multiple images in limited context | • OCR and fine-grained text recognition<br/>• Tasks requiring complete spatial information<br/>• Pixel-level precision tasks<br/>• Dense document layouts<br/>• Detailed chart/diagram analysis |
 | **VQ-GAN / Codebook** | • Image generation (text-to-image)<br/>• Unified understanding + generation models<br/>• Creative visual tasks<br/>• Style transfer and manipulation<br/>• Learning cross-modal representations | • OCR and precise text recognition<br/>• Fine-grained visual details<br/>• Tasks requiring pixel-perfect accuracy |
 
+### Tokenization Comparison
+
+| Aspect | Projection Layers | Cross Attention | VQ-GAN / Codebook |
+|--------|-------------------|-----------------|---------------------|
+| **Representation Type** | Continuous vectors | Continuous vectors | Discrete integers |
+| **Tokens per Image** | ~576 (all patches) | ~64 (learned queries) | ~1,024 (codebook indices) |
+| **Information Preservation** | High - all patch info retained | Selective - only queried info | Lossy - quantization discards detail |
+| **How Image Enters LLM** | Projected tokens concatenated into prompt | Text queries image via attention at each layer | Image tokens added to vocabulary, treated like text |
+| **Requires Separate Vision Encoder** | Yes (CLIP, SigLIP, etc.) | Yes (CLIP, SigLIP, etc.) | No - uses its own trained tokenizer |
+| **Can Generate Images** | No | No | Yes |
+| **Training Complexity** | Low - just train projection layer | Medium - add cross-attention layers | High - codebook collapse risk, unstable gradients |
+
+Cross attention gives you the best results for image understanding compared to VQ-GAN. Context management is much easier with cross attention, and you can query against the image to get a smaller fixed-size set of tokens. VQ-GANs are great for image generation, unified vocabulary, and other types of model outputs.
+
 ## Conclusion
 
-Now we know how models can learn to accept different modalities than just the one modality it was originally trained on or meant to understand. There are new papers every month about different ideas for improving models abilities to understand multiple domains.
+Now we know how models can learn to accept different modalities than just the one modality they were originally trained on or meant to understand.
 
-In the next article we will use some of these techniques to train our own model to understand different domains.
+**Multi Modal Recap**: 
+- projection layers preserve the most visual detail and are best for OCR and document understanding.
+- Cross attention gives you context efficiency by querying only the most relevant image features.
+- VQ-GAN unlocks image generation by turning images into discrete tokens the LLM can predict.
+
+Each method trades off between information preservation, context efficiency, and generation capability.
+
+In the next article, we will use some of these techniques to train our own model to understand different domains.

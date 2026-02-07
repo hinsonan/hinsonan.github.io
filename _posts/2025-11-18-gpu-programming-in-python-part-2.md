@@ -957,51 +957,6 @@ Now we will launch this kernel and blur our image.
 
 The first thing we need to grasp is the blocks and grid size. 
 
-<style>
-.gpu-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-  font-size: 0.9em;
-}
-
-.gpu-table thead tr {
-  background-color: #2c3e50;
-  color: #ffffff;
-  text-align: left;
-}
-
-.gpu-table th,
-.gpu-table td {
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-}
-
-.gpu-table tbody tr {
-  border-bottom: 1px solid #dddddd;
-}
-
-.gpu-table tbody tr:nth-of-type(even) {
-  background-color: #f3f3f3;
-}
-
-.gpu-table tbody tr:nth-of-type(odd) {
-  background-color: #ffffff;
-}
-
-.gpu-table tbody tr:hover {
-  background-color: #e8f4f8;
-  cursor: pointer;
-}
-
-.gpu-table tbody td:first-child {
-  font-weight: bold;
-  background-color: #ecf0f1;
-}
-</style>
-
-<div class="gpu-table-wrapper" markdown="block">
-
 | Concept | What It Is | Size Limits | Can Communicate? | Where It Runs | Example |
 |---------|-----------|-------------|------------------|---------------|---------|
 | **Thread** | Single execution unit | N/A (smallest unit) | With threads in same block only | Inside a block on an SM | Thread 5 processes pixel (85, 160) |
@@ -1009,9 +964,6 @@ The first thing we need to grasp is the blocks and grid size.
 | **Grid** | All blocks in kernel | X: 2³¹-1 blocks<br/>Y,Z: 65,535 blocks | Blocks are independent | Distributed across all SMs | Grid of 1,900 blocks covers entire 800×600 image |
 | **Warp** | 32 consecutive threads | Always 32 threads | Execute same instruction | Scheduled together on SM | Threads 0-31 in a block = 1 warp |
 | **SM** | Streaming Multiprocessor | Hardware unit | N/A | Physical GPU chip | RTX 5090 has 170 SMs, each runs multiple blocks |
-{: .gpu-table}
-
-</div>
 
 ### Helpful Definitions
 

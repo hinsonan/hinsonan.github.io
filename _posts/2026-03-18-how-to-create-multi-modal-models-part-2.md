@@ -5,7 +5,7 @@ date: 2026-02-07
 categories: ML
 ---
 
-It's time to take the lessons from the last blog post and make ourselves a genuine multi modal model. This is all the rage these days. We are going to train 3 different projection layers and see how they allow the model to understand images. The reason we are going to do these different projection layers is this is an experiment that you can run locally if you have a decent gpu. Here are the three methods we will use.
+It's time to take the lessons from the [last blog post](https://gradientrage.com/ml/2026/02/07/how-to-create-multi-modal-models-part-1.html) and make ourselves a genuine multi modal model. This is all the rage these days. We are going to train 3 different projection layers and see how they allow the model to understand images. The reason we are going to do these different projection layers is this is an experiment that you can run locally if you have a decent gpu. Here are the three methods we will use.
 
 * Multi-Layer Projection
 * Q Former
@@ -246,6 +246,8 @@ All three models were trained for 10 epochs on 1000 COCO training samples and ev
 | Perceiver | **1.4604** | 3.4482 | **1.4551** | **0.2320** | 64 |
 | Q-Former | 0.7789 | 2.8455 | 0.7424 | 0.1895 | 32 |
 
+These scores are very low and that's to be expected with this small subset and only 10 epochs of training. Consider that the model has never seen a pixel before and in just a few hours the ability to caption images is emerging.
+
 ### Inference Comparison
 
 GT = ground truth caption. All six validation images shown.
@@ -276,6 +278,8 @@ What's also neat is you can see the different queries and latents in the project
 ![resampler](/assets/images/projection_layer_images/trained_attention_perceiver_specialization.png)
 
 This can show you how your projection layer is focusing on certain aspects of the image. Now this training run was very small so all these results are not mature or conclusive. All this shows is that in a few hours we have started to add a new modality to a model.
+
+Keep in mind these attention maps are from early training and should not be considered final or what they would look like in a fully trained model.
 
 ## Conclusion
 

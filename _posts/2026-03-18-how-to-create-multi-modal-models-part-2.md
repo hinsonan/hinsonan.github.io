@@ -54,7 +54,7 @@ This approach has a few advantages.
 
 3) Simple to debug and conceptualize
 
-The downside of this method is that it blows the context up since we keep all the vision tokens. This can help when the task needs all those details but many times you do not need all this information
+The downside of this method is that it blows the context up since we keep all the vision tokens. This can help when the task needs all those details but many times you do not need all this information.
 
 ## Q Former
 
@@ -179,19 +179,19 @@ This creates a few advantages:
 
 2) Faster convergence since the layers are normed before the attention call
 
-3) This method isn't meant to do this but it can handle videos. The visual tokens are flattened and the resampler compresses the data down into 64 latents. I am unsure how well this would do in practice since this was designed for images.
+3) This method isn't meant to do this, but it can handle videos. The visual tokens are flattened and the resampler compresses the data down into 64 latents. I am unsure how well this would do in practice since this was designed for images.
 
-Similar disadvantages to QFormer since we compress the data we are losing information. The latents are optimized to predict the next token in an interleaved image and text sequence. This is slightly different than QFormer which in the BLIP-2 paper gets a different stage of training. BLIP-2 has three losses in stage 1 that the QFormer queries to understand the images with text. For our experiments this wont matter since we are going to compare these three methods and optimize for the next best token. We can directly compare these methods to each other.
+Similar disadvantages to QFormer: since we compress the data we are losing information. The latents are optimized to predict the next token in an interleaved image and text sequence. This is slightly different than QFormer which in the BLIP-2 paper gets a different stage of training. BLIP-2 has three losses in stage 1 that the QFormer queries to understand the images with text. For our experiments this won't matter since we are going to compare these three methods and optimize for the next best token. We can directly compare these methods to each other.
 
 ## Setting Up The Experiment
 
 <div style="background:#3d2b00;border-left:4px solid #f5a623;padding:12px 16px;border-radius:4px;color:#fbd38d;margin:16px 0;">
-  <strong>⚠ Note:</strong> The purpose of these experiments is to show how the model can learn to understand the image modality. This is not a rigorous testing about which of these three methods is the best if you limit all methods to the same number of output tokens. QFormer is also at a disadvantage since we are not doing staged training like the BLIP-2 paper. The goal of this experiment is for you to get an idea of how these projection work and see how it effects the model.
+  <strong>⚠ Note:</strong> The purpose of these experiments is to show how the model can learn to understand the image modality. This is not a rigorous testing about which of these three methods is the best if you limit all methods to the same number of output tokens. QFormer is also at a disadvantage since we are not doing staged training like the BLIP-2 paper. The goal of this experiment is for you to get an idea of how these projections work and see how it affects the model.
 </div>
 
-We want to learn more about how these different projection layers effect the model. We want to know some of the tradeoffs and when to use certain projection methods.
+We want to learn more about how these different projection layers affect the model. We want to know some of the tradeoffs and when to use certain projection methods.
 
-We are going to be using the [coco-karpathy](https://huggingface.co/datasets/yerevann/coco-karpathy) dataset. This is an image caption pair dataset. Due to time training will only be 10 epochs using 1000 train and 1000 validation examples. One of the benefits of projection layers is they are faster to train so we will see how this does.
+We are going to be using the [coco-karpathy](https://huggingface.co/datasets/yerevann/coco-karpathy) dataset. This is an image caption pair dataset. Due to time constraints, training will only be 10 epochs using 1000 train and 1000 validation examples. One of the benefits of projection layers is they are faster to train so we will see how this does.
 
 For our vision model we will be using [SigLIP](https://huggingface.co/google/siglip-base-patch16-224). This model is similar to CLIP and it will output 16x16 patches for a 224 pixel image that gives you 196 patches.
 
@@ -217,7 +217,7 @@ Now we have to train the projection layer to project the SigLIP embeddings into 
 
 We will be using the **CIDEr** (Consensus-based Image Description Evaluation) metric to determine how the model is performing. This metric is designed for image captioning tasks.
 
-Another metric we will use is **METEOR** (Metric for Evaluation of Translation with Explicit ORdering). It is meant to be used for translation task but it does well for image captioning. It compares the output to one or more references with different priorities.
+Another metric we will use is **METEOR** (Metric for Evaluation of Translation with Explicit ORdering). It is meant to be used for translation tasks but it does well for image captioning. It compares the output to one or more references with different priorities.
 
 
 
@@ -255,11 +255,11 @@ GT = ground truth caption. All six validation images shown.
 | Boy with umbrella and cattle | A child holding a flowered umbrella and petting a yak. | A boy feeding a cow. | A man is holding the grass that a horse has been bred on. | A bunch of people with a large umbrella standing next to an animal holding wa... |
 | Galley kitchen | A galley kitchen with cabinets and appliances on both sides. | A kitchen with a bowl and stove on it. | A small kitchen with a refrigerator and stove in it. | A kitchen with an open stove and some utensils on it. |
 | Girl holding a kitten | A young girl is holding a small cat. | A little girl is holding a baby with one hand, the other hand has an elephant. | A girl is keeping her hand between a puppy and her face. | A pink, squawzy ball being held up with a cloth. |
-| Bathroom with toilet | The toilet is near the door in the bathroom. | The bathroom has a toilet and an ashtray next to it. | A bathroom with a toilet in the middle and black grout on the walls. | A bathroom containing an toilet and a sink. |
+| Bathroom with toilet | The toilet is near the door in the bathroom. | The bathroom has a toilet and an ashtray next to it. | A bathroom with a toilet in the middle and black grout on the walls. | A bathroom containing a toilet and a sink. |
 | Steel bathroom | A photo of a bathroom made of steel. | A bathroom with sinks and a bowl in it. | A kitchen has multiple small structures on its walls. | A bathroom with a mirror and a white table with some clothes on it. |
 | Woman on bicycle | A woman rides a bicycle on a road next to the median. | A person on a bike sitting by the side of a road. | A person is walking on a sidewalk with bikes behind them. | woman with umbrella on top of car |
 
-Each training took a few hours. While training both the vision encoder and llm were frozen so only the projection layer was trained. You can see that even with this small amount of training we have a model that is beginning the understand images.
+Each training took a few hours. While training, both the vision encoder and llm were frozen so only the projection layer was trained. You can see that even with this small amount of training we have a model that is beginning to understand images.
 
 Let's take a look at how the QFormer and Resampler "see" the image with their attention scores.
 
@@ -279,8 +279,8 @@ This can show you how your projection layer is focusing on certain aspects of th
 
 ## Conclusion
 
-We have taken an language model that can not understand images and in just a few hours it has started to be able to process images. If you wanted you can run the training for longer and get much better results.
+We have taken a language model that cannot understand images and in just a few hours it has started to be able to process images. If you wanted you can run the training for longer and get much better results.
 
-Multi modal models will continue to grow and we will see them grow into other domains. Music, audio, video, electrical signals, and much more will become very popular domains that models will learn to process. I hope this peaks your curiosity about multi modal models.
+Multi modal models will continue to grow and we will see them grow into other domains. Music, audio, video, electrical signals, and much more will become very popular domains that models will learn to process. I hope this piques your curiosity about multi modal models.
 
 [Training Code](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/projection_layers)

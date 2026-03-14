@@ -258,3 +258,29 @@ GT = ground truth caption. All six validation images shown.
 | Bathroom with toilet | The toilet is near the door in the bathroom. | The bathroom has a toilet and an ashtray next to it. | A bathroom with a toilet in the middle and black grout on the walls. | A bathroom containing an toilet and a sink. |
 | Steel bathroom | A photo of a bathroom made of steel. | A bathroom with sinks and a bowl in it. | A kitchen has multiple small structures on its walls. | A bathroom with a mirror and a white table with some clothes on it. |
 | Woman on bicycle | A woman rides a bicycle on a road next to the median. | A person on a bike sitting by the side of a road. | A person is walking on a sidewalk with bikes behind them. | woman with umbrella on top of car |
+
+Each training took a few hours. While training both the vision encoder and llm were frozen so only the projection layer was trained. You can see that even with this small amount of training we have a model that is beginning the understand images.
+
+Let's take a look at how the QFormer and Resampler "see" the image with their attention scores.
+
+![attention_grids](/assets/images/projection_layer_images/trained_attention_grids.png)
+
+![attention_grids_gradients](/assets/images/projection_layer_images/trained_attention_model_comparison.png)
+
+The QFormer seems to be spread out throughout the whole image with some hotspots and the Resampler seems to lock into certain areas.
+
+What's also neat is you can see the different queries and latents in the projection layer that focus on different areas.
+
+![queries](/assets/images/projection_layer_images/trained_attention_qformer_specialization.png)
+
+![resampler](/assets/images/projection_layer_images/trained_attention_perceiver_specialization.png)
+
+This can show you how your projection layer is focusing on certain aspects of the image. Now this training run was very small so all these results are not mature or conclusive. All this shows is that in a few hours we have started to add a new modality to a model.
+
+## Conclusion
+
+We have taken an language model that can not understand images and in just a few hours it has started to be able to process images. If you wanted you can run the training for longer and get much better results.
+
+Multi modal models will continue to grow and we will see them grow into other domains. Music, audio, video, electrical signals, and much more will become very popular domains that models will learn to process. I hope this peaks your curiosity about multi modal models.
+
+[Training Code](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/code_examples/projection_layers)

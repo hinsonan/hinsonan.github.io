@@ -283,4 +283,4 @@ We have taken an language model that can not understand images and in just a few
 
 Multi modal models will continue to grow and we will see them grow into other domains. Music, audio, video, electrical signals, and much more will become very popular domains that models will learn to process. I hope this peaks your curiosity about multi modal models.
 
-[Training Code](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/code_examples/projection_layers)
+[Training Code](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/projection_layers)

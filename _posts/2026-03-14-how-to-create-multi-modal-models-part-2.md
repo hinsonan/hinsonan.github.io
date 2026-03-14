@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "How to Create Multi Modal Models Part 2"
-date: 2026-02-07
+date: 2026-03-14
 categories: ML
 ---
 

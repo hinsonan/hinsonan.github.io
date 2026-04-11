@@ -110,8 +110,31 @@ float Q_rsqrt( float number )
 
 This code would be hard to maintain and explain. It's not easy to read but without this code you can kiss the birth of lighting engines in 3D graphics goodbye.
 
+The opposite is also true that highly optimized code is not always good code. If an extra data structure or variable could be declared and allow for developers to quickly debug a stack or heap issue at the tradeoff of a little extra server memory then it's probably worth it. 
+
 So now that the waters are all muddy and we don't have a clear image of what is good code or bad code how do we frame this topic. We all have worked in "bad code" and we see it a lot. We have wasted countless hours inside "bad code". Every so often you run across "good code" and can easily make the changes you need.
 
 It's never been about good code vs bad code. It's about good and bad problem solving skills given the context and situation. That doesn't sound fancy and it doesn't make a good T-shirt. At the core it's always about problem solving.
 
-# Code is the Vehicle for Problem Solving
+## Code is the Vehicle for Problem Solving
+
+Code is just the way that we express our solutions and problem solving. Truth be told the problem begins at communication and requirement gathering. I won't touch on this area of problem solving in this article but let's assume all the business meetings and customers have been established and its time to solve and deliver the technical product.
+
+Think of all the different areas of development:
+
+* Research
+* New Features
+* Maintaining Existing Features
+* Process Improvements
+* CI/CD
+* Development and Production Envs
+* Infrastructure
+* Proof of Concept Work
+* Meetings
+* System Design
+* UX
+
+There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's Simple **Good problem solving is simply how many problems can you solve given the constraints chained on you at the start or during**
+
+## Solving All the Worlds Problems
+

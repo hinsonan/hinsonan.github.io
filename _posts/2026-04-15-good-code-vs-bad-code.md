@@ -1,11 +1,11 @@
 ---
 layout: post
 title: "Good Code vs Bad Code"
-date: 2026-04-15
+date: 2026-04-12
 categories: ML
 ---
 
-The question that has been debated by many overweight nerds and now new cool chad vibe coders is what is good code and bad code? You have the old guard zealots of uncle Bob's clean code that preach small functions and test driven development. You have the chads who don't look at the code and push based on vibes. One camp leaves you writing test suites that fall apart as soon as you code the real thing and the other leaks your credit card and crashes.
+The question that has been debated by many overweight nerds and now new cool chad vibe coders, is **what is good code and bad code?** You have the old guard zealots of uncle Bob's clean code that preach small functions and test driven development. You have the chads who don't look at the code and push based on vibes. One camp leaves you writing test suites that fall apart as soon as you code the real thing and the other leaks your credit card and crashes.
 
 The truth of the matter is good code vs bad code is the wrong framework. The real issue is can you solve the problem in an efficient and elegant manner? Let's dive in
 
@@ -134,7 +134,11 @@ Think of all the different areas of development:
 * System Design
 * UX
 
-There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's simple: **Good problem solving is simply solving all the relevant problems given the constraints imposed on you at the start or during**
+There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? 
+
+It's simple:
+
+**Good problem solving is simply solving all the relevant problems given the constraints imposed on you at the start or during**
 
 ## Solving All the Worlds Problems
 

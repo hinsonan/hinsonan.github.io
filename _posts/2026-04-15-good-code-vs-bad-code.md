@@ -391,28 +391,30 @@ Yes this method is slightly more memory-heavy but the tradeoff is worth it if th
 
 #### Bad Code
 
-This is an example of creating a struct that will use more memory than is needed
+This is an example of a struct layout that will use more memory than needed.
 
 ```rust
+#[repr(C)] // fixed field order for demonstration
 struct PlayerState {
-    is_alive:   bool,    // 1 byte  — but padded to 8
-    score:      u64,     // 8 bytes — needs 8-byte alignment
+    is_alive:   bool,    // 1 byte
+    score:      u64,     // 8 bytes, 8-byte alignment
     health:     u8,      // 1 byte
-    level:      u32,     // 4 bytes — needs 4-byte alignment
-    is_admin:   bool,    // 1 byte  — padded to 8
-    position_x: f64,    // 8 bytes — needs 8-byte alignment
+    level:      u32,     // 4 bytes, 4-byte alignment
+    is_admin:   bool,    // 1 byte
+    position_x: f64,    // 8 bytes, 8-byte alignment
     position_y: f64,    // 8 bytes
-    flags:      u8,      // 1 byte  — padded to 8
+    flags:      u8,      // 1 byte
 }
 ```
 
-This structure would come out to be 56 bytes in total. Modern CPUs fetch bytes in chunks to be more efficient. Most of the time data is near each other so modern CPUs will grab data in 8 byte chunks for a `u64` or 1 byte for `bool`
+On a 64-bit machine, this layout is 56 bytes because the compiler inserts padding so aligned fields (`u64`, `f64`, `u32`) start at their proper offset. CPUs move data through cache lines (commonly 64 bytes), with individual loads/stores consisting of 1, 4, or 8 bytes.
 
-We can use better data layouts to make the padding become in alignment so that the struct does not need to add extra padding
+We can reduce padding by reordering fields from largest alignment to smallest and by packing booleans into a flag when it is worth the complexity.
 
 #### Better Code with Proper Alignment
 
 ```rust
+#[repr(C)]
 struct PlayerState {
     // 8-byte fields first
     score:      u64,     // bytes 0–7
@@ -428,7 +430,7 @@ struct PlayerState {
 }
 
 // boolean flags packed into one u8
-// instead of 1 bool per 8 bytes
+// instead of separate bool fields
 const FLAG_ALIVE: u8 = 0b0000_0001;
 const FLAG_ADMIN: u8 = 0b0000_0010;
 const FLAG_IMMUNE:u8 = 0b0000_0100;
@@ -441,11 +443,11 @@ impl PlayerState {
 }
 ```
 
-Instead of being 56 bytes, this object is now only 32 bytes. This is because the compiler will add padding along the boundaries in order to avoid any unaligned reads and torn reads. If the compiler did not do this then you could run into a lot of strange behavior with interleaving reads/writes and that will result in undefined behavior. 
+On that same machine, this layout is 32 bytes instead of 56. Padding exists mostly to satisfy alignment and ABI rules. With this layout each store starts at it's properly aligned offset.
 
-By restructuring the layout of the struct we make sure that each data type is placed along its appropriate read chunk. For example, every 8-byte field starts at a multiple of 8.
+By moving the layout, aligned fields are placed at aligned offsets (8-byte fields at offsets divisible by 8).
 
-This code requires you to know a little about the hardware you are working on. This code requires that you not only solve the basic functionality but also optimize for memory layout. 
+This optimization requires some hardware and ABI awareness.
 
 Remember that this is only appropriate to spend time on if this is a system that needs to be performant or a system that will be used by others. If this is throwaway code or part of something that will be thrown away then spending time on this is a waste.
 

@@ -5,15 +5,15 @@ date: 2026-04-15
 categories: ML
 ---
 
-The question that has been debated by many overweight nerds and now new cool chad vibe coders is what is good code and bad code? You have the old guard zealots of uncle Bob's clean code that preach small functions and test driven development. You have the chads who don't look at the code and push based on vibes. One camp leaves you writing test suites that fall apart as soon as you code to real thing and the other leaks your credit card and crashes.
+The question that has been debated by many overweight nerds and now new cool chad vibe coders is what is good code and bad code? You have the old guard zealots of uncle Bob's clean code that preach small functions and test driven development. You have the chads who don't look at the code and push based on vibes. One camp leaves you writing test suites that fall apart as soon as you code the real thing and the other leaks your credit card and crashes.
 
-The truth of the matter is good code vs bad code is the wrong argument. The real issue is can you solve the problem in an efficient and elegant manner? Let's dive in
+The truth of the matter is good code vs bad code is the wrong framework. The real issue is can you solve the problem in an efficient and elegant manner? Let's dive in
 
 ## Bad Code is Good and Good Code is Bad
 
-One persons trash is another persons treasure and that's why bad code is simply code you yourself did not write. Perhaps it's code your wrote last month (or generated) and now your past self is here to haunt you. You are confronted with your sins and now you have to fix it. Many times what you think is bad code is really just a skill issue or lack of perception. For example you may look at the src code for Pytorch or React and think wow this sucks. There is some "bad" code in here. The people that work in that code and make decisions may think that code is good. To them its good and to you its bad. Other times its really is a poor solution but Pytorch is used by millions so it can't be complete garbage (However users does not mean its good...looking at you Windows).
+One person's trash is another person's treasure and that's why bad code is simply code you yourself did not write. Perhaps it's code you wrote last month (or generated) and now your past self is here to haunt you. You are confronted with your sins and now you have to fix it. Many times what you think is bad code is really just a skill issue or lack of perception. For example you may look at the src code for Pytorch or React and think wow this sucks. There is some "bad" code in here. The people that work in that code and make decisions may think that code is good. To them it's good and to you it's bad. Other times it really is a poor solution but Pytorch is used by millions so it can't be complete garbage (However, having users doesn't mean it's good...looking at you Windows).
 
-The other side of the coin is the zealots who insist clean code is the only way. Here is the problem with "clean code", it can make performance tank. You make all this nice little functions and test for the end result to be slower. The other issue is you generally kill locality of scope and make me hop around to 50 different files. For those that are unaware here is some code and principles from the [book](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882)
+The other side of the coin is the zealots who insist clean code is the only way. Here is the problem with "clean code", it can make performance tank. You make all these nice little functions only for the end result to be slower. The other issue is you generally kill locality of scope and make me hop around to 50 different files. For those that are unaware here is some code and principles from the [book](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882)
 
 **Principles**
 
@@ -81,11 +81,11 @@ for (auto& s : shapes) {
 }
 ```
 
-The "bad" code in this example stays hot in that sweet cpu cache and can be easily vectorized. The clean code forces pointer indirection and scatters all the objects across the heap which makes it harder to vectorize and lookup. The clean code example cost you performance. The counter argument to this is does this performance matter and isn't it better to have easy to maintain and easy to read code? To that I say what even is "easy to read code". As far as maintenance goes I prefer locality of scope and not making 100 tiny functions.
+The "bad" code in this example stays hot in that sweet CPU cache and can be easily vectorized. The clean code forces pointer indirection and scatters all the objects across the heap which makes it harder to vectorize and lookup. The clean code example costs you performance. The counter argument to this is does this performance matter and isn't it better to have easy to maintain and easy to read code? To that I say what even is "easy to read code". As far as maintenance goes I prefer locality of scope and not making 100 tiny functions.
 
-> PSA: At this point I sound a bit harsh towards clean code but it honestly is one of my favorite books and I like Uncle Bob. I think everyone should read it at different points in their career. Really adopt it and try hard to right "clean code". Then understand what you don't like about it. Read it as a junior, mid, senior developer and see how your thoughts have changed over time
+> PSA: At this point I sound a bit harsh towards clean code but it honestly is one of my favorite books and I like Uncle Bob. I think everyone should read it at different points in their career. Really adopt it and try hard to write "clean code". Then understand what you don't like about it. Read it as a junior, mid, senior developer and see how your thoughts have changed over time
 
-Another fun example is the [inverse square root function](https://en.wikipedia.org/wiki/Fast_inverse_square_root) that allowed lighting in 3D graphics to work. Good luck explaining how this code works and it defiantly does not fit "clean code"
+Another fun example is the [inverse square root function](https://en.wikipedia.org/wiki/Fast_inverse_square_root) that allowed lighting in 3D graphics to work. Good luck explaining how this code works and it definitely does not fit "clean code"
 
 This code includes the original comments made by the author.
 
@@ -112,13 +112,13 @@ This code would be hard to maintain and explain. It's not easy to read but witho
 
 The opposite is also true that highly optimized code is not always good code. If an extra data structure or variable could be declared and allow for developers to quickly debug a stack or heap issue at the tradeoff of a little extra server memory then it's probably worth it. 
 
-So now that the waters are all muddy and we don't have a clear image of what is good code or bad code how do we frame this topic. We all have worked in "bad code" and we see it a lot. We have wasted countless hours inside "bad code". Every so often you run across "good code" and can easily make the changes you need.
+So now that the waters are all muddy and we don't have a clear image of what is good code or bad code, how do we frame this topic. We all have worked in "bad code" and we see it a lot. We have wasted countless hours inside "bad code". Every so often you run across "good code" and can easily make the changes you need.
 
 It's never been about good code vs bad code. It's about good and bad problem solving skills given the context and situation. That doesn't sound fancy and it doesn't make a good T-shirt. At the core it's always about problem solving.
 
 ## Code is the Vehicle for Problem Solving
 
-Code is just the way that we express our solutions and problem solving. Truth be told the problem begins at communication and requirement gathering. I won't touch on this area of problem solving in this article but let's assume all the business meetings and customers have been established and its time to solve and deliver the technical product.
+Code is just the way that we express our solutions and problem solving. Truth be told the problem begins at communication and requirement gathering. I won't touch on this area of problem solving in this article but let's assume all the business meetings and customers have been established and it's time to solve and deliver the technical product.
 
 Think of all the different areas of development:
 
@@ -134,26 +134,26 @@ Think of all the different areas of development:
 * System Design
 * UX
 
-There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's Simple **Good problem solving is simply solving all the relevant problems given the constraints chained on you at the start or during**
+There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's simple: **Good problem solving is simply solving all the relevant problems given the constraints imposed on you at the start or during**
 
 ## Solving All the Worlds Problems
 
 What leads to bad code is bad problem solving or just not solving the right types of problems at all. Let's talk about a new ML model or algorithm you are evaluating for a new feature that will be implemented soon.
 
-You create this new algorithm in a jupyter notebook and demonstrate that it does work as intended so you hand it off to the backend team to integrate. This leads to the backend team asking you questions and implementing that notebook into the system. Turns out the backend team took much longer to integrate into the system and you noticed that the next release doesn't even have your new algorithm running. They struggled to get it working with the system. You demonstrated the new technique works and from your perspective that was the end of the task. Truth is you solved only a handful of problems and you decided not to solve other more important problems.
+You create this new algorithm in a Jupyter notebook and demonstrate that it does work as intended so you hand it off to the backend team to integrate. This leads to the backend team asking you questions and implementing that notebook into the system. Turns out the backend team took much longer to integrate into the system and you noticed that the next release doesn't even have your new algorithm running. They struggled to get it working with the system. You demonstrated the new technique works and from your perspective that was the end of the task. Truth is you solved only a handful of problems and you decided not to solve other more important problems.
 
 We all know that getting something to work is just the first step of the problem. What people fail to grasp is when they clean it up and present their work they still failed to solve the real problems that will come later.
 
-We mentioned constraints that are imposed on you when you start working on an issue and the one common chain that controls us is **time**. No one can beat father time. Time is always a major constraining factor. If you had unlimited time to create this new algorithm and all you had after years of work is one lousy broken script then you really suck. However if you are constrained to 2 days and its a hard algorithm to create and you showed off a broken but sometimes working script then that might be very impressive given 2 days.
+We mentioned constraints that are imposed on you when you start working on an issue and the one common chain that controls us is **time**. No one can beat Father Time. Time is always a major constraining factor. If you had unlimited time to create this new algorithm and all you had after years of work is one lousy broken script then you really suck. However if you are constrained to 2 days and it's a hard algorithm to create and you showed off a broken but sometimes working script then that might be very impressive given 2 days.
 
 Here's a non exhaustive list of problems you need to solve to really make a good solution
 
 * Does this solution work at the very basic level?
 * Does this solution cover the major edge cases?
-* Can other install or know how to use this new algorithm/feature
+* Can others install or know how to use this new algorithm/feature
 * Is there a developer guide or usage guide that walks people through how to integrate or use what you made?
 * Did you optimize it for the performance requirements?
-* Did you remove any barriers for the next group (python model does not slot into a C#/Rust/Go backend)?
+* Did you remove any barriers for the next group (Python model does not slot into a C#/Rust/Go backend)?
 * Do you lay out the pros/cons of the way you solved the problem?
 * Are the documents accurate to what the code does?
 * Does this solve the business problems if this is relevant?
@@ -161,19 +161,25 @@ Here's a non exhaustive list of problems you need to solve to really make a good
 * Does this make future features and work easier?
 * Does this pass CI/CD?
 
-Most of the time you can't solve all of these problems in the amount of time you have. So you are forced to choose which of these problems is worth solving. So how do you know which of the problems to solve and which to reject? You have to communicate with your leads/team/managers to figure that out. You have to understand the problems they need to be solving so that you can know which problems and battle you need to fight.
+Most of the time you can't solve all of these problems in the amount of time you have. So you are forced to choose which of these problems is worth solving. So how do you know which of the problems to solve and which to reject? You have to communicate with your leads/team/managers to figure that out. You have to understand the problems they need to be solving so that you can know which problems and battles you need to fight.
 
-This is why this field is so crazy. Once you see all these problems and all the constraints is gets hard to manage. This is why there is so much bad code out there. People are getting hounded to solve everything and things fall through the cracks. 
+This is why this field is so crazy. Once you see all these problems and all the constraints it gets hard to manage. This is why there is so much bad code out there. People are getting hounded to solve everything and things fall through the cracks. 
 
-It gets more manageable when you have better communication with the team and know which battles are important to spend time on. Does your models memory footprint need to be optimized if the team agrees that a 80% solution is perfectly acceptable for now? Probably not and it is better to provide how to use this new model and a basic inference guide. 
+It gets more manageable when you have better communication with the team and know which battles are important to spend time on. Does your model's memory footprint need to be optimized if the team agrees that an 80% solution is perfectly acceptable for now? Probably not and it is better to provide how to use this new model and a basic inference guide. 
 
-If you just hand them a notebook that semi works then you did not solve the right problems for the team or if you spent days optimizing something but no one knows the API then you wasted time in this situation and failed.
+If you just hand them a notebook that semi-works, you did not solve the right problems for the team. If you spent days optimizing something but no one knows the API, you wasted time and failed.
+
+## You ain't that Good
+
+Here's another harsh truth: a lot of bad code is generated due to skill issues. Everything is a skill issue at the end of the day. You can't fix your car because you lack skills or you can't build a house due to lack of skills. You can't solve this technical problem all the way through due to constraints and skill. If you were a god and as good at programming as Terry Davis then you could make a novel algorithm in about one hour. Instead you could only solve the problem to the degree that your skills with the constraints allowed you.
+
+When you see bad code and think oh I am so much better than whoever this person is you only think that because you did not solve that problem in the context that the other person had. Maybe that person had multiple meetings pop up or had to solve an emerging fire so they left the solution at 80% complete. Now that's not an excuse, it's just reality and maybe if you can improve it you should.
 
 ## Perspective is Everything
 
-One thing that I have noticed in good problem solvers and good code is the person who wrote the code/system/docs put themselves in other peoples shoes. If you can grasp a birds eye view of the project and understand how the manager thinks you can provide auto gen docs or system diagrams so they can show their boss. If you understand how the backend will work you can write your solution in a way that makes integration much faster. If you can reduce the systems complexity and make a design that requires less code changes over time then you made the whole teams future better.
+One thing that I have noticed in good problem solvers and good code is the person who wrote the code/system/docs put themselves in other people's shoes. If you can grasp a bird's-eye view of the project and understand how the manager thinks you can provide auto gen docs or system diagrams so they can show their boss. If you understand how the backend will work you can write your solution in a way that makes integration much faster. If you can reduce the system's complexity and make a design that requires less code changes over time then you made the whole team's future better.
 
-It's all about being able to think and take on other peoples perspective.
+It's all about being able to think and take on other people's perspective.
 
 ## Concrete Examples
 
@@ -203,7 +209,7 @@ def run_inference(raw_data):
     return results  # a DataFrame
 ```
 
-This looks ok if the whole system is using python and dataframes but if the backend is in a real langauge this will fail. `return results` is a dataframe that is in column order when the backend expects row ordering:
+This looks ok if the whole system is using Python and dataframes but if the backend is in a real language this will fail. `return results` is a dataframe that is in column order when the backend expects row ordering:
 
 ```json
 {
@@ -213,9 +219,9 @@ This looks ok if the whole system is using python and dataframes but if the back
 }
 ```
 
-This format of columns will not be compatible in this scenario since the backend teams wanted rows. Even if this format could be easier to vectorize its not what the team agreed on.
+This format of columns will not be compatible in this scenario since the backend teams wanted rows. Even if this format could be easier to vectorize, it's not what the team agreed on.
 
-**The Go side — attempt 1**
+**The Backend Side — attempt 1**
 
 ```go
 type Prediction struct {
@@ -235,7 +241,7 @@ processBatch(results[0]) // panic: index out of range
 
 **Backend Side Attempt 2**
 
-After looking at the python code they write a work around
+After looking at the Python code they write a workaround
 
 ```go
 type RawDF struct {
@@ -316,7 +322,7 @@ In this example we will see how "bad" code that makes more memory may be preferr
 
 #### Bad Code
 
-This code has no intermediate variables and streams through memory one element at a time but if this code return a wrong value or needs inspecting it will be difficult to determine if a user is eligible.
+This code has no intermediate variables and streams through memory one element at a time but if this code returns a wrong value or needs inspecting it will be difficult to determine if a user is eligible. Keep in mind this is not necessarily bad code it's just bad code if you expect this to need debugging and a critical path in the code.
 
 ```python
 def run_pipeline(user_ids: list[int]) -> float:
@@ -379,10 +385,78 @@ def run_pipeline(user_ids: list[int], debug: bool = False) -> float:
     return total
 ```
 
-Yes this method is slightly more memory heavy but the trade off is worth it if this breaks and you need to investigate the logs or step through the function. This is where your communication skills come in and you need to understand which tradeoffs are appropriate
+Yes this method is slightly more memory-heavy but the tradeoff is worth it if this breaks and you need to investigate the logs or step through the function. This is where your communication skills come in and you need to understand which tradeoffs are appropriate.
 
+### Memory Layout and Padding
 
-Here's another harsh truth is that a lot of bad code is generated due to skills issues. Everything is a skill issue at the end of the day. You can't fix your car because you lack skills or you can't build a house due to lack of skills. You can't solve this technical problem all the way through due to constraints and skill. If you were a god and as good as programming like Terry Davis then you could make a novel algorithm in about one hour. Instead you could only solve the problem to the degree that your skills with the constraints allowed you.
+#### Bad Code
 
-When you see bad code and think oh I am so much better than whoever this person is you only think that because you did not solve that problem in the context that the other person had. Maybe that person had multiple meetings pop up or had to solve an emerging fire so they left the solution at 80% complete. Now that's not an excuse its just reality and maybe if you can improve it you should.
+This is an example of creating a struct that will use more memory than is needed
 
+```rust
+struct PlayerState {
+    is_alive:   bool,    // 1 byte  — but padded to 8
+    score:      u64,     // 8 bytes — needs 8-byte alignment
+    health:     u8,      // 1 byte
+    level:      u32,     // 4 bytes — needs 4-byte alignment
+    is_admin:   bool,    // 1 byte  — padded to 8
+    position_x: f64,    // 8 bytes — needs 8-byte alignment
+    position_y: f64,    // 8 bytes
+    flags:      u8,      // 1 byte  — padded to 8
+}
+```
+
+This structure would come out to be 56 bytes in total. Modern CPUs fetch bytes in chunks to be more efficient. Most of the time data is near each other so modern CPUs will grab data in 8 byte chunks for a `u64` or 1 byte for `bool`
+
+We can use better data layouts to make the padding become in alignment so that the struct does not need to add extra padding
+
+#### Better Code with Proper Alignment
+
+```rust
+struct PlayerState {
+    // 8-byte fields first
+    score:      u64,     // bytes 0–7
+    position_x: f64,    // bytes 8–15
+    position_y: f64,    // bytes 16–23
+    // 4-byte field next
+    level:      u32,     // bytes 24–27
+    // pack all 1-byte fields together
+    health:     u8,      // byte  28
+    flags:      u8,      // byte  29 (bitfield)
+    // 2 bytes remain — no padding needed
+    _pad:       [u8; 2], // bytes 30–31 (explicit)
+}
+
+// boolean flags packed into one u8
+// instead of 1 bool per 8 bytes
+const FLAG_ALIVE: u8 = 0b0000_0001;
+const FLAG_ADMIN: u8 = 0b0000_0010;
+const FLAG_IMMUNE:u8 = 0b0000_0100;
+
+impl PlayerState {
+    fn is_alive(&self)  -> bool { self.flags & FLAG_ALIVE != 0 }
+    fn is_admin(&self)  -> bool { self.flags & FLAG_ADMIN != 0 }
+    fn set_alive(&mut self) { self.flags |= FLAG_ALIVE; }
+    fn set_dead(&mut self)  { self.flags &= !FLAG_ALIVE; }
+}
+```
+
+Instead of being 56 bytes, this object is now only 32 bytes. This is because the compiler will add padding along the boundaries in order to avoid any unaligned reads and torn reads. If the compiler did not do this then you could run into a lot of strange behavior with interleaving reads/writes and that will result in undefined behavior. 
+
+By restructuring the layout of the struct we make sure that each data type is placed along its appropriate read chunk. For example, every 8-byte field starts at a multiple of 8.
+
+This code requires you to know a little about the hardware you are working on. This code requires that you not only solve the basic functionality but also optimize for memory layout. 
+
+Remember that this is only appropriate to spend time on if this is a system that needs to be performant or a system that will be used by others. If this is throwaway code or part of something that will be thrown away then spending time on this is a waste.
+
+## Conclusion
+
+Good code and bad code are subjective and the correct way to think about it is good vs bad problem solving. Does your code solve all the relevant problems or does it ignore important problems.
+
+Can you perceive your other team's needs and emotions? Do you know what barriers to bring down and what problems to focus on? If you can build the technical and communication skills to high levels then you will be writing better solutions that will lead to people wanting to work with you and saying you have good code.
+
+If you fail to do this then you will continue to write bad code. Sometimes even if you are really good the constraints get to even the best and you will write bad code. Due to these crazy requirements that change on a whim bad code will continue to spew out from the keyboard.
+
+Now it's easier than ever to write bad code because your favorite LLM can generate thousands of lines of code with bad solutions. Your LLM cannot solve or even comprehend some of the problems you have to tackle.
+
+Strive to be a great problem solver and raise the bar for others around you.

@@ -134,7 +134,255 @@ Think of all the different areas of development:
 * System Design
 * UX
 
-There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's Simple **Good problem solving is simply how many problems can you solve given the constraints chained on you at the start or during**
+There are many more areas and each area has its unique challenges. How can we establish what good problem solving is in a way that can encompass all the different duties we have to perform? It's Simple **Good problem solving is simply solving all the relevant problems given the constraints chained on you at the start or during**
 
 ## Solving All the Worlds Problems
+
+What leads to bad code is bad problem solving or just not solving the right types of problems at all. Let's talk about a new ML model or algorithm you are evaluating for a new feature that will be implemented soon.
+
+You create this new algorithm in a jupyter notebook and demonstrate that it does work as intended so you hand it off to the backend team to integrate. This leads to the backend team asking you questions and implementing that notebook into the system. Turns out the backend team took much longer to integrate into the system and you noticed that the next release doesn't even have your new algorithm running. They struggled to get it working with the system. You demonstrated the new technique works and from your perspective that was the end of the task. Truth is you solved only a handful of problems and you decided not to solve other more important problems.
+
+We all know that getting something to work is just the first step of the problem. What people fail to grasp is when they clean it up and present their work they still failed to solve the real problems that will come later.
+
+We mentioned constraints that are imposed on you when you start working on an issue and the one common chain that controls us is **time**. No one can beat father time. Time is always a major constraining factor. If you had unlimited time to create this new algorithm and all you had after years of work is one lousy broken script then you really suck. However if you are constrained to 2 days and its a hard algorithm to create and you showed off a broken but sometimes working script then that might be very impressive given 2 days.
+
+Here's a non exhaustive list of problems you need to solve to really make a good solution
+
+* Does this solution work at the very basic level?
+* Does this solution cover the major edge cases?
+* Can other install or know how to use this new algorithm/feature
+* Is there a developer guide or usage guide that walks people through how to integrate or use what you made?
+* Did you optimize it for the performance requirements?
+* Did you remove any barriers for the next group (python model does not slot into a C#/Rust/Go backend)?
+* Do you lay out the pros/cons of the way you solved the problem?
+* Are the documents accurate to what the code does?
+* Does this solve the business problems if this is relevant?
+* How did you add or support debugging this algorithm/feature?
+* Does this make future features and work easier?
+* Does this pass CI/CD?
+
+Most of the time you can't solve all of these problems in the amount of time you have. So you are forced to choose which of these problems is worth solving. So how do you know which of the problems to solve and which to reject? You have to communicate with your leads/team/managers to figure that out. You have to understand the problems they need to be solving so that you can know which problems and battle you need to fight.
+
+This is why this field is so crazy. Once you see all these problems and all the constraints is gets hard to manage. This is why there is so much bad code out there. People are getting hounded to solve everything and things fall through the cracks. 
+
+It gets more manageable when you have better communication with the team and know which battles are important to spend time on. Does your models memory footprint need to be optimized if the team agrees that a 80% solution is perfectly acceptable for now? Probably not and it is better to provide how to use this new model and a basic inference guide. 
+
+If you just hand them a notebook that semi works then you did not solve the right problems for the team or if you spent days optimizing something but no one knows the API then you wasted time in this situation and failed.
+
+## Perspective is Everything
+
+One thing that I have noticed in good problem solvers and good code is the person who wrote the code/system/docs put themselves in other peoples shoes. If you can grasp a birds eye view of the project and understand how the manager thinks you can provide auto gen docs or system diagrams so they can show their boss. If you understand how the backend will work you can write your solution in a way that makes integration much faster. If you can reduce the systems complexity and make a design that requires less code changes over time then you made the whole teams future better.
+
+It's all about being able to think and take on other peoples perspective.
+
+## Concrete Examples
+
+### The API/Integration Mismatch
+
+The person makes a working ML model with an inference example for the backend team to follow
+
+#### Bad Code in this Context
+
+```python
+import pandas as pd
+import numpy as np
+
+def run_inference(raw_data):
+    # hardcoded path — only works on one machine
+    model = load_model("/home/dan/model.pkl")
+
+    df = pd.DataFrame(raw_data)
+    predictions = model.predict(df)
+
+    results = pd.DataFrame({
+        "user_id": df["user_id"],
+        "score":   predictions,
+        "rank":    np.argsort(predictions),
+    })
+
+    return results  # a DataFrame
+```
+
+This looks ok if the whole system is using python and dataframes but if the backend is in a real langauge this will fail. `return results` is a dataframe that is in column order when the backend expects row ordering:
+
+```json
+{
+  "user_id": {"0": 101, "1": 102, "2": 103},
+  "score":   {"0": 0.91, "1": 0.45, "2": 0.78},
+  "rank":    {"0": 2, "1": 0, "2": 1}
+}
+```
+
+This format of columns will not be compatible in this scenario since the backend teams wanted rows. Even if this format could be easier to vectorize its not what the team agreed on.
+
+**The Go side — attempt 1**
+
+```go
+type Prediction struct {
+    UserID int64   `json:"user_id"`
+    Score  float64 `json:"score"`
+    Rank   int     `json:"rank"`
+}
+
+// expected a list of Prediction
+var results []Prediction
+json.Unmarshal(body, &results)
+
+// results is nil — unmarshal silently failed.
+// shape didn't match the struct.
+processBatch(results[0]) // panic: index out of range
+```
+
+**Backend Side Attempt 2**
+
+After looking at the python code they write a work around
+
+```go
+type RawDF struct {
+    UserID map[string]int64   `json:"user_id"`
+    Score  map[string]float64 `json:"score"`
+    Rank   map[string]int     `json:"rank"`
+}
+
+// manually reassemble rows from the dict-of-dicts
+for k, uid := range raw.UserID {
+    row := Prediction{uid, raw.Score[k], raw.Rank[k]}
+    // ...
+}
+```
+
+This is brittle and breaks if a field changes or is added. No one documented the data contract so the backend team had to "reverse engineer" it.
+
+Now it's time to fix the Python code
+
+One issue is `np.int64` and `np.float32` are not JSON serializable. Depending on your serializer you either get a `TypeError` on the way out or a silent coercion into something unexpected. Explicitly casting with `int()` and `float()` can resolve this.
+
+#### Better Code in this Context
+
+```python
+from dataclasses import dataclass, asdict
+from typing import List
+import os
+
+@dataclass
+class Prediction:
+    user_id: int
+    score:   float
+    rank:    int
+
+def run_inference(raw_data) -> List[Prediction]:
+    model_path = os.environ["MODEL_PATH"]  # no hardcoded paths
+    model = load_model(model_path)
+
+    df = pd.DataFrame(raw_data)
+    scores = model.predict(df)
+    ranks  = scores.argsort()
+
+    return [
+        Prediction(
+            user_id=int(row.user_id),   # cast numpy -> native Python
+            score=float(scores[i]),     # json serializable
+            rank=int(ranks[i])
+        )
+        for i, row in df.iterrows()
+    ]
+```
+
+The JSON is now a list of records:
+
+```json
+[
+  {"user_id": 101, "score": 0.91, "rank": 2},
+  {"user_id": 102, "score": 0.45, "rank": 0},
+  {"user_id": 103, "score": 0.78, "rank": 1}
+]
+```
+
+The backend has almost no changes to make except for syntax:
+
+```go
+var results []Prediction
+if err := json.Unmarshal(body, &results); err != nil {
+    return err
+}
+processBatch(results)
+```
+
+This small example in Python is rewritten in a way that helps the backend team easily integrate this model. Now in a real system things would be much more complex and you would need to provide a user/dev guide on how to use and integrate.
+
+### Extra Memory to Help Debugging
+
+In this example we will see how "bad" code that makes more memory may be preferred in many cases.
+
+#### Bad Code
+
+This code has no intermediate variables and streams through memory one element at a time but if this code return a wrong value or needs inspecting it will be difficult to determine if a user is eligible.
+
+```python
+def run_pipeline(user_ids: list[int]) -> float:
+    return sum(
+        score * weight
+        for score, weight in (
+            (get_score(uid), get_weight(uid))
+            for uid in user_ids
+            if is_eligible(uid)
+        )
+    )
+```
+
+#### Better Code for Easier Debugging
+
+This code has a larger memory footprint but if you need better logs and an easier debug process then this code will allow you to easily see the issues.
+
+```python
+from dataclasses import dataclass, field
+from typing import Iterator
+import logging
+
+@dataclass
+class PipelineStats:
+    total:      int = 0
+    eligible:   int = 0
+    zero_weight: list = field(default_factory=list)
+    min_score:  float = float("inf")
+    max_score:  float = float("-inf")
+
+def _score_stream(user_ids: list[int], stats: PipelineStats) -> Iterator[float]:
+    for uid in user_ids:
+        stats.total += 1
+        if not is_eligible(uid):
+            continue
+
+        score  = get_score(uid)
+        weight = get_weight(uid)
+        stats.eligible += 1
+        stats.min_score = min(stats.min_score, score)
+        stats.max_score = max(stats.max_score, score)
+
+        if weight == 0.0:
+            stats.zero_weight.append(uid)  # only store outliers
+
+        yield score * weight
+
+def run_pipeline(user_ids: list[int], debug: bool = False) -> float:
+    stats = PipelineStats()
+    total = sum(_score_stream(user_ids, stats))
+
+    logging.info(f"eligible: {stats.eligible}/{stats.total}, "
+                 f"score range: [{stats.min_score:.2f}, {stats.max_score:.2f}]")
+
+    if stats.zero_weight:
+        logging.warning(f"zero-weight users (excluded from sum): {stats.zero_weight}")
+
+    logging.debug(f"full stats: {stats}")
+
+    return total
+```
+
+Yes this method is slightly more memory heavy but the trade off is worth it if this breaks and you need to investigate the logs or step through the function. This is where your communication skills come in and you need to understand which tradeoffs are appropriate
+
+
+Here's another harsh truth is that a lot of bad code is generated due to skills issues. Everything is a skill issue at the end of the day. You can't fix your car because you lack skills or you can't build a house due to lack of skills. You can't solve this technical problem all the way through due to constraints and skill. If you were a god and as good as programming like Terry Davis then you could make a novel algorithm in about one hour. Instead you could only solve the problem to the degree that your skills with the constraints allowed you.
+
+When you see bad code and think oh I am so much better than whoever this person is you only think that because you did not solve that problem in the context that the other person had. Maybe that person had multiple meetings pop up or had to solve an emerging fire so they left the solution at 80% complete. Now that's not an excuse its just reality and maybe if you can improve it you should.
 

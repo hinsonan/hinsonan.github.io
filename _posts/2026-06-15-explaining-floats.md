@@ -579,12 +579,6 @@ Lets break down these different types and when they released.
 | FP8 | 2022 | Hopper H100 | 8-bit training |
 | FP4 | 2024 | Blackwell B200 | 4-bit inference
 
-## Tensor Float 32 (TF32)
-
-## Brain Float 16 (BF16)
-
-## Floating Point 8 (FP8) and Floating Point 4 (FP4)
-
 ## FLoating Point Breakdowns
 
 | Type | Sign | Exponent | Mantissa | Total Bits |
@@ -597,3 +591,130 @@ Lets break down these different types and when they released.
 | FP8 (E4M3) | 1 | 4 | 3 | 8 |
 | FP8 (E5M2) | 1 | 5 | 2 | 8 |
 | FP4 | 1 | 2 | 1 | 4 |
+
+## Tensor Float 32 (TF32)
+
+Around 2020 Nvidia started making GPUs with Tensor Cores. These are in total 19 bits and they have an accumulator that accumulates back to a float32. The loss of precision does not matter for training and the loss is pretty small. Faster training speeds is worth the precision.
+
+```
+Input:  FP32 (23-bit mantissa)
+           ↓
+Multiply: TF32 (10-bit mantissa)
+           ↓
+Accumulate: FP32 (23-bit mantissa)
+```
+
+The way this works is that the precision is dropped to 10 mantissa at multiply but when adding products together that is done at the full 23 bit mantissa. The GPU has a specific tensor cores that are created and optimized for these calculations. Below is a more complete example.
+
+<div style="font-family: monospace; margin: 16px 0; padding: 16px; background: #1a1a2e; border-radius: 8px; color: #fff; overflow-x: auto;">
+
+<div style="font-size: 12px; color: #fbbf24; margin-bottom: 4px;">1) 2.5 and 4.5 enter as FP32 (32-bit fields on the wire)</div>
+<table style="border-collapse: collapse; margin: 2px 0;">
+<tr><td style="padding: 1px 4px; color: #888; font-size: 10px;">2.5</td></tr>
+<tr><td style="padding: 0;"><table style="border-collapse: collapse;"><tr>
+<td style="padding: 1px 3px; background: #3b82f6; color: #fff; font-size: 9px; border: 1px solid #2563eb; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">1</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">1</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #374151; color: #666; font-size: 9px; border: 1px solid #1f2937; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #374151; color: #666; font-size: 9px; border: 1px solid #1f2937; min-width: 22px; text-align: center;" colspan="10">...0s (20 more bits)</td>
+</tr></table></td></tr>
+</table>
+<table style="border-collapse: collapse; margin: 2px 0;">
+<tr><td style="padding: 1px 4px; color: #888; font-size: 10px;">4.5</td></tr>
+<tr><td style="padding: 0;"><table style="border-collapse: collapse;"><tr>
+<td style="padding: 1px 3px; background: #3b82f6; color: #fff; font-size: 9px; border: 1px solid #2563eb; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">1</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #22c55e; color: #fff; font-size: 9px; border: 1px solid #16a34a; min-width: 22px; text-align: center;">1</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">0</td>
+<td style="padding: 1px 3px; background: #a855f7; color: #fff; font-size: 9px; border: 1px solid #9333ea; min-width: 22px; text-align: center;">1</td>
+<td style="padding: 1px 3px; background: #374151; color: #666; font-size: 9px; border: 1px solid #1f2937; min-width: 22px; text-align: center;" colspan="10">...0s (20 more bits)</td>
+</tr></table></td></tr>
+</table>
+
+<div style="font-size: 11px; color: #888; margin: 2px 0;"><span style="color: #3b82f6;">sign</span> <span style="color: #22c55e;">exponent</span> <span style="color: #a855f7;">kept (10-bit mantissa)</span> <span style="color: #374151;">ignored (13 bits)</span></div>
+
+<div style="font-size: 12px; color: #fbbf24; margin: 10px 0 4px;">2) Multiply reads only the purple bits (first 10 mantissa bits)</div>
+
+<div style="font-size: 12px; color: #fff; margin: 4px 0;">&nbsp;&nbsp;TF32 multiply: 2.5 × 4.5 = 11.25</div>
+
+<div style="font-size: 12px; color: #fbbf24; margin: 10px 0 4px;">3) Each K-step feeds one product into the FP32 accumulator (hardware adder on die):</div>
+
+<div style="margin: 8px 0;">
+<table style="border-collapse: collapse; margin: 0 auto; background: #16213e;">
+<tr style="border-bottom: 1px solid #0f3460;">
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">K-step</th>
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">Multiply</th>
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">Partial Product</th>
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">acc before</th>
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">acc after</th>
+<th style="padding: 4px 10px; color: #888; font-size: 10px; border: 1px solid #0f3460;">Precision</th>
+</tr>
+<tr>
+<td style="padding: 4px 10px; color: #aaa; font-size: 11px; border: 1px solid #0f3460; text-align: center;">0</td>
+<td style="padding: 4px 10px; color: #fff; font-size: 11px; border: 1px solid #0f3460;">2.5×4.5</td>
+<td style="padding: 4px 10px; background: #2563eb; color: #93c5fd; font-size: 11px; border: 1px solid #0f3460; text-align: center;">11.25</td>
+<td style="padding: 4px 10px; background: #9333ea; color: #d8b4fe; font-size: 11px; border: 1px solid #0f3460; text-align: center;">0.0</td>
+<td style="padding: 4px 10px; background: #dc2626; color: #fca5a5; font-size: 11px; border: 1px solid #0f3460; text-align: center;">11.25</td>
+<td style="padding: 4px 6px; color: #22c55e; font-size: 10px; border: 1px solid #0f3460; text-align: center;">FP32</td>
+</tr>
+<tr>
+<td style="padding: 4px 10px; color: #aaa; font-size: 11px; border: 1px solid #0f3460; text-align: center;">1</td>
+<td style="padding: 4px 10px; color: #fff; font-size: 11px; border: 1px solid #0f3460;">3.1×2.2</td>
+<td style="padding: 4px 10px; background: #2563eb; color: #93c5fd; font-size: 11px; border: 1px solid #0f3460; text-align: center;">6.82</td>
+<td style="padding: 4px 10px; background: #9333ea; color: #d8b4fe; font-size: 11px; border: 1px solid #0f3460; text-align: center;">11.25</td>
+<td style="padding: 4px 10px; background: #dc2626; color: #fca5a5; font-size: 11px; border: 1px solid #0f3460; text-align: center;">18.07</td>
+<td style="padding: 4px 6px; color: #22c55e; font-size: 10px; border: 1px solid #0f3460; text-align: center;">FP32</td>
+</tr>
+<tr>
+<td style="padding: 4px 10px; color: #aaa; font-size: 11px; border: 1px solid #0f3460; text-align: center;">2</td>
+<td style="padding: 4px 10px; color: #fff; font-size: 11px; border: 1px solid #0f3460;">1.7×0.9</td>
+<td style="padding: 4px 10px; background: #2563eb; color: #93c5fd; font-size: 11px; border: 1px solid #0f3460; text-align: center;">1.53</td>
+<td style="padding: 4px 10px; background: #9333ea; color: #d8b4fe; font-size: 11px; border: 1px solid #0f3460; text-align: center;">18.07</td>
+<td style="padding: 4px 10px; background: #dc2626; color: #fca5a5; font-size: 11px; border: 1px solid #0f3460; text-align: center;">19.60</td>
+<td style="padding: 4px 6px; color: #22c55e; font-size: 10px; border: 1px solid #0f3460; text-align: center;">FP32</td>
+</tr>
+<tr>
+<td style="padding: 4px 10px; color: #aaa; font-size: 11px; border: 1px solid #0f3460; text-align: center;">⋮</td>
+<td style="padding: 4px 10px; color: #555; font-size: 11px; border: 1px solid #0f3460;">⋮</td>
+<td style="padding: 4px 10px; color: #555; font-size: 11px; border: 1px solid #0f3460;">⋮</td>
+<td style="padding: 4px 10px; color: #555; font-size: 11px; border: 1px solid #0f3460;">⋮</td>
+<td style="padding: 4px 10px; color: #555; font-size: 11px; border: 1px solid #0f3460;">⋮</td>
+<td style="padding: 4px 6px; color: #555; font-size: 10px; border: 1px solid #0f3460; text-align: center;"></td>
+</tr>
+<tr>
+<td style="padding: 4px 10px; color: #aaa; font-size: 11px; border: 1px solid #0f3460; text-align: center;">15</td>
+<td style="padding: 4px 10px; color: #fff; font-size: 11px; border: 1px solid #0f3460;">0.4×8.1</td>
+<td style="padding: 4px 10px; background: #2563eb; color: #93c5fd; font-size: 11px; border: 1px solid #0f3460; text-align: center;">3.24</td>
+<td style="padding: 4px 10px; background: #9333ea; color: #d8b4fe; font-size: 11px; border: 1px solid #0f3460; text-align: center;">...</td>
+<td style="padding: 4px 10px; background: #dc2626; color: #fca5a5; font-size: 11px; border: 1px solid #0f3460; text-align: center;">final dot product</td>
+<td style="padding: 4px 6px; color: #22c55e; font-size: 10px; border: 1px solid #0f3460; text-align: center;">FP32</td>
+</tr>
+</table>
+</div>
+
+</div>
+
+Since the accumulator keeps full FP32 precision during addition you limit the precision loss. For scientific computing this would not be a good idea but for ML training this precision rarely is worth the cost for larger multi billion param models.
+
+## Brain Float 16 (BF16)
+
+BF16 and FP16 are the exact same amount of bits so what gives? 
+
+## Floating Point 8 (FP8) and Floating Point 4 (FP4)
+

@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Explaining Floats: TF32, BF16, FP8, FP4, Huh?"
-date: 2026-06-15
+date: 2026-06-13
 categories: ML
 ---
 
@@ -399,8 +399,8 @@ value = (-1)^sign x 2^(exponent - 1023) x 1.mantissa
 Applying the formula:
 
 - `sign = 0` -> `(-1)^0 = +1`
-- `exponent = 01111111100_2 = 1020` -> `2^(1020 - 1023) = 2^-3 = 1/8`
-- `mantissa = .0100...0_2 = 1/4` -> `1 + 1/4 = 1.25`
+- `exponent = 01111111100₂ = 1020` -> `2^(1020 - 1023) = 2^-3 = 1/8`
+- `mantissa = .0100...0₂ = 1/4` -> `1 + 1/4 = 1.25`
 
 `(+1) x 1.25 x 1/8 = 0.15625`
 
@@ -555,8 +555,8 @@ Applying the formula:
 Applying the formula:
 
 - `sign = 1` -> `(-1)^1 = -1`
-- `exponent = 10000000000_2 = 1024` -> `2^(1024 - 1023) = 2^1 = 2`
-- `mantissa = .0100...0_2 = 1/4` -> `1 + 1/4 = 1.25`
+- `exponent = 10000000000₂ = 1024` -> `2^(1024 - 1023) = 2^1 = 2`
+- `mantissa = .0100...0₂ = 1/4` -> `1 + 1/4 = 1.25`
 
 `(-1) x 1.25 x 2 = -2.5`
 

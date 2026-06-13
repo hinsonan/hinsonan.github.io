@@ -714,7 +714,278 @@ Since the accumulator keeps full FP32 precision during addition you limit the pr
 
 ## Brain Float 16 (BF16)
 
-BF16 and FP16 are the exact same amount of bits so what gives? 
+BF16 and FP16 are the exact same amount of bits so what gives? The range of the numbers for BF16 is greater than FP16 but with lesser precision. BF16 has 8 exponents and FP16 has 5.
+
+The primary reason for BF16 was to make training easier by reducing the need to apply loss scaling when training large models (billions of params)
+
+To protect FP16 from underflow and overflow during backprop you need to scale the values. The reason you have to protect against this is because for large models the logits can get very large and overflow the range of FP16. The other issue is that the vanishing gradient issue can pop up when training the large models. So you need to scale the loss which looks something like this
+
+```python
+loss_scaled = loss × S              # one scalar, cheap
+
+# backprop runs — ALL gradients are now ×S in size
+# FP16 can represent them because they're no longer tiny
+
+# BEFORE optimizer.step():
+for grad in model.parameters():
+    grad /= S                       # done in FP32, exact
+    
+optimizer.step()                    # sees correct-magnitude gradients
+```
+
+Using Pytorch this is done by using `GradScaler`
+
+```python
+scaler = torch.cuda.amp.GradScaler()   # manages S automatically
+
+for batch in dataloader:
+    with torch.autocast(device_type='cuda', dtype=torch.float16):
+        loss = model(batch)            # forward in FP16
+
+    scaler.scale(loss).backward()      # loss × S, then backprop (grads are ×S)
+    scaler.unscale_(optimizer)         # divides all grads by S in FP32
+    scaler.step(optimizer)             # optimizer sees correct magnitudes
+    scaler.update()                    # adjusts S up or down for next step
+```
+
+The problem with this is sometimes its very hard to find the right value to scale by. Many times you can solve overflow but not underflow. In order to solve this BF16 comes to the rescue.
+
+BF16 has the same range has a FP32 but with less precision. This is well worth the trade off since now we don't have to apply scaling and deal with these issues. Our gradients can flow more properly.
+
+There are some instances where you may prefer the extra precision of FP16 such as after pre-training and supervised training. The weights are more stable and maybe if you want to do reinforcement learning you may want to switch to FP16 for extra precision. This is not always true and many people have used BF16 for RL tuning.
 
 ## Floating Point 8 (FP8) and Floating Point 4 (FP4)
 
+FP8 comes in two versions
+
+* **E4M3** (4 exponent, 3 mantissa)
+* **E5M2** (5 exponent, 2 mantissa). 
+
+Both are needed because activations and gradients have different requirements:
+
+- **E4M3** (range ±448): More precision for weights and activations (forward pass).
+- **E5M2** (range ±57344): More range for gradients (backward pass). Gradients span many orders of magnitude and need the wider range to avoid overflow.
+
+<div style="overflow-x:auto;margin:1rem 0;">
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E4M3</strong> (1 sign | 4 exponent | 3 mantissa) — weights and activations, max value 448</div>
+  <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;">
+    <tr>
+      <th colspan="1" style="border:1px solid #1e3a5f;padding:6px 2px;background:#2563eb;color:#fff;text-align:center;font-size:0.85rem;">sign</th>
+      <th colspan="4" style="border:1px solid #14532d;padding:6px 2px;background:#16a34a;color:#fff;text-align:center;font-size:0.85rem;">exponent (4 bits)</th>
+      <th colspan="3" style="border:1px solid #7f1d1d;padding:6px 2px;background:#dc2626;color:#fff;text-align:center;font-size:0.85rem;">mantissa (3 bits)</th>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#3b82f6;color:#fff;padding:0;">S</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+    </tr>
+    <tr>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">7</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">6</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">3</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">2</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">0</td>
+    </tr>
+  </table>
+</div>
+
+<div style="overflow-x:auto;margin:1rem 0;">
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E5M2</strong> (1 sign | 5 exponent | 2 mantissa) — gradients, max value 57344</div>
+  <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;">
+    <tr>
+      <th colspan="1" style="border:1px solid #1e3a5f;padding:6px 2px;background:#2563eb;color:#fff;text-align:center;font-size:0.85rem;">sign</th>
+      <th colspan="5" style="border:1px solid #14532d;padding:6px 2px;background:#16a34a;color:#fff;text-align:center;font-size:0.85rem;">exponent (5 bits)</th>
+      <th colspan="2" style="border:1px solid #7f1d1d;padding:6px 2px;background:#dc2626;color:#fff;text-align:center;font-size:0.85rem;">mantissa (2 bits)</th>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#3b82f6;color:#fff;padding:0;">S</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+      <td style="border:1px solid #1f2937;width:32px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+    </tr>
+    <tr>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">7</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">6</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;"></td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">2</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">1</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">0</td>
+    </tr>
+  </table>
+</div>
+
+The H100 introduced FP8 tensor cores. Training with FP8 follows the same mixed-precision pattern as TF32
+
+
+<div style="font-family:monospace;margin:16px 0;padding:16px;background:#1a1a2e;border-radius:8px;color:#fff;overflow-x:auto;">
+
+<div style="font-size:12px;color:#fbbf24;margin-bottom:8px;">FP8 mixed-precision training flow</div>
+
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">master weights</div>
+    <div style="color:#fff;">FP32</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">cast + scale</div>
+    <div style="color:#22c55e;">FP8 E4M3</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">activations</div>
+    <div style="color:#22c55e;">FP8 E4M3</div>
+  </div>
+  <div style="color:#888;">×</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">weights</div>
+    <div style="color:#22c55e;">FP8 E4M3</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">matmul</div>
+    <div style="color:#a855f7;">FP8 multiply</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">accumulate</div>
+    <div style="color:#3b82f6;">FP32</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">update</div>
+    <div style="color:#fff;">FP32 master</div>
+  </div>
+</div>
+
+<div style="font-size:11px;color:#888;margin:8px 0;">
+  <span style="color:#fbbf24;">scale</span> = FP8_max / tensor_amax &nbsp;•&nbsp;
+  <span style="color:#fbbf24;">dequantize</span> = result / scale &nbsp;•&nbsp;
+  backward gradients use <span style="color:#22c55e;">E5M2</span>
+</div>
+
+</div>
+
+The major new piece that allows this to work is per tensor scaling. You need to find a scale value for each tensor in order to fit it into the range for FP8
+
+```python
+# per-tensor scaling for FP8
+amax = input.abs().max()              # largest value in the tensor
+scale = 448.0 / amax                   # map max → FP8 max (448 for E4M3)
+scaled = (input * scale).to(torch.float8_e4m3fn)   # quantize to FP8
+```
+
+The scale factor is stored alongside the FP8 tensor so the next layer knows how to interpret it. PyTorch handles this automatically with `torch.fp8` APIs.
+
+With newer NVIDIA cards like H100 you can actually train in FP8. You don't even need to worry about the loss scaler since all tensors get scaled properly. 
+
+### Floating Point 4 (FP4)
+
+FP4 is experimental. The standard format is **E2M1** (2 exponent, 1 mantissa). With 4 bits total, you can represent exactly 16 values:
+
+<div style="overflow-x:auto;margin:1rem 0;">
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP4 E2M1</strong> (1 sign | 2 exponent | 1 mantissa)</div>
+  <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;">
+    <tr>
+      <th colspan="1" style="border:1px solid #1e3a5f;padding:6px 2px;background:#2563eb;color:#fff;text-align:center;font-size:0.85rem;">sign</th>
+      <th colspan="2" style="border:1px solid #14532d;padding:6px 2px;background:#16a34a;color:#fff;text-align:center;font-size:0.85rem;">exponent (2 bits)</th>
+      <th colspan="1" style="border:1px solid #7f1d1d;padding:6px 2px;background:#dc2626;color:#fff;text-align:center;font-size:0.85rem;">mantissa (1 bit)</th>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;width:42px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#3b82f6;color:#fff;padding:0;">S</td>
+      <td style="border:1px solid #1f2937;width:42px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:42px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#22c55e;color:#fff;padding:0;">E</td>
+      <td style="border:1px solid #1f2937;width:42px;height:26px;text-align:center;font-weight:bold;font-size:0.85rem;background:#ef4444;color:#fff;padding:0;">M</td>
+    </tr>
+    <tr>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">3</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">2</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">1</td>
+      <td style="text-align:center;font-size:0.65rem;color:#6b7280;padding:1px 0;">0</td>
+    </tr>
+  </table>
+</div>
+
+<div style="overflow-x:auto;margin:1rem 0;">
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;">All 16 representable values:</div>
+  <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;text-align:center;">
+    <tr>
+      <th style="border:1px solid #1f2937;padding:6px 10px;background:#1e3a5f;color:#fff;font-size:0.8rem;">Bits</th>
+      <th style="border:1px solid #1f2937;padding:6px 12px;background:#1e3a5f;color:#fff;font-size:0.8rem;">Value</th>
+      <th style="border:1px solid #1f2937;padding:6px 10px;background:#1e3a5f;color:#fff;font-size:0.8rem;">Bits</th>
+      <th style="border:1px solid #1f2937;padding:6px 12px;background:#1e3a5f;color:#fff;font-size:0.8rem;">Value</th>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 00 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;background:#1a1a2e;color:#fff;">+0.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 00 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;background:#1a1a2e;color:#fff;">−0.0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 00 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+0.5</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 00 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−0.5</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 01 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+1.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 01 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−1.0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 01 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+1.5</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 01 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−1.5</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 10 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+2.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 10 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−2.0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 10 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+3.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 10 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−3.0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 11 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+4.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 11 0</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−4.0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">0 11 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">+6.0</td>
+      <td style="border:1px solid #1f2937;padding:4px 10px;font-size:0.8rem;">1 11 1</td>
+      <td style="border:1px solid #1f2937;padding:4px 12px;font-size:0.8rem;">−6.0</td>
+    </tr>
+  </table>
+</div>
+
+One sign bit, 2 exponent bits (bias 1), 1 mantissa bit. That's it — fractions are limited to halves (0.0, 0.5) and integers (1, 2, 3, 4, 6, — plus negatives).
+
+**Training from scratch with FP4 is not practical today.** The representable set is too sparse — weight updates smaller than 0.5 get rounded to zero. Research on FP4 training (e.g., "FP4 Training" from Microsoft, "SwitchBack" from Apple) uses clever tricks:
+- Maintain FP16/FP32 shadow copies of weights.
+- Only the matmul compute happens in FP4 (like a quantization-aware training setup).
+- Use E2M1 for weights, E3M0 or E4M3 for activations.
+- Custom block sizes and scale factors that are much finer-grained than FP8.
+
+In practice, FP4 is used for **inference quantization** (compress a trained model to 4 bits per weight), not training. Tools like bitsandbytes, AutoGPTQ, and llama.cpp ship FP4-quantized models that run on consumer GPUs with minimal accuracy loss, but the model was trained in FP16/BF16 first.

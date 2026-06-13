@@ -723,7 +723,7 @@ To protect FP16 from underflow and overflow during backprop you need to scale th
 ```python
 loss_scaled = loss × S              # one scalar, cheap
 
-# backprop runs — ALL gradients are now ×S in size
+# backprop runs: ALL gradients are now ×S in size
 # FP16 can represent them because they're no longer tiny
 
 # BEFORE optimizer.step():
@@ -767,7 +767,7 @@ Both are needed because activations and gradients have different requirements:
 - **E5M2** (range ±57344): More range for gradients (backward pass). Gradients span many orders of magnitude and need the wider range to avoid overflow.
 
 <div style="overflow-x:auto;margin:1rem 0;">
-  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E4M3</strong> (1 sign | 4 exponent | 3 mantissa) — weights and activations, max value 448</div>
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E4M3</strong> (1 sign | 4 exponent | 3 mantissa): weights and activations, max value 448</div>
   <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;">
     <tr>
       <th colspan="1" style="border:1px solid #1e3a5f;padding:6px 2px;background:#2563eb;color:#fff;text-align:center;font-size:0.85rem;">sign</th>
@@ -798,7 +798,7 @@ Both are needed because activations and gradients have different requirements:
 </div>
 
 <div style="overflow-x:auto;margin:1rem 0;">
-  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E5M2</strong> (1 sign | 5 exponent | 2 mantissa) — gradients, max value 57344</div>
+  <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP8 E5M2</strong> (1 sign | 5 exponent | 2 mantissa): gradients, max value 57344</div>
   <table style="border-collapse:collapse;font-family:monospace;line-height:1.2;">
     <tr>
       <th colspan="1" style="border:1px solid #1e3a5f;padding:6px 2px;background:#2563eb;color:#fff;text-align:center;font-size:0.85rem;">sign</th>
@@ -835,7 +835,8 @@ The H100 introduced FP8 tensor cores. Training with FP8 follows the same mixed-p
 
 <div style="font-size:12px;color:#fbbf24;margin-bottom:8px;">FP8 mixed-precision training flow</div>
 
-<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px;">
+  <div style="color:#888;width:62px;">Forward:</div>
   <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
     <div style="color:#888;font-size:9px;">master weights</div>
     <div style="color:#fff;">FP32</div>
@@ -867,6 +868,29 @@ The H100 introduced FP8 tensor cores. Training with FP8 follows the same mixed-p
   </div>
   <div style="color:#888;">→</div>
   <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">loss</div>
+    <div style="color:#fff;">FP32</div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:11px;">
+  <div style="color:#888;width:62px;">Backward:</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">gradients</div>
+    <div style="color:#22c55e;">FP8 E5M2</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">dequantize</div>
+    <div style="color:#3b82f6;">FP32</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
+    <div style="color:#888;font-size:9px;">optimizer</div>
+    <div style="color:#fff;">FP32</div>
+  </div>
+  <div style="color:#888;">→</div>
+  <div style="background:#16213e;border:1px solid #0f3460;border-radius:4px;padding:6px 10px;text-align:center;">
     <div style="color:#888;font-size:9px;">update</div>
     <div style="color:#fff;">FP32 master</div>
   </div>
@@ -875,7 +899,8 @@ The H100 introduced FP8 tensor cores. Training with FP8 follows the same mixed-p
 <div style="font-size:11px;color:#888;margin:8px 0;">
   <span style="color:#fbbf24;">scale</span> = FP8_max / tensor_amax &nbsp;•&nbsp;
   <span style="color:#fbbf24;">dequantize</span> = result / scale &nbsp;•&nbsp;
-  backward gradients use <span style="color:#22c55e;">E5M2</span>
+  forward uses <span style="color:#22c55e;">E4M3</span> &nbsp;•&nbsp;
+  backward uses <span style="color:#22c55e;">E5M2</span>
 </div>
 
 </div>
@@ -895,7 +920,11 @@ With newer NVIDIA cards like H100 you can actually train in FP8. You don't even 
 
 ### Floating Point 4 (FP4)
 
-FP4 is experimental. The standard format is **E2M1** (2 exponent, 1 mantissa). With 4 bits total, you can represent exactly 16 values:
+FP4 is experimental. It can really save you memory but in my experience some models start to show degradation at this low precision. If the model was trained using quantized aware training then it can still be pretty good. I hope we continue to research and try new things at these lower precision data types.
+
+Here is the standard format
+
+**E2M1** (2 exponent, 1 mantissa). With 4 bits total, you can represent exactly 16 values:
 
 <div style="overflow-x:auto;margin:1rem 0;">
   <div style="font-family:monospace;font-size:0.9rem;margin-bottom:0.5rem;"><strong>FP4 E2M1</strong> (1 sign | 2 exponent | 1 mantissa)</div>
@@ -980,12 +1009,35 @@ FP4 is experimental. The standard format is **E2M1** (2 exponent, 1 mantissa). W
   </table>
 </div>
 
-One sign bit, 2 exponent bits (bias 1), 1 mantissa bit. That's it — fractions are limited to halves (0.0, 0.5) and integers (1, 2, 3, 4, 6, — plus negatives).
+So can you train in FP4? Not really or at least not yet. We lose so much precision that when you compute gradients you will run into too much underflow/overflow. This mode is meant to be used for inference only at the moment.
 
-**Training from scratch with FP4 is not practical today.** The representable set is too sparse — weight updates smaller than 0.5 get rounded to zero. Research on FP4 training (e.g., "FP4 Training" from Microsoft, "SwitchBack" from Apple) uses clever tricks:
-- Maintain FP16/FP32 shadow copies of weights.
-- Only the matmul compute happens in FP4 (like a quantization-aware training setup).
-- Use E2M1 for weights, E3M0 or E4M3 for activations.
-- Custom block sizes and scale factors that are much finer-grained than FP8.
+The model is trained in BF16/FP16 and then quantized and scaled to 4bit for inference.
 
-In practice, FP4 is used for **inference quantization** (compress a trained model to 4 bits per weight), not training. Tools like bitsandbytes, AutoGPTQ, and llama.cpp ship FP4-quantized models that run on consumer GPUs with minimal accuracy loss, but the model was trained in FP16/BF16 first.
+There is some research on FP4 training that uses similiar techniques to FP8. In a practical sense it is still too unstable for adoption.
+
+Below are some papers about attempting training at FP4:
+
+- **[FP4 All the Way](https://arxiv.org/abs/2505.19115)** (Chmiel et al., 2025)
+
+- **[Quartet](https://arxiv.org/abs/2505.14669)** (Castro et al., 2025) 
+
+- **[Pretraining LLMs with NVFP4](https://arxiv.org/abs/2509.25149)** (NVIDIA, 2025)
+
+I think we will have large adoption of FP4 and other smaller precisions in the future.
+
+## Conclusion
+
+| Format | Best for | Hardware | Notes |
+|--------|----------|----------|-------|
+| **FP64** | Scientific computing, numerical simulation | CPUs, HPC GPUs (A100, H100, B200) | Overkill for ML: use only when double precision is required |
+| **FP32** | Master weights, loss scaling, accumulator | All hardware | The reference precision. Everything casts down from here |
+| **TF32** | Training throughput on NVIDIA Tensor Cores | Ampere+ (A100, H100, B200) | Transparent drop-in for FP32 in PyTorch: free speed on compatible GPUs |
+| **BF16** | Training large models (7B+) | TPU v2+, Ampere+ GPUs | Best range/precision trade-off for training. No loss scaling needed |
+| **FP16** | Fine-tuning, inference, smaller models | Most GPUs (Pascal+) | More precision than BF16 but less range: requires GradScaler for training |
+| **FP8 (E4M3)** | Forward pass, inference quantization | Hopper+ (H100, B200) | Weights and activations during FP8 training |
+| **FP8 (E5M2)** | Gradients during FP8 training | Hopper+ (H100, B200) | Extra range needed for backprop |
+| **FP4** | Inference quantization | Blackwell B200 (experimental) | Training still research-only. Use for memory-bound inference |
+
+Now we have a much better understanding of how these data types work and how they can help ML training. GPUs keep improving and the hardware can be pretty complicated. 
+
+Keep these data types in mind when you have to purchase hardware for yourself or your company. You want hardware that supports your training/inference needs. Good luck and maybe try some FP4 training on your own.

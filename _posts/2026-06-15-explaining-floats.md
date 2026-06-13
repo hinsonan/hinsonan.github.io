@@ -5,7 +5,7 @@ date: 2026-06-15
 categories: ML
 ---
 
-There are too many floats now and no one knows what they are. Everyone knows about 64 and 32 bit floats but over the past 10 years all these "new" types have emerged. You start mentioning brain floats to someone and you have lost the audience. If you work in ML or even if you primarily work on serving models for inference you need to understand these data types. Grab hold of your exponents and let's see where the mantissa takes us.
+There are too many floats now and no one knows what they are. Everyone knows about 64- and 32-bit floats but over the past 10 years all these "new" types have emerged. You start mentioning brain floats to someone and you have lost the audience. If you work in ML or even if you primarily work on serving models for inference you need to understand these data types. Grab hold of your exponents and let's see where the mantissa takes us.
 
 # Classic IEEE 754
 
@@ -577,7 +577,7 @@ Let's break down these different types and when they released.
 | BF16 | 2020 | Ampere / Cooper Lake | widespread GPU/CPU adoption |
 | TF32 | 2020 | Ampere A100 | FP32 speedup |
 | FP8 | 2022 | Hopper H100 | 8-bit training |
-| FP4 | 2024 | Blackwell B200 | 4-bit inference
+| FP4 | 2024 | Blackwell B200 | 4-bit inference | 
 
 ## Floating Point Breakdowns
 
@@ -594,7 +594,7 @@ Let's break down these different types and when they released.
 
 ## Tensor Float 32 (TF32)
 
-Around 2020 Nvidia started making GPUs with Tensor Cores. These are in total 19 bits and they have an accumulator that accumulates back to a float32. The loss of precision does not matter for training and the loss is pretty small. Faster training speeds is worth the precision.
+Around 2017 Nvidia started making GPUs with Tensor Cores (Volta V100), and with Ampere (A100) in 2020 they added TF32 support. These are in total 19 bits and they have an accumulator that accumulates back to a float32. The loss of precision does not matter for training and the loss is pretty small. Faster training speeds is worth the precision.
 
 ```
 Input:  FP32 (23-bit mantissa)
@@ -736,7 +736,7 @@ optimizer.step()                    # sees correct-magnitude gradients
 Using Pytorch this is done by using `GradScaler`
 
 ```python
-scaler = torch.cuda.amp.GradScaler()   # manages S automatically
+scaler = torch.amp.GradScaler("cuda")   # manages S automatically
 
 for batch in dataloader:
     with torch.autocast(device_type='cuda', dtype=torch.float16):
@@ -1027,16 +1027,16 @@ I think we will have large adoption of FP4 and other smaller precisions in the f
 
 ## Conclusion
 
-| Format | Best for | Hardware | Notes |
-|--------|----------|----------|-------|
-| **FP64** | Scientific computing, numerical simulation | CPUs, HPC GPUs (A100, H100, B200) | Overkill for ML: use only when double precision is required |
-| **FP32** | Master weights, loss scaling, accumulator | All hardware | The reference precision. Everything casts down from here |
-| **TF32** | Training throughput on NVIDIA Tensor Cores | Ampere+ (A100, H100, B200) | Transparent drop-in for FP32 in PyTorch: free speed on compatible GPUs |
-| **BF16** | Training large models (7B+) | TPU v2+, Ampere+ GPUs | Best range/precision trade-off for training. No loss scaling needed |
-| **FP16** | Fine-tuning, inference, smaller models | Most GPUs (Pascal+) | More precision than BF16 but less range: requires GradScaler for training |
-| **FP8 (E4M3)** | Forward pass, inference quantization | Hopper+ (H100, B200) | Weights and activations during FP8 training |
-| **FP8 (E5M2)** | Gradients during FP8 training | Hopper+ (H100, B200) | Extra range needed for backprop |
-| **FP4** | Inference quantization | Blackwell B200 (experimental) | Training still research-only. Use for memory-bound inference |
+| Format | Best for | Hardware | Range | Notes |
+|--------|----------|----------|-------|-------|
+| **FP64** | Scientific computing, numerical simulation | CPUs, HPC GPUs (A100, H100, B200) | ±1.8 × 10³⁰⁸ | Overkill for ML: use only when double precision is required |
+| **FP32** | Master weights, loss scaling, accumulator | All hardware | ±3.4 × 10³⁸ | The reference precision. Everything casts down from here |
+| **TF32** | Training throughput on NVIDIA Tensor Cores | Ampere+ (A100, H100, B200) | ±3.4 × 10³⁸ | Transparent drop-in for FP32 in PyTorch: free speed on compatible GPUs |
+| **BF16** | Training large models (7B+) | TPU v2+, Ampere+ GPUs | ±3.4 × 10³⁸ | Best range/precision trade-off for training. No loss scaling needed |
+| **FP16** | Fine-tuning, inference, smaller models | Most GPUs (Pascal+) | ±65,504 | More precision than BF16 but less range: requires GradScaler for training |
+| **FP8 (E4M3)** | Forward pass, inference quantization | Hopper+ (H100, B200) | ±448 | Weights and activations during FP8 training |
+| **FP8 (E5M2)** | Gradients during FP8 training | Hopper+ (H100, B200) | ±57,344 | Extra range needed for backprop |
+| **FP4** | Inference quantization | Blackwell B200 (experimental) | ±6 | Training still research-only. Use for memory-bound inference |
 
 Now we have a much better understanding of how these data types work and how they can help ML training. GPUs keep improving and the hardware can be pretty complicated. 
 

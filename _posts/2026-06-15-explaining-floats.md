@@ -5,11 +5,11 @@ date: 2026-06-15
 categories: ML
 ---
 
-There are too many floats now and no one knows what they are. Everyone knows about 64 and 32 bit floats but over the past 10 years all these "new" types have emerged. You start mentioning brain floats to someone and you have lost the audience. If you work in ML or even if you primarily work on serving models for inference you need to understand these data types. Grab hold of your exponents and lets see where the mantissa takes us.
+There are too many floats now and no one knows what they are. Everyone knows about 64 and 32 bit floats but over the past 10 years all these "new" types have emerged. You start mentioning brain floats to someone and you have lost the audience. If you work in ML or even if you primarily work on serving models for inference you need to understand these data types. Grab hold of your exponents and let's see where the mantissa takes us.
 
 # Classic IEEE 754
 
-We must understand what a floating point is and how CPUs have been using them. in 1985 [IEEE](https://en.wikipedia.org/wiki/IEEE_754) established the standard for floating point numbers. All Floats comprise of three things
+We must understand what a floating point is and how CPUs have been using them. In 1985 [IEEE](https://en.wikipedia.org/wiki/IEEE_754) established the standard for floating point numbers. All floats comprise three things
 
 1) Sign bit
 
@@ -564,7 +564,7 @@ Now that we understand this a bit better we can move onto all these new types th
 
 # GPUs get all the floats
 
-Lets break down these different types and when they released.
+Let's break down these different types and when they released.
 
 ## Release Dates
 
@@ -579,7 +579,7 @@ Lets break down these different types and when they released.
 | FP8 | 2022 | Hopper H100 | 8-bit training |
 | FP4 | 2024 | Blackwell B200 | 4-bit inference
 
-## FLoating Point Breakdowns
+## Floating Point Breakdowns
 
 | Type | Sign | Exponent | Mantissa | Total Bits |
 |------|------|----------|----------|------------|
@@ -604,7 +604,7 @@ Multiply: TF32 (10-bit mantissa)
 Accumulate: FP32 (23-bit mantissa)
 ```
 
-The way this works is that the precision is dropped to 10 mantissa at multiply but when adding products together that is done at the full 23 bit mantissa. The GPU has a specific tensor cores that are created and optimized for these calculations. Below is a more complete example.
+The way this works is that the precision is dropped to 10 mantissa at multiply but when adding products together that is done at the full 23 bit mantissa. The GPU has specific tensor cores that are created and optimized for these calculations. Below is a more complete example.
 
 <div style="font-family: monospace; margin: 16px 0; padding: 16px; background: #1a1a2e; border-radius: 8px; color: #fff; overflow-x: auto;">
 
@@ -710,7 +710,7 @@ The way this works is that the precision is dropped to 10 mantissa at multiply b
 
 </div>
 
-Since the accumulator keeps full FP32 precision during addition you limit the precision loss. For scientific computing this would not be a good idea but for ML training this precision rarely is worth the cost for larger multi billion param models.
+Since the accumulator keeps full FP32 precision during addition you limit the precision loss. For scientific computing this would not be a good idea but for ML training this precision is rarely worth the cost for larger multi-billion param models.
 
 ## Brain Float 16 (BF16)
 
@@ -750,7 +750,7 @@ for batch in dataloader:
 
 The problem with this is sometimes its very hard to find the right value to scale by. Many times you can solve overflow but not underflow. In order to solve this BF16 comes to the rescue.
 
-BF16 has the same range has a FP32 but with less precision. This is well worth the trade off since now we don't have to apply scaling and deal with these issues. Our gradients can flow more properly.
+BF16 has the same range as FP32 but with less precision. This is well worth the trade off since now we don't have to apply scaling and deal with these issues. Our gradients can flow more properly.
 
 There are some instances where you may prefer the extra precision of FP16 such as after pre-training and supervised training. The weights are more stable and maybe if you want to do reinforcement learning you may want to switch to FP16 for extra precision. This is not always true and many people have used BF16 for RL tuning.
 
@@ -1013,7 +1013,7 @@ So can you train in FP4? Not really or at least not yet. We lose so much precisi
 
 The model is trained in BF16/FP16 and then quantized and scaled to 4bit for inference.
 
-There is some research on FP4 training that uses similiar techniques to FP8. In a practical sense it is still too unstable for adoption.
+There is some research on FP4 training that uses similar techniques to FP8. In a practical sense it is still too unstable for adoption.
 
 Below are some papers about attempting training at FP4:
 

@@ -10,7 +10,9 @@ from complex_core import (
     analytic_example,
     complex_linear_mse_gradients,
     complex_map_matrix,
+    cauchy_riemann_residual,
     finite_diff_real_imag,
+    iq_impairment_examples,
     make_complex_regression_data,
     rotation_commutation_error_complex,
     rotation_commutation_error_real,
@@ -153,6 +155,27 @@ def check_optimizer_step_equivalence() -> bool:
     return ok
 
 
+def check_cauchy_riemann_examples() -> bool:
+    z = 1.2 - 0.7j
+    hol = cauchy_riemann_residual("z2", z)
+    non_hol = cauchy_riemann_residual("abs2_as_complex", z)
+    hol_res = abs(hol["residual_1"]) + abs(hol["residual_2"])
+    non_hol_res = abs(non_hol["residual_1"]) + abs(non_hol["residual_2"])
+    ok = hol_res < 1e-3 and non_hol_res > 1e-2
+    print(f"  CR residual z^2={hol_res:.3e}, |z|^2={non_hol_res:.3e} {'OK' if ok else 'FAIL'}")
+    return ok
+
+
+def check_iq_impairments() -> bool:
+    examples = iq_impairment_examples(n_symbols=128, seed=4)
+    keys_ok = set(examples) == {"clean", "phase rotation", "amplitude scale", "noise", "frequency offset"}
+    shapes_ok = all(v.shape == examples["clean"].shape for v in examples.values())
+    finite_ok = all(np.all(np.isfinite(v.real)) and np.all(np.isfinite(v.imag)) for v in examples.values())
+    ok = keys_ok and shapes_ok and finite_ok
+    print(f"  impairment examples keys={len(examples)}, shape={examples['clean'].shape} {'OK' if ok else 'FAIL'}")
+    return ok
+
+
 def main() -> int:
     print("Part 1 numeric checks")
     print("=" * 60)
@@ -179,6 +202,12 @@ def main() -> int:
 
     print("\n7) Optimizer step equivalence (complex vs split-real)")
     ok &= check_optimizer_step_equivalence()
+
+    print("\n8) Holomorphic vs non-holomorphic examples")
+    ok &= check_cauchy_riemann_examples()
+
+    print("\n9) IQ impairment examples")
+    ok &= check_iq_impairments()
 
     print("\n" + "=" * 60)
     print("ALL OK" if ok else "SOME CHECKS FAILED")

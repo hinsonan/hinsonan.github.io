@@ -81,6 +81,61 @@ def analytic_example(name: str, z: complex, a: complex = 1.0 + 0.0j) -> dict[str
     raise ValueError(f"unknown example '{name}'")
 
 
+def cauchy_riemann_residual(name: str, z: complex, eps: float = 1e-5) -> dict[str, float]:
+    """Numerically check Cauchy-Riemann residuals for complex-valued examples."""
+    if name == "z2":
+        fn = lambda zz: zz**2
+    elif name == "conj_z":
+        fn = np.conj
+    elif name == "abs2_as_complex":
+        fn = lambda zz: np.abs(zz) ** 2 + 0.0j
+    else:
+        raise ValueError(f"unknown Cauchy-Riemann example '{name}'")
+
+    x, y = float(z.real), float(z.imag)
+    f0 = fn(x + 1j * y)
+    fx = fn((x + eps) + 1j * y)
+    fy = fn(x + 1j * (y + eps))
+
+    du_dx = float((fx.real - f0.real) / eps)
+    dv_dx = float((fx.imag - f0.imag) / eps)
+    du_dy = float((fy.real - f0.real) / eps)
+    dv_dy = float((fy.imag - f0.imag) / eps)
+
+    return {
+        "du_dx": du_dx,
+        "du_dy": du_dy,
+        "dv_dx": dv_dx,
+        "dv_dy": dv_dy,
+        "residual_1": du_dx - dv_dy,
+        "residual_2": du_dy + dv_dx,
+    }
+
+
+def iq_impairment_examples(
+    modulation: str = "qpsk",
+    n_symbols: int = 256,
+    seed: int = 3,
+    phase_deg: float = 45.0,
+    amplitude: float = 1.35,
+    snr_db: float = 12.0,
+    freq_offset_cycles: float = 0.18,
+) -> dict[str, np.ndarray]:
+    """Return simple IQ impairment examples for constellation intuition."""
+    clean, _ = sample_constellation_burst(modulation, n_symbols, phase_deg=0.0, snr_db=None, seed=seed)
+    rng = np.random.default_rng(seed + 1000)
+    n = np.arange(n_symbols, dtype=np.float64)
+    phase_ramp = np.exp(1j * 2.0 * np.pi * freq_offset_cycles * n / max(1, n_symbols - 1))
+
+    return {
+        "clean": clean,
+        "phase rotation": clean * np.exp(1j * np.deg2rad(phase_deg)),
+        "amplitude scale": amplitude * clean,
+        "noise": add_awgn_complex(clean, snr_db, rng),
+        "frequency offset": clean * phase_ramp,
+    }
+
+
 def wirtinger_steps(name: str, z: complex) -> dict[str, complex | float | str]:
     """Return intermediate real-partial and Wirtinger derivative steps."""
     x = float(z.real)

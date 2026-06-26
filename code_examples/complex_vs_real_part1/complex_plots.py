@@ -9,9 +9,11 @@ from plotly.subplots import make_subplots
 from complex_core import (
     CONSTELLATIONS,
     MODULATION_NOTES,
+    cauchy_riemann_residual,
     complex_map_matrix,
     complex_linear_mse_gradients,
     complex_sinusoid,
+    iq_impairment_examples,
     magnitude,
     make_complex_regression_data,
     mul_by_i,
@@ -74,6 +76,37 @@ def format_wirtinger_steps_markdown(example_name: str, x: float, y: float) -> st
         "**Step 3:**\n"
         f"`df/dz  = 0.5*(df/dx - i*df/dy) = {s['df_dz']:.4f}`\n\n"
         f"`df/dz* = 0.5*(df/dx + i*df/dy) = {s['df_dz_conj']:.4f}`\n"
+    )
+
+
+def format_holomorphic_check_markdown(z: complex = 1.2 - 0.7j) -> str:
+    """Return a compact Cauchy-Riemann comparison for notebook display."""
+    rows = []
+    labels = {
+        "z2": "`f(z)=z^2`",
+        "conj_z": "`f(z)=z*`",
+        "abs2_as_complex": "`f(z)=|z|^2`",
+    }
+    notes = {
+        "z2": "holomorphic: ordinary complex derivative works",
+        "conj_z": "anti-holomorphic: depends on `z*`",
+        "abs2_as_complex": "real loss shape: depends on both `z` and `z*`",
+    }
+    for name in ["z2", "conj_z", "abs2_as_complex"]:
+        r = cauchy_riemann_residual(name, z)
+        residual = abs(r["residual_1"]) + abs(r["residual_2"])
+        rows.append(f"| {labels[name]} | `{residual:.2e}` | {notes[name]} |")
+
+    return "\n".join(
+        [
+            f"Cauchy-Riemann residuals at `z={z:.3f}`:",
+            "",
+            "| Function | residual | Interpretation |",
+            "|---|---:|---|",
+            *rows,
+            "",
+            "Small residual means the ordinary complex derivative is valid. ML losses like `|z|^2` are real-valued and non-holomorphic, so Wirtinger calculus is the useful tool.",
+        ]
     )
 
 
@@ -516,6 +549,87 @@ def plot_iq_map_geometry(
         "real_matrix": a_real,
     }
     return fig, summary, stats
+
+
+def map_degrees_of_freedom_markdown() -> str:
+    """Explain complex scalar maps versus unconstrained real 2x2 maps."""
+    w = 0.6 + 0.9j
+    a_complex = complex_map_matrix(w)
+    return "\n".join(
+        [
+            "### Degrees of freedom: why the complex map is constrained",
+            "",
+            "A complex scalar multiply `y = w*x` has 2 real degrees of freedom: `Re(w)` and `Im(w)`. As a real matrix it is always:",
+            "",
+            "```text",
+            "[[ Re(w), -Im(w)],",
+            " [ Im(w),  Re(w)]]",
+            "```",
+            "",
+            f"For `w={w:.2f}`, that matrix is approximately:",
+            "",
+            "```text",
+            f"[[{a_complex[0,0]: .2f}, {a_complex[0,1]: .2f}],",
+            f" [{a_complex[1,0]: .2f}, {a_complex[1,1]: .2f}]]",
+            "```",
+            "",
+            "A generic real 2x2 map has 4 real degrees of freedom. That extra freedom can learn useful patterns, but it can also shear/warp IQ geometry unless the data teaches it not to.",
+        ]
+    )
+
+
+def complex_activation_notes_markdown() -> str:
+    """Return a brief caveat about nonlinearities in complex neural nets."""
+    return "\n".join(
+        [
+            "### Complex activations caveat",
+            "",
+            "Linear complex layers are straightforward, but nonlinearities need care. A usual real activation like ReLU assumes an ordered real line; complex numbers do not have a natural `positive` direction.",
+            "",
+            "Common complex-network choices include applying nonlinearities to magnitude, phase, or real/imag parts separately. Those choices affect which signal symmetries the model preserves.",
+            "",
+            "Part 2 handles this in the model design; Part 1 only needs the backprop rule and the IQ geometry intuition.",
+        ]
+    )
+
+
+def plot_iq_impairments(
+    modulation: str = "qpsk",
+    n_symbols: int = 256,
+    seed: int = 3,
+) -> go.Figure:
+    """Show common IQ impairments that motivate rotation-robust models."""
+    examples = iq_impairment_examples(modulation=modulation, n_symbols=n_symbols, seed=seed)
+    names = list(examples.keys())
+    fig = make_subplots(
+        rows=1,
+        cols=len(names),
+        subplot_titles=[name.title() for name in names],
+        horizontal_spacing=0.04,
+    )
+
+    lim = max(2.0, float(max(np.max(np.abs(z)) for z in examples.values())) * 1.15)
+    for col, name in enumerate(names, start=1):
+        z = examples[name]
+        fig.add_trace(
+            go.Scatter(
+                x=z.real,
+                y=z.imag,
+                mode="markers",
+                name=name,
+                showlegend=False,
+                marker={"size": 5, "opacity": 0.65},
+            ),
+            row=1,
+            col=col,
+        )
+        fig.update_xaxes(range=[-lim, lim], title_text="I", row=1, col=col)
+        fig.update_yaxes(range=[-lim, lim], title_text="Q", row=1, col=col, scaleanchor=f"x{col}", scaleratio=1)
+        fig.add_hline(y=0, line={"color": "#dddddd", "width": 1}, row=1, col=col)
+        fig.add_vline(x=0, line={"color": "#dddddd", "width": 1}, row=1, col=col)
+
+    fig.update_layout(height=360)
+    return _layout(fig, "Common IQ impairments: same signal family, changed geometry")
 
 
 def plot_iq_sample_efficiency(

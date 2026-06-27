@@ -12,6 +12,7 @@ from complex_core import (
     complex_map_matrix,
     cauchy_riemann_residual,
     finite_diff_real_imag,
+    generate_iq_linear_task,
     iq_impairment_examples,
     make_complex_regression_data,
     rotation_commutation_error_complex,
@@ -21,6 +22,7 @@ from complex_core import (
     to_wirtinger,
     train_complex_linear,
 )
+from complex_plots import plot_constellation_samples, plot_wirtinger_update_directions
 
 
 def check_analytic_vs_finite_diff(name: str, z: complex, tol: float = 1e-4) -> bool:
@@ -121,6 +123,40 @@ def check_rotation_commutation() -> bool:
     return ok
 
 
+def check_real_matrix_gradient(tol: float = 1e-5) -> bool:
+    x, y, _, _ = generate_iq_linear_task(
+        n_samples=64,
+        phase_low_deg=-20.0,
+        phase_high_deg=20.0,
+        noise=0.05,
+        seed=9,
+    )
+    x_iq = np.stack([x.real, x.imag], axis=1)
+    y_iq = np.stack([y.real, y.imag], axis=1)
+    a = np.array([[0.25, -0.15], [0.05, 0.35]], dtype=np.float64)
+
+    residual = x_iq @ a.T - y_iq
+    grad = 2.0 * (residual.T @ x_iq) / float(x_iq.shape[0])
+
+    def loss_fn(matrix: np.ndarray) -> float:
+        r = x_iq @ matrix.T - y_iq
+        return float(np.mean(np.sum(r**2, axis=1)))
+
+    eps = 1e-6
+    fd = np.zeros_like(a)
+    base = loss_fn(a)
+    for i in range(2):
+        for j in range(2):
+            pert = a.copy()
+            pert[i, j] += eps
+            fd[i, j] = (loss_fn(pert) - base) / eps
+
+    err = float(np.max(np.abs(grad - fd)))
+    ok = err < tol
+    print(f"  real 2x2 grad max err={err:.3e} {'OK' if ok else 'FAIL'}")
+    return ok
+
+
 def check_iq_sample_efficiency() -> bool:
     results = run_iq_rotation_sample_efficiency(
         n_train=24,
@@ -176,6 +212,38 @@ def check_iq_impairments() -> bool:
     return ok
 
 
+def check_rotated_constellation_ideal_markers() -> bool:
+    phase_deg = 45.0
+    fig, _ = plot_constellation_samples("bpsk", phase_deg=phase_deg, snr_db=None, n_symbols=64, seed=2)
+    ideal_trace = next(trace for trace in fig.data if trace.name == "ideal symbols")
+    ideal = np.asarray(ideal_trace.x) + 1j * np.asarray(ideal_trace.y)
+    expected = np.exp(1j * np.deg2rad(phase_deg)) * np.array([1.0, -1.0])
+    max_dist = max(float(np.min(np.abs(point - expected))) for point in ideal)
+    ok = max_dist < 1e-6
+    print(f"  rotated ideal-marker max mismatch={max_dist:.3e} {'OK' if ok else 'FAIL'}")
+    return ok
+
+
+def check_wirtinger_update_visual_stats() -> bool:
+    _, _, stats = plot_wirtinger_update_directions()
+    w = 1.0 + 1.5j
+    target = 1.0 + 2.0j
+    next_points = stats["next_points"]
+    correct = next_points["Correct: -lr dL/dw*"]
+    split = next_points["Split-real: -(lr/2)(dL/du + i dL/dv)"]
+    wrong = next_points["Wrong: -lr dL/dw"]
+    current_loss = abs(w - target) ** 2
+    correct_loss = abs(correct - target) ** 2
+    wrong_loss = abs(wrong - target) ** 2
+    step_match = abs(correct - split)
+    ok = step_match < 1e-12 and correct_loss < current_loss and wrong_loss > current_loss
+    print(
+        f"  one-step visual split-match={step_match:.3e}, "
+        f"loss current/correct/wrong={current_loss:.3e}/{correct_loss:.3e}/{wrong_loss:.3e} {'OK' if ok else 'FAIL'}"
+    )
+    return ok
+
+
 def main() -> int:
     print("Part 1 numeric checks")
     print("=" * 60)
@@ -197,17 +265,26 @@ def main() -> int:
     print("\n5) IQ geometry commutation check")
     ok &= check_rotation_commutation()
 
-    print("\n6) IQ narrow-band sample-efficiency check")
+    print("\n6) Real 2x2 map gradient check")
+    ok &= check_real_matrix_gradient()
+
+    print("\n7) IQ narrow-band sample-efficiency check")
     ok &= check_iq_sample_efficiency()
 
-    print("\n7) Optimizer step equivalence (complex vs split-real)")
+    print("\n8) Optimizer step equivalence (complex vs split-real)")
     ok &= check_optimizer_step_equivalence()
 
-    print("\n8) Holomorphic vs non-holomorphic examples")
+    print("\n9) Holomorphic vs non-holomorphic examples")
     ok &= check_cauchy_riemann_examples()
 
-    print("\n9) IQ impairment examples")
+    print("\n10) IQ impairment examples")
     ok &= check_iq_impairments()
+
+    print("\n11) Rotated constellation ideal markers")
+    ok &= check_rotated_constellation_ideal_markers()
+
+    print("\n12) Wirtinger one-step visual stats")
+    ok &= check_wirtinger_update_visual_stats()
 
     print("\n" + "=" * 60)
     print("ALL OK" if ok else "SOME CHECKS FAILED")

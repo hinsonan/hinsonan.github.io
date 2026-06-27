@@ -355,7 +355,11 @@ def train_real_matrix_map(
     epochs: int = 35,
     matrix_init: np.ndarray | None = None,
 ) -> dict[str, list[np.ndarray] | list[float]]:
-    """Fit y_iq~=A*x_iq with an unconstrained 2x2 real matrix."""
+    """Fit y_iq~=A*x_iq with an unconstrained 2x2 real matrix.
+
+    Uses the true real gradient for L = mean(||A x_iq - y_iq||^2):
+        dL/dA = 2 * (residual^T x_iq) / n
+    """
     a = np.array(matrix_init, dtype=np.float64) if matrix_init is not None else np.zeros((2, 2), dtype=np.float64)
     x_iq = np.stack([x.real, x.imag], axis=1)
     y_iq = np.stack([y.real, y.imag], axis=1)
@@ -365,7 +369,7 @@ def train_real_matrix_map(
     for _ in range(epochs):
         residual = x_iq @ a.T - y_iq
         loss = float(np.mean(np.sum(residual**2, axis=1)))
-        grad = (residual.T @ x_iq) / n
+        grad = 2.0 * (residual.T @ x_iq) / n
         a = a - lr * grad
         history["loss"].append(loss)
         history["matrix"].append(a.copy())
@@ -395,7 +399,11 @@ def run_iq_rotation_sample_efficiency(
     lr: float = 0.3,
     epochs: int = 35,
 ) -> dict[str, np.ndarray | float]:
-    """Compare complex vs split-real linear maps under narrow-band phase training."""
+    """Compare complex vs split-real linear maps under narrow-band phase training.
+
+    We use lr_real = 0.5 * lr so per-coordinate update scale is aligned with the
+    complex dL/dw* convention used in train_complex_scalar_map.
+    """
     angles = np.array(test_angles_deg if test_angles_deg is not None else np.arange(-180.0, 181.0, 15.0), dtype=np.float64)
 
     complex_err = np.zeros((len(seeds), len(angles)), dtype=np.float64)
@@ -412,7 +420,7 @@ def run_iq_rotation_sample_efficiency(
             seed=seed,
         )
         complex_hist = train_complex_scalar_map(x_train, y_train, lr=lr, epochs=epochs)
-        real_hist = train_real_matrix_map(x_train, y_train, lr=lr, epochs=epochs)
+        real_hist = train_real_matrix_map(x_train, y_train, lr=0.5 * lr, epochs=epochs)
 
         w_hat = complex_hist["w"][-1]
         a_hat = real_hist["matrix"][-1]

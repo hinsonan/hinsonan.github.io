@@ -25,6 +25,8 @@ from complex_core import (
     rotate,
     sample_constellation_burst,
     simulate_descent_methods,
+    toy_quadratic_gradients,
+    toy_quadratic_loss,
     to_wirtinger,
     train_complex_linear,
     wirtinger_steps,
@@ -204,9 +206,10 @@ def plot_constellation_samples(
         raise ValueError(f"Unknown modulation '{mod_name}'. Options: {list(CONSTELLATIONS)}")
 
     burst, clean = sample_constellation_burst(mod_name, n_symbols, phase_deg, snr_db, seed)
+    ideal = clean * np.exp(1j * np.deg2rad(phase_deg))
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=burst.real, y=burst.imag, mode="markers", name="received", marker={"size": 6, "color": COLORS["noisy"], "opacity": 0.7}))
-    fig.add_trace(go.Scatter(x=clean.real, y=clean.imag, mode="markers", name="clean symbols", marker={"size": 12, "symbol": "x", "color": COLORS["clean"]}))
+    fig.add_trace(go.Scatter(x=ideal.real, y=ideal.imag, mode="markers", name="ideal symbols", marker={"size": 12, "symbol": "x", "color": COLORS["clean"]}))
     fig.add_vline(x=0, line={"color": "gray", "dash": "dot"})
     fig.add_hline(y=0, line={"color": "gray", "dash": "dot"})
     lim = max(2.0, float(np.max(np.abs(burst))) * 1.15)
@@ -249,6 +252,7 @@ def plot_constellation_rotation_grid(
                 snr_db=snr_db,
                 seed=seed + row * 101 + col * 17,
             )
+            ideal = clean * np.exp(1j * np.deg2rad(rot))
             show_legend = row == 1 and col == 1
             fig.add_trace(
                 go.Scatter(
@@ -264,8 +268,8 @@ def plot_constellation_rotation_grid(
             )
             fig.add_trace(
                 go.Scatter(
-                    x=clean.real,
-                    y=clean.imag,
+                    x=ideal.real,
+                    y=ideal.imag,
                     mode="markers",
                     name="ideal symbols",
                     showlegend=show_legend,
@@ -295,6 +299,175 @@ def modulation_notes_markdown() -> str:
         note = MODULATION_NOTES[key]
         lines.append(f"- **{note['name']}**: {note['what']} {note['uses']}")
     return "\n".join(lines)
+
+
+def format_wirtinger_update_table_markdown(
+    w: complex = 1.0 + 1.5j,
+    target: complex = 1.0 + 2.0j,
+    lr: float = 0.25,
+) -> str:
+    """Return a concrete one-step update table for the toy real loss."""
+    dL_dw, dL_dw_conj, dL_du, dL_dv = toy_quadratic_gradients(w, target)
+    split_grad = 0.5 * dL_du + 0.5j * dL_dv
+    correct_next = w - lr * dL_dw_conj
+    split_next = w - lr * split_grad
+    wrong_next = w - lr * dL_dw
+
+    return "\n".join(
+        [
+            f"For `L(w)=|w-a|^2`, use `w={w:.3f}`, target `a={target:.3f}`, and `lr={lr:.2f}`.",
+            "",
+            "| Quantity | Value | Meaning |",
+            "|---|---:|---|",
+            f"| `w-a` | `{w - target:.3f}` | current error vector |",
+            f"| `dL/du` | `{dL_du:.3f}` | real-axis slope |",
+            f"| `dL/dv` | `{dL_dv:.3f}` | imaginary-axis slope |",
+            f"| `dL/dw*` | `{dL_dw_conj:.3f}` | complex form of the real gradient, scaled by 1/2 |",
+            f"| `dL/dw` | `{dL_dw:.3f}` | conjugated direction; not the descent update for real losses |",
+            "",
+            "One gradient step:",
+            "",
+            "| Update | New `w` | Loss after step |",
+            "|---|---:|---:|",
+            f"| `w - lr*dL/dw*` | `{correct_next:.3f}` | `{toy_quadratic_loss(correct_next, target):.4f}` |",
+            f"| split real/imag | `{split_next:.3f}` | `{toy_quadratic_loss(split_next, target):.4f}` |",
+            f"| `w - lr*dL/dw` | `{wrong_next:.3f}` | `{toy_quadratic_loss(wrong_next, target):.4f}` |",
+            "",
+            "The first two rows match because `dL/dw* = 0.5*dL/du + 0.5i*dL/dv`. The last row flips the imaginary part of the direction, so it moves the parameter away from the target vertically in this example.",
+        ]
+    )
+
+
+def plot_wirtinger_update_directions(
+    w: complex = 1.0 + 1.5j,
+    target: complex = 1.0 + 2.0j,
+    lr: float = 0.25,
+) -> tuple[go.Figure, str, dict]:
+    """Show a simple one-step comparison for dL/dw* versus dL/dw."""
+    dL_dw, dL_dw_conj, dL_du, dL_dv = toy_quadratic_gradients(w, target)
+    split_step = -0.5 * lr * dL_du + 1j * (-0.5 * lr * dL_dv)
+    correct_step = -lr * dL_dw_conj
+    wrong_step = -lr * dL_dw
+    split_next = w + split_step
+    correct_next = w + correct_step
+    wrong_next = w + wrong_step
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            "Correct update: split-real equals -dL/dw*",
+            "Wrong update: dL/dw flips the Q step",
+        ),
+        horizontal_spacing=0.14,
+    )
+
+    def add_points(col: int) -> None:
+        fig.add_trace(
+            go.Scatter(
+                x=[target.real],
+                y=[target.imag],
+                mode="markers+text",
+                name="target a" if col == 1 else "target a ",
+                text=["target a"],
+                textposition="top center",
+                marker={"size": 14, "symbol": "x", "color": "black"},
+                showlegend=col == 1,
+            ),
+            row=1,
+            col=col,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[w.real],
+                y=[w.imag],
+                mode="markers+text",
+                name="current w" if col == 1 else "current w ",
+                text=["current w"],
+                textposition="bottom center",
+                marker={"size": 11, "color": "#111111"},
+                showlegend=col == 1,
+            ),
+            row=1,
+            col=col,
+        )
+
+    def add_segment(col: int, start: complex, end: complex, name: str, color: str, dash: str | None = None) -> None:
+        fig.add_trace(
+            go.Scatter(
+                x=[start.real, end.real],
+                y=[start.imag, end.imag],
+                mode="lines+markers",
+                name=name,
+                line={"color": color, "width": 4, **({"dash": dash} if dash else {})},
+                marker={"size": [5, 10], "color": color},
+                showlegend=True,
+            ),
+            row=1,
+            col=col,
+        )
+
+    add_points(1)
+    add_segment(1, w, w + split_step.real, "real-part step", "#2ca02c", dash="dot")
+    add_segment(1, w + split_step.real, split_next, "imag-part step", "#2ca02c", dash="dash")
+    add_segment(1, w, correct_next, "single complex step -lr*dL/dw*", "#1f77b4")
+    fig.add_annotation(
+        x=correct_next.real,
+        y=correct_next.imag,
+        text="same landing point",
+        showarrow=True,
+        arrowhead=2,
+        ax=50,
+        ay=-35,
+        row=1,
+        col=1,
+    )
+
+    add_points(2)
+    add_segment(2, w, correct_next, "correct: moves toward target", "#1f77b4")
+    add_segment(2, w, wrong_next, "wrong: -lr*dL/dw", "#d62728")
+    fig.add_annotation(
+        x=wrong_next.real,
+        y=wrong_next.imag,
+        text="Q update goes the wrong way",
+        showarrow=True,
+        arrowhead=2,
+        ax=30,
+        ay=45,
+        row=1,
+        col=2,
+    )
+
+    span = 0.9
+    for col in (1, 2):
+        fig.update_xaxes(title_text="I = Re(w)", range=[target.real - span, target.real + span], zeroline=True, row=1, col=col)
+        fig.update_yaxes(title_text="Q = Im(w)", range=[target.imag - span, target.imag + span], zeroline=True, scaleanchor=f"x{col}", scaleratio=1, row=1, col=col)
+        fig.add_hline(y=target.imag, line={"color": "#cccccc", "dash": "dot"}, row=1, col=col)
+        fig.add_vline(x=target.real, line={"color": "#cccccc", "dash": "dot"}, row=1, col=col)
+
+    fig.update_layout(height=460)
+    fig = _layout(fig, "Wirtinger update as split-real gradient descent")
+
+    current_loss = toy_quadratic_loss(w, target)
+    correct_loss = toy_quadratic_loss(correct_next, target)
+    wrong_loss = toy_quadratic_loss(wrong_next, target)
+    summary = (
+        f"Current loss={current_loss:.4f}. "
+        f"Correct step loss={correct_loss:.4f}; wrong dL/dw step loss={wrong_loss:.4f}. "
+        "The left panel shows that split-real and -dL/dw* land at the same point."
+    )
+    stats = {
+        "dL_dw": dL_dw,
+        "dL_dw_conj": dL_dw_conj,
+        "dL_du": dL_du,
+        "dL_dv": dL_dv,
+        "next_points": {
+            "Correct: -lr dL/dw*": correct_next,
+            "Split-real: -(lr/2)(dL/du + i dL/dv)": split_next,
+            "Wrong: -lr dL/dw": wrong_next,
+        },
+    }
+    return fig, summary, stats
 
 
 def plot_descent_trajectory_comparison(

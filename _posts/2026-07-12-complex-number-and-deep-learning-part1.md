@@ -11,7 +11,7 @@ No one knows what an imaginary number is. It's like asking ML people how this al
 
 Imaginary numbers are a bad name. Imaginary makes it seem like it's not real but it is. This is in some ways hard to grasp like negative numbers were hard to grasp for many in mathematics. Which makes sense because if you have 3 apples and you take 4 apples away you now have -1 apples. How in the world can you have -1 apples? It sounds absurd but that doesn't mean negative numbers are not real. In banking it makes a lot of sense. You are in the hole and have negative dollars. You gotta get out of that hole.
 
-Wikipedia defines an imaginary number as: "the product of a real number and the imaginary unit $i$, which is defined by its property $i^2 = -1$."
+World most trusted source Wikipedia defines an imaginary number as: "the product of a real number and the imaginary unit $i$, which is defined by its property $i^2 = -1$."
 
 An imaginary number is then any real multiple of $i$, written as:
 
@@ -316,8 +316,7 @@ This animation shows the same complex number in both forms: $z = a + bi$ and $z 
 
 ### Rotation Visualization
 
-Here is a tiny animation based on the idea of `plot_rotation_vectors(x=1.0, y=1.0, angle_deg=45.0)`.
-It draws the original vector and its rotated version.
+Here is an animation that shows the original vector and the rotated version.
 
 <div id="complex-rotation-demo" style="max-width:420px;margin:1rem auto;padding:0.75rem;border:1px solid #444;border-radius:8px;">
   <canvas id="complex-rotation-canvas" width="380" height="300" style="width:100%;height:auto;display:block;"></canvas>
@@ -471,277 +470,15 @@ It draws the original vector and its rotated version.
 })();
 </script>
 
+I hope defining these terms and showing these animations help get the point across that complex numbers deal with rotating and scaling vectors.
+
 ## Complex Numbers and ML
 
 So if complex numbers contain rotation information then why are complex neural networks not that popular? It has to do with how back propagation works. Complex numbers do not propagate gradients well and the hardware is not optimized for this process
 
-### Why Complex Derivatives Feel Weird in ML
+### Holomorphic vs Non-Holomorphic
 
-For the real-valued loss
-
-$$
-L(w) = |w-a|^2,
-$$
-
-the correct complex gradient update is
-
-$$
-w_{t+1} = w_t - \eta \frac{\partial L}{\partial w^*}.
-$$
-
-Using $\frac{\partial L}{\partial w}$ directly flips the imaginary-axis direction, which can send optimization away from the target.
-
-This demo follows the same setup as `code_examples/complex_vs_real_part1/complex_core.py` (`toy_quadratic_gradients`, `simulate_descent_methods`) and `code_examples/complex_vs_real_part1/complex_plots.py` (`plot_wirtinger_update_directions`, `plot_descent_trajectory_comparison`).
-
-Small numeric example (same math as the code):
-
-$$
-a = 1 + 2i,\quad w = 0.6 + 1.2i,\quad \eta = 0.25
-$$
-
-$$
-\frac{\partial L}{\partial w^*} = w-a = -0.4-0.8i,\qquad
-\frac{\partial L}{\partial w} = \overline{(w-a)} = -0.4+0.8i
-$$
-
-$$
-w - \eta\frac{\partial L}{\partial w^*} = 0.7+1.4i\ (L: 0.80 \to 0.45),\qquad
-w - \eta\frac{\partial L}{\partial w} = 0.7+1.0i\ (L: 0.80 \to 1.09)
-$$
-
-Why there is a gap between the two updates:
-
-$$
-\frac{\partial L}{\partial w^*} = w-a,\qquad
-\frac{\partial L}{\partial w} = \overline{(w-a)}
-$$
-
-The second one is a conjugate, so it flips the sign of the imaginary part. That means it changes the vertical update direction.
-
-If we compare the two next-step points directly:
-
-$$
-\Delta
-=
-\left(w-\eta\frac{\partial L}{\partial w}\right)
--
-\left(w-\eta\frac{\partial L}{\partial w^*}\right)
-=
--2i\eta\,\operatorname{Im}(w-a)
-$$
-
-So the delta is purely on the imaginary axis. If your imaginary error is nonzero, using $\frac{\partial L}{\partial w}$ can move the parameter in the wrong vertical direction.
-
-<div id="complex-wirtinger-landscape" style="max-width:520px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
-  <canvas id="complex-wirtinger-canvas" width="480" height="320" style="width:100%;height:auto;display:block;border-radius:6px;"></canvas>
-  <div style="margin-top:0.7rem;font-size:0.9rem;display:grid;grid-template-columns:auto 1fr auto;gap:0.35rem;align-items:center;">
-    <label for="wire-u0">start Re(w)</label>
-    <input id="wire-u0" type="range" min="-2.0" max="2.0" step="0.1" value="-1.2">
-    <span id="wire-u0-value">-1.2</span>
-
-    <label for="wire-v0">start Im(w)</label>
-    <input id="wire-v0" type="range" min="-1.0" max="3.5" step="0.1" value="0.9">
-    <span id="wire-v0-value">0.9</span>
-
-    <label for="wire-lr">learning rate</label>
-    <input id="wire-lr" type="range" min="0.05" max="0.55" step="0.01" value="0.22">
-    <span id="wire-lr-value">0.22</span>
-
-    <label for="wire-steps">steps</label>
-    <input id="wire-steps" type="range" min="4" max="28" step="1" value="16">
-    <span id="wire-steps-value">16</span>
-  </div>
-  <div style="margin-top:0.6rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-    <button id="wire-replay" type="button" style="padding:0.25rem 0.55rem;border:1px solid #666;border-radius:6px;background:transparent;color:inherit;cursor:pointer;">Replay</button>
-    <div style="font-size:0.92rem;line-height:1.35;">
-      <strong>Step:</strong> <span id="wire-step">0</span>
-      <strong style="margin-left:0.6rem;">Loss (correct):</strong> <span id="wire-loss-c">-</span>
-      <strong style="margin-left:0.6rem;">Loss (wrong):</strong> <span id="wire-loss-w">-</span>
-    </div>
-  </div>
-</div>
-
-<script>
-(() => {
-  const canvas = document.getElementById('complex-wirtinger-canvas');
-  const u0Input = document.getElementById('wire-u0');
-  const v0Input = document.getElementById('wire-v0');
-  const lrInput = document.getElementById('wire-lr');
-  const stepsInput = document.getElementById('wire-steps');
-  const u0Value = document.getElementById('wire-u0-value');
-  const v0Value = document.getElementById('wire-v0-value');
-  const lrValue = document.getElementById('wire-lr-value');
-  const stepsValue = document.getElementById('wire-steps-value');
-  const replayButton = document.getElementById('wire-replay');
-  const stepLabel = document.getElementById('wire-step');
-  const lossCLabel = document.getElementById('wire-loss-c');
-  const lossWLabel = document.getElementById('wire-loss-w');
-
-  if (!canvas || !u0Input || !v0Input || !lrInput || !stepsInput || !u0Value || !v0Value || !lrValue || !stepsValue || !replayButton || !stepLabel || !lossCLabel || !lossWLabel) return;
-
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
-  const xMin = -2.4;
-  const xMax = 2.4;
-  const yMin = -1.2;
-  const yMax = 3.8;
-  const target = { re: 1.0, im: 2.0 };
-
-  let startTime = performance.now();
-
-  function toPxX(x) {
-    return ((x - xMin) / (xMax - xMin)) * W;
-  }
-
-  function toPxY(y) {
-    return H - ((y - yMin) / (yMax - yMin)) * H;
-  }
-
-  function loss(p) {
-    const dx = p.re - target.re;
-    const dy = p.im - target.im;
-    return dx * dx + dy * dy;
-  }
-
-  function stepCorrect(w, lr) {
-    return {
-      re: w.re - lr * (w.re - target.re),
-      im: w.im - lr * (w.im - target.im)
-    };
-  }
-
-  function stepWrong(w, lr) {
-    return {
-      re: w.re - lr * (w.re - target.re),
-      im: w.im + lr * (w.im - target.im)
-    };
-  }
-
-  function trajectory(start, lr, steps, updater) {
-    const pts = [start];
-    for (let i = 0; i < steps; i += 1) {
-      pts.push(updater(pts[pts.length - 1], lr));
-    }
-    return pts;
-  }
-
-  function drawBackground() {
-    ctx.fillStyle = '#10161d';
-    ctx.fillRect(0, 0, W, H);
-
-    const sx = W / (xMax - xMin);
-    const sy = H / (yMax - yMin);
-    const levels = [0.2, 0.5, 1.0, 1.8, 3.0, 4.8, 7.0];
-
-    ctx.strokeStyle = 'rgba(200,220,240,0.18)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < levels.length; i += 1) {
-      const r = Math.sqrt(levels[i]);
-      ctx.beginPath();
-      ctx.ellipse(toPxX(target.re), toPxY(target.im), r * sx, r * sy, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-
-  function drawAxes() {
-    const y0 = toPxY(0);
-    const x0 = toPxX(0);
-    ctx.strokeStyle = 'rgba(210,210,210,0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, y0);
-    ctx.lineTo(W, y0);
-    ctx.moveTo(x0, 0);
-    ctx.lineTo(x0, H);
-    ctx.stroke();
-  }
-
-  function drawPoint(p, color, size) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(toPxX(p.re), toPxY(p.im), size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawPath(points, color, width, upto) {
-    if (upto < 1) return;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    ctx.moveTo(toPxX(points[0].re), toPxY(points[0].im));
-    for (let i = 1; i <= upto; i += 1) {
-      ctx.lineTo(toPxX(points[i].re), toPxY(points[i].im));
-    }
-    ctx.stroke();
-  }
-
-  function drawLegend() {
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#4db0ff';
-    ctx.fillText('correct: w - lr * dL/dw*', 14, 24);
-    ctx.fillStyle = '#ff6b6b';
-    ctx.fillText('wrong: w - lr * dL/dw', 14, 42);
-  }
-
-  function draw() {
-    const start = { re: Number(u0Input.value), im: Number(v0Input.value) };
-    const lr = Number(lrInput.value);
-    const steps = Number(stepsInput.value);
-    const good = trajectory(start, lr, steps, stepCorrect);
-    const bad = trajectory(start, lr, steps, stepWrong);
-
-    const elapsed = (performance.now() - startTime) / 1000;
-    const stepFloat = Math.min(steps, elapsed * 4.0);
-    const k = Math.floor(stepFloat);
-
-    u0Value.textContent = start.re.toFixed(1);
-    v0Value.textContent = start.im.toFixed(1);
-    lrValue.textContent = lr.toFixed(2);
-    stepsValue.textContent = String(steps);
-    stepLabel.textContent = String(k);
-    lossCLabel.textContent = loss(good[k]).toFixed(4);
-    lossWLabel.textContent = loss(bad[k]).toFixed(4);
-
-    drawBackground();
-    drawAxes();
-
-    drawPath(good, '#4db0ff', 3, k);
-    drawPath(bad, '#ff6b6b', 3, k);
-
-    drawPoint(target, '#f5f5f5', 5);
-    drawPoint(start, '#d1d5db', 4);
-    drawPoint(good[k], '#4db0ff', 4);
-    drawPoint(bad[k], '#ff6b6b', 4);
-
-    drawLegend();
-
-    ctx.fillStyle = '#f5f5f5';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('target a', toPxX(target.re) + 8, toPxY(target.im) - 8);
-
-    if (k < steps) {
-      requestAnimationFrame(draw);
-    }
-  }
-
-  function restart() {
-    startTime = performance.now();
-    requestAnimationFrame(draw);
-  }
-
-  u0Input.addEventListener('input', restart);
-  v0Input.addEventListener('input', restart);
-  lrInput.addEventListener('input', restart);
-  stepsInput.addEventListener('input', restart);
-  replayButton.addEventListener('click', restart);
-  restart();
-})();
-</script>
-
-### Holomorphic vs Non-Holomorphic (Why This Matters)
-
-For people new to this, here is the clean intuition:
+For people new to this or those who forgot what they learned in calculus class like me, here is a simple way to define the terms:
 
 - **Holomorphic:** one consistent complex derivative in every direction.
 - **Non-holomorphic:** derivative estimate changes with direction.
@@ -755,13 +492,7 @@ $$
 - **Holomorphic example:** $f(z)=z^2$ gives one consistent derivative, $f'(z)=2z$.
 - **Non-holomorphic example:** $f(z)=\lvert z \rvert^2=z\overline{z}$ depends on both $z$ and $\overline{z}$, so the ordinary complex derivative is not valid for optimization.
 
-Most ML losses are real-valued and behave like the second case. That is why Wirtinger derivatives are used:
-
-$$
-\frac{\partial L}{\partial z},\quad \frac{\partial L}{\partial z^*}
-$$
-
-For gradient descent with real losses, the update uses $\frac{\partial L}{\partial z^*}$.
+Most ML losses are real-valued and behave like the second case, which is the root of the problem we will see next.
 
 ### Beginner Visual: Direction Check
 
@@ -922,6 +653,219 @@ If the arrows match, the derivative is direction-independent (holomorphic behavi
 })();
 </script>
 
+### Why Complex Derivatives Are Tough in ML
+
+ML losses are real-valued (like $L = \lvert w-a \rvert^2$), which means they are non-holomorphic. Ordinary complex calculus only gives us one derivative $f'(w)$, and it **does not even exist** for these losses. So we cannot blindly reuse real-number gradient descent on complex weights.
+
+If you try to apply the ordinary complex derivative anyway, something bad happens: the imaginary-axis direction gets flipped. The real-axis move is fine, but the vertical move goes the wrong way, and loss goes **up** instead of down. The graph below shows this directly. Blue walks toward the target. Red drifts away because its imaginary step is flipped.
+
+<div id="complex-wirtinger-landscape" style="max-width:520px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
+  <canvas id="complex-wirtinger-canvas" width="480" height="320" style="width:100%;height:auto;display:block;border-radius:6px;"></canvas>
+  <div style="margin-top:0.7rem;font-size:0.9rem;display:grid;grid-template-columns:auto 1fr auto;gap:0.35rem;align-items:center;">
+    <label for="wire-u0">start Re(w)</label>
+    <input id="wire-u0" type="range" min="-2.0" max="2.0" step="0.1" value="-1.2">
+    <span id="wire-u0-value">-1.2</span>
+
+    <label for="wire-v0">start Im(w)</label>
+    <input id="wire-v0" type="range" min="-1.0" max="3.5" step="0.1" value="0.9">
+    <span id="wire-v0-value">0.9</span>
+
+    <label for="wire-lr">learning rate</label>
+    <input id="wire-lr" type="range" min="0.05" max="0.55" step="0.01" value="0.22">
+    <span id="wire-lr-value">0.22</span>
+
+    <label for="wire-steps">steps</label>
+    <input id="wire-steps" type="range" min="4" max="28" step="1" value="16">
+    <span id="wire-steps-value">16</span>
+  </div>
+  <div style="margin-top:0.6rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+    <button id="wire-replay" type="button" style="padding:0.25rem 0.55rem;border:1px solid #666;border-radius:6px;background:transparent;color:inherit;cursor:pointer;">Replay</button>
+    <div style="font-size:0.92rem;line-height:1.35;">
+      <strong>Step:</strong> <span id="wire-step">0</span>
+      <strong style="margin-left:0.6rem;">Loss (correct):</strong> <span id="wire-loss-c">-</span>
+      <strong style="margin-left:0.6rem;">Loss (wrong):</strong> <span id="wire-loss-w">-</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('complex-wirtinger-canvas');
+  const u0Input = document.getElementById('wire-u0');
+  const v0Input = document.getElementById('wire-v0');
+  const lrInput = document.getElementById('wire-lr');
+  const stepsInput = document.getElementById('wire-steps');
+  const u0Value = document.getElementById('wire-u0-value');
+  const v0Value = document.getElementById('wire-v0-value');
+  const lrValue = document.getElementById('wire-lr-value');
+  const stepsValue = document.getElementById('wire-steps-value');
+  const replayButton = document.getElementById('wire-replay');
+  const stepLabel = document.getElementById('wire-step');
+  const lossCLabel = document.getElementById('wire-loss-c');
+  const lossWLabel = document.getElementById('wire-loss-w');
+
+  if (!canvas || !u0Input || !v0Input || !lrInput || !stepsInput || !u0Value || !v0Value || !lrValue || !stepsValue || !replayButton || !stepLabel || !lossCLabel || !lossWLabel) return;
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const xMin = -2.4;
+  const xMax = 2.4;
+  const yMin = -1.2;
+  const yMax = 3.8;
+  const target = { re: 1.0, im: 2.0 };
+
+  let startTime = performance.now();
+
+  function toPxX(x) {
+    return ((x - xMin) / (xMax - xMin)) * W;
+  }
+
+  function toPxY(y) {
+    return H - ((y - yMin) / (yMax - yMin)) * H;
+  }
+
+  function loss(p) {
+    const dx = p.re - target.re;
+    const dy = p.im - target.im;
+    return dx * dx + dy * dy;
+  }
+
+  function stepCorrect(w, lr) {
+    return {
+      re: w.re - lr * (w.re - target.re),
+      im: w.im - lr * (w.im - target.im)
+    };
+  }
+
+  function stepWrong(w, lr) {
+    return {
+      re: w.re - lr * (w.re - target.re),
+      im: w.im + lr * (w.im - target.im)
+    };
+  }
+
+  function trajectory(start, lr, steps, updater) {
+    const pts = [start];
+    for (let i = 0; i < steps; i += 1) {
+      pts.push(updater(pts[pts.length - 1], lr));
+    }
+    return pts;
+  }
+
+  function drawBackground() {
+    ctx.fillStyle = '#10161d';
+    ctx.fillRect(0, 0, W, H);
+
+    const sx = W / (xMax - xMin);
+    const sy = H / (yMax - yMin);
+    const levels = [0.2, 0.5, 1.0, 1.8, 3.0, 4.8, 7.0];
+
+    ctx.strokeStyle = 'rgba(200,220,240,0.18)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < levels.length; i += 1) {
+      const r = Math.sqrt(levels[i]);
+      ctx.beginPath();
+      ctx.ellipse(toPxX(target.re), toPxY(target.im), r * sx, r * sy, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function drawAxes() {
+    const y0 = toPxY(0);
+    const x0 = toPxX(0);
+    ctx.strokeStyle = 'rgba(210,210,210,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y0);
+    ctx.lineTo(W, y0);
+    ctx.moveTo(x0, 0);
+    ctx.lineTo(x0, H);
+    ctx.stroke();
+  }
+
+  function drawPoint(p, color, size) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(toPxX(p.re), toPxY(p.im), size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPath(points, color, width, upto) {
+    if (upto < 1) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(toPxX(points[0].re), toPxY(points[0].im));
+    for (let i = 1; i <= upto; i += 1) {
+      ctx.lineTo(toPxX(points[i].re), toPxY(points[i].im));
+    }
+    ctx.stroke();
+  }
+
+  function drawLegend() {
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#4db0ff';
+    ctx.fillText('correct descent direction', 14, 24);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillText('naive complex derivative (flipped)', 14, 42);
+  }
+
+  function draw() {
+    const start = { re: Number(u0Input.value), im: Number(v0Input.value) };
+    const lr = Number(lrInput.value);
+    const steps = Number(stepsInput.value);
+    const good = trajectory(start, lr, steps, stepCorrect);
+    const bad = trajectory(start, lr, steps, stepWrong);
+
+    const elapsed = (performance.now() - startTime) / 1000;
+    const stepFloat = Math.min(steps, elapsed * 4.0);
+    const k = Math.floor(stepFloat);
+
+    u0Value.textContent = start.re.toFixed(1);
+    v0Value.textContent = start.im.toFixed(1);
+    lrValue.textContent = lr.toFixed(2);
+    stepsValue.textContent = String(steps);
+    stepLabel.textContent = String(k);
+    lossCLabel.textContent = loss(good[k]).toFixed(4);
+    lossWLabel.textContent = loss(bad[k]).toFixed(4);
+
+    drawBackground();
+    drawAxes();
+
+    drawPath(good, '#4db0ff', 3, k);
+    drawPath(bad, '#ff6b6b', 3, k);
+
+    drawPoint(target, '#f5f5f5', 5);
+    drawPoint(start, '#d1d5db', 4);
+    drawPoint(good[k], '#4db0ff', 4);
+    drawPoint(bad[k], '#ff6b6b', 4);
+
+    drawLegend();
+
+    ctx.fillStyle = '#f5f5f5';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('target a', toPxX(target.re) + 8, toPxY(target.im) - 8);
+
+    if (k < steps) {
+      requestAnimationFrame(draw);
+    }
+  }
+
+  function restart() {
+    startTime = performance.now();
+    requestAnimationFrame(draw);
+  }
+
+  u0Input.addEventListener('input', restart);
+  v0Input.addEventListener('input', restart);
+  lrInput.addEventListener('input', restart);
+  stepsInput.addEventListener('input', restart);
+  replayButton.addEventListener('click', restart);
+  restart();
+})();
+</script>
+
 ## Wirtinger Calculus has Entered the Fight
 
 So if most ML loss functions are non-holomorphic, are we out of luck?
@@ -930,7 +874,7 @@ No. Wirtinger calculus lets us treat a real-valued complex loss in a way that is
 
 Thankfully some crazy dude figured out how to do this in 1927. Thank you [Wilhelm Wirtinger](https://en.wikipedia.org/wiki/Wirtinger_derivatives).
 
-### The Core Idea
+### Explaining Wirtinger
 
 The trick is to stop treating $z$ as the only variable. A real-valued loss depends on **both** $z$ and $\overline{z}$, so Wirtinger treats them as two independent variables:
 
@@ -969,7 +913,60 @@ u_{t+1} = u_t - \frac{\eta}{2}\frac{\partial L}{\partial u},
 v_{t+1} = v_t - \frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-That equivalence is the key point implemented in the Part 1 code (`toy_quadratic_gradients` and `simulate_descent_methods` in `code_examples/complex_vs_real_part1/complex_core.py`).
+#### Why the Wirtinger update picks $\partial L/\partial z^*$ and not $\partial L/\partial z$
+
+Here is the part most people skip over, and it is what makes the whole rule feel like magic until you see it.
+
+Start from the split real-imag update, which we know is correct for a real-valued loss:
+
+$$
+\Delta z_{\text{real split}}
+=
+-\frac{\eta}{2}\frac{\partial L}{\partial u}
+\;-\;
+i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
+$$
+
+That is literally the real-axis step plus $i$ times the imaginary-axis step. Good. Now plug in the two Wirtinger derivatives and see what each one gives when used as a gradient step.
+
+Using $\partial L/\partial z^*$ (the $+i$ derivative):
+
+$$
+-\eta\frac{\partial L}{\partial z^*}
+=
+-\eta\cdot\frac{1}{2}\!\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)
+=
+-\frac{\eta}{2}\frac{\partial L}{\partial u}
+\;-\;
+i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
+$$
+
+That is **identical** to the real split step. The real piece stays real, the imaginary piece stays imaginary, both signs preserved. So this update walks exactly where real gradient descent would walk.
+
+Using $\partial L/\partial z$ (the $-i$ derivative) instead:
+
+$$
+-\eta\frac{\partial L}{\partial z}
+=
+-\eta\cdot\frac{1}{2}\!\left(\frac{\partial L}{\partial u} - i\frac{\partial L}{\partial v}\right)
+=
+-\frac{\eta}{2}\frac{\partial L}{\partial u}
+\;+\;
+i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
+$$
+
+Compare this line to the one above it. The real piece is unchanged. The imaginary piece now has a **$+$** instead of a $-$. So the vertical move goes in the opposite direction from what real gradient descent wants &mdash; that is the bug.
+
+So why is it okay that the Wirtinger update uses $$\partial L/\partial z^*$$ rather than $$\partial L/\partial z$$? Because one of them ($$\partial L/\partial z^*$$) is built so the $$+i$$ reproduces the real split gradient exactly, and the other ($$\partial L/\partial z$$) is built so the $$-i$$ flips the imaginary piece. The math works out because Wirtinger did not *choose* a descent direction &mdash; he gave us both and we pick the one whose algebra matches real gradient descent. For real-valued losses that is always $$\partial L/\partial z^*$$.
+
+### Wirtinger Solves the Derivative Visual
+
+This visual shows the toy loss $L(w) = \lvert w-a \rvert^2$ with a rotating target. Pick one of the two derivatives using the buttons and watch what happens.
+
+- **Wirtinger (correct):** use $$\frac{\partial L}{\partial w^*}$$, so the step $$w - \eta\frac{\partial L}{\partial w^*}$$ matches the real-imag gradient. $w$ tracks the target and loss falls.
+- **Naive complex derivative:** use $$\frac{\partial L}{\partial w}$$, which is the conjugate. It flips the imaginary step, so $w$ drifts away and loss rises.
+
+Both derivatives are defined &mdash; that is the whole point of Wirtinger. The framework gives you both, and this shows which one gradient descent should actually use.
 
 ### Why It Captures Rotation Better
 

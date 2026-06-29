@@ -872,17 +872,19 @@ So if most ML loss functions are non-holomorphic, are we out of luck?
 
 No. Wirtinger calculus lets us treat a real-valued complex loss in a way that is fully consistent with real gradient descent.
 
-Thankfully some crazy dude figured out how to do this in 1927. Thank you [Wilhelm Wirtinger](https://en.wikipedia.org/wiki/Wirtinger_derivatives).
+Thankfully some crazy guy named Wilhelm Wirtinger introduced this calculus back in 1927. ([Wirtinger Derivatives](https://en.wikipedia.org/wiki/Wirtinger_derivatives).)
 
 ### Explaining Wirtinger
 
-The trick is to stop treating $z$ as the only variable. A real-valued loss depends on **both** $z$ and $\overline{z}$, so Wirtinger treats them as two independent variables:
+This smart math guy decided lets treat the complex numbers as two independent variables. A real-valued loss depends on **both** $z$ and $\overline{z}$, so Wirtinger calculus treats them as two independent variables:
 
 $$
 L(z) = L(z, \overline{z})
 $$
 
-Then we take two partial derivatives:
+where $L(z)$ is the real-valued loss, $z = u + iv$ is the complex parameter with real part $u$ and imaginary part $v$, and $\overline{z} = u - iv$ is its complex conjugate.
+
+Because $L$ depends on two real degrees of freedom $u$ and $v$, we need two partial derivatives to describe its local behavior:
 
 $$
 \frac{\partial L}{\partial z}
@@ -894,16 +896,17 @@ $$
 \frac{1}{2}\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)
 $$
 
-where $z = u + iv$. Think of these as two views of the same gradient:
+where $\partial L/\partial z$ and $\partial L/\partial z^{\ast}$ are the Wirtinger partial derivatives, $\partial L/\partial u$ and $\partial L/\partial v$ are the ordinary real partial derivatives, $i^2 = -1$, and $z^{\ast} = \overline{z}$.
 
-- $\frac{\partial L}{\partial z^*}$ is the **descent direction** for real losses.
-- $\frac{\partial L}{\partial z}$ is its **conjugate**, which flips the imaginary axis.
+Neither derivative is optional. They are the two partial derivatives of the calculus, just as $\partial L/\partial u$ and $\partial L/\partial v$ are both needed in real calculus.
 
-The update rule is:
+For gradient descent on a real-valued loss, the update rule is:
 
 $$
 z_{t+1} = z_t - \eta \frac{\partial L}{\partial z^*}
 $$
+
+where $z_t$ is the parameter at step $t$, $z_{t+1}$ is the updated parameter, $\eta > 0$ is the learning rate, and $\partial L/\partial z^{\ast}$ is the Wirtinger derivative with respect to $\overline{z}$.
 
 This is exactly the same as split real-imag updates:
 
@@ -913,9 +916,11 @@ u_{t+1} = u_t - \frac{\eta}{2}\frac{\partial L}{\partial u},
 v_{t+1} = v_t - \frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-#### Why the Wirtinger update picks $\partial L/\partial z^*$ and not $\partial L/\partial z$
+where $u_t$ and $v_t$ are the real and imaginary parts of $z_t$, and $\partial L/\partial u$ and $\partial L/\partial v$ are the ordinary real gradients. The factor of $1/2$ is the price of using the compact complex notation instead of writing out the two real updates.
 
-Here is the part most people skip over, and it is what makes the whole rule feel like magic until you see it.
+#### Why the Wirtinger update uses $\partial L/\partial z^{\ast}$
+
+The update uses $\partial L/\partial z^{\ast}$ not because Wirtinger offered a choice between two derivatives, but because that is the derivative whose gradient step reproduces real gradient descent on $(u, v)$.
 
 Start from the split real-imag update, which we know is correct for a real-valued loss:
 
@@ -923,13 +928,13 @@ $$
 \Delta z_{\text{real split}}
 =
 -\frac{\eta}{2}\frac{\partial L}{\partial u}
-\;-\;
+\;-\\;
 i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-That is literally the real-axis step plus $i$ times the imaginary-axis step. Good. Now plug in the two Wirtinger derivatives and see what each one gives when used as a gradient step.
+where $\Delta z_{\text{real split}}$ is the total complex step obtained by updating $u$ and $v$ separately.
 
-Using $\partial L/\partial z^*$ (the $+i$ derivative):
+That is the real-axis step plus $i$ times the imaginary-axis step. Now plug in the Wirtinger derivative:
 
 $$
 -\eta\frac{\partial L}{\partial z^*}
@@ -937,13 +942,15 @@ $$
 -\eta\cdot\frac{1}{2}\!\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)
 =
 -\frac{\eta}{2}\frac{\partial L}{\partial u}
-\;-\;
+\;-\\;
 i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-That is **identical** to the real split step. The real piece stays real, the imaginary piece stays imaginary, both signs preserved. So this update walks exactly where real gradient descent would walk.
+where the left-hand side is the complex gradient-descent step using $\partial L/\partial z^{\ast}$.
 
-Using $\partial L/\partial z$ (the $-i$ derivative) instead:
+That is **identical** to the real split step. The real piece stays real, the imaginary piece stays imaginary, and both signs are preserved. So this update walks exactly where real gradient descent would walk.
+
+What if we had used $\partial L/\partial z$ instead? That derivative uses the $-i$ combination of the real partials, giving:
 
 $$
 -\eta\frac{\partial L}{\partial z}
@@ -951,13 +958,15 @@ $$
 -\eta\cdot\frac{1}{2}\!\left(\frac{\partial L}{\partial u} - i\frac{\partial L}{\partial v}\right)
 =
 -\frac{\eta}{2}\frac{\partial L}{\partial u}
-\;+\;
+\;+\\;
 i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-Compare this line to the one above it. The real piece is unchanged. The imaginary piece now has a **$+$** instead of a $-$. So the vertical move goes in the opposite direction from what real gradient descent wants &mdash; that is the bug.
+where the left-hand side is the step obtained by mistakenly using $\partial L/\partial z$ instead of $\partial L/\partial z^{\ast}$.
 
-So why is it okay that the Wirtinger update uses $$\partial L/\partial z^*$$ rather than $$\partial L/\partial z$$? Because one of them ($$\partial L/\partial z^*$$) is built so the $$+i$$ reproduces the real split gradient exactly, and the other ($$\partial L/\partial z$$) is built so the $$-i$$ flips the imaginary piece. The math works out because Wirtinger did not *choose* a descent direction &mdash; he gave us both and we pick the one whose algebra matches real gradient descent. For real-valued losses that is always $$\partial L/\partial z^*$$.
+The real piece is unchanged, but the imaginary piece now has a **$+$** instead of a $-$. The vertical move goes in the opposite direction from what real gradient descent wants. That is why $\partial L/\partial z$ is the wrong direction for minimizing a real-valued loss.
+
+The two derivatives are both part of the calculus, not an either-or menu. For real-valued losses the descent step happens to use $\partial L/\partial z^{\ast}$, because its algebra lines up with the real gradient on $(u, v)$.
 
 ### Wirtinger Solves the Derivative Visual
 
@@ -966,13 +975,13 @@ This visual shows the toy loss $L(w) = \lvert w-a \rvert^2$ with a rotating targ
 - **Wirtinger (correct):** use $$\frac{\partial L}{\partial w^*}$$, so the step $$w - \eta\frac{\partial L}{\partial w^*}$$ matches the real-imag gradient. $w$ tracks the target and loss falls.
 - **Naive complex derivative:** use $$\frac{\partial L}{\partial w}$$, which is the conjugate. It flips the imaginary step, so $w$ drifts away and loss rises.
 
-Both derivatives are defined &mdash; that is the whole point of Wirtinger. The framework gives you both, and this shows which one gradient descent should actually use.
+Both derivatives are defined because the calculus needs both to describe a non-holomorphic function. The visual shows which one corresponds to real gradient descent.
 
 ### Why It Captures Rotation Better
 
 Here is the part that connects back to the rotation theme of this whole article.
 
-A complex weight $w$ carries both magnitude and angle. When the target $a$ sits at some angle, the error vector $w - a$ points in a specific direction. The Wirtinger update $\frac{\partial L}{\partial w^*} = w - a$ preserves that direction, so each step moves $w$ along the true line toward $a$.
+A complex weight $w$ carries both magnitude and angle. When the target $a$ sits at some angle, the error vector $w - a$ points in a specific direction. The Wirtinger update $\frac{\partial L}{\partial w^{\ast}} = w - a$ preserves that direction, so each step moves $w$ along the true line toward $a$.
 
 The naive derivative $\frac{\partial L}{\partial w} = \overline{(w-a)}$ conjugates the error, which mirrors the angle across the real axis. That mirror flip is exactly the rotation bug: the step points in a direction that does not match the real geometry of the loss surface.
 
@@ -1002,7 +1011,7 @@ $$
 
 ### Rotating Target Visual
 
-This visual shows the difference directly. The target $a$ rotates around the origin, so the model has to track a moving angle. The blue path uses $\frac{\partial L}{\partial w^*}$ and follows the target. The red path uses $\frac{\partial L}{\partial w}$ and drifts away because the imaginary update is mirrored.
+This visual shows the difference directly. The target $a$ rotates around the origin, so the model has to track a moving angle. The blue path uses $\frac{\partial L}{\partial w^{\ast}}$ and follows the target. The red path uses $\frac{\partial L}{\partial w}$ and drifts away because the imaginary update is mirrored.
 
 <div id="wirtinger-rotation-demo" style="max-width:560px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
   <canvas id="wirtinger-rotation-canvas" width="500" height="360" style="width:100%;height:auto;display:block;border-radius:6px;"></canvas>

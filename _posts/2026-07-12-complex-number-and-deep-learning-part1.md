@@ -876,15 +876,9 @@ Thankfully some crazy guy named Wilhelm Wirtinger introduced this calculus back 
 
 ### Explaining Wirtinger
 
-This smart math guy decided lets treat the complex numbers as two independent variables. A real-valued loss depends on **both** $z$ and $\overline{z}$, so Wirtinger calculus treats them as two independent variables:
+This smart math guy decided lets treat the complex numbers as two independent variables. A real-valued loss depends on **both** $z$ and $\overline{z}$. Since $z = u + iv$, that means the loss really just depends on two real numbers: $u$ and $v$. Two knobs to turn.
 
-$$
-L(z) = L(z, \overline{z})
-$$
-
-where $L(z)$ is the real-valued loss, $z = u + iv$ is the complex parameter with real part $u$ and imaginary part $v$, and $\overline{z} = u - iv$ is its complex conjugate.
-
-Because $L$ depends on two real degrees of freedom $u$ and $v$, we need two partial derivatives to describe its local behavior:
+Because we have two knobs, we need two partial derivatives to describe how the loss changes. Wirtinger gives us exactly that:
 
 $$
 \frac{\partial L}{\partial z}
@@ -896,7 +890,7 @@ $$
 \frac{1}{2}\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)
 $$
 
-where $\partial L/\partial z$ and $\partial L/\partial z^{\ast}$ are the Wirtinger partial derivatives, $\partial L/\partial u$ and $\partial L/\partial v$ are the ordinary real partial derivatives, $i^2 = -1$, and $z^{\ast} = \overline{z}$.
+These are just the two real partial derivatives ($\partial L/\partial u$ and $\partial L/\partial v$) repackaged into complex form. One combines them with $-i$, the other with $+i$. That sign difference is the whole story.
 
 Neither derivative is optional. They are the two partial derivatives of the calculus, just as $\partial L/\partial u$ and $\partial L/\partial v$ are both needed in real calculus.
 
@@ -906,9 +900,9 @@ $$
 z_{t+1} = z_t - \eta \frac{\partial L}{\partial z^*}
 $$
 
-where $z_t$ is the parameter at step $t$, $z_{t+1}$ is the updated parameter, $\eta > 0$ is the learning rate, and $\partial L/\partial z^{\ast}$ is the Wirtinger derivative with respect to $\overline{z}$.
+That is the only formula you need to remember. It looks like regular gradient descent but uses the conjugate derivative $\partial L/\partial z^{\ast}$.
 
-This is exactly the same as split real-imag updates:
+If you unpack it, this is exactly the same as updating the real and imaginary parts separately:
 
 $$
 u_{t+1} = u_t - \frac{\eta}{2}\frac{\partial L}{\partial u},
@@ -916,11 +910,17 @@ u_{t+1} = u_t - \frac{\eta}{2}\frac{\partial L}{\partial u},
 v_{t+1} = v_t - \frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-where $u_t$ and $v_t$ are the real and imaginary parts of $z_t$, and $\partial L/\partial u$ and $\partial L/\partial v$ are the ordinary real gradients. The factor of $1/2$ is the price of using the compact complex notation instead of writing out the two real updates.
+The factor of $1/2$ is the price of using the compact complex notation instead of writing out the two real updates.
+
+If you want to go deeper, [Kreutz-Delgado's paper](https://arxiv.org/abs/0906.4835) walks through the full calculus with worked examples, and [Wikipedia's Wirtinger derivatives page](https://en.wikipedia.org/wiki/Wirtinger_derivatives) covers the formal math side.
 
 #### Why the Wirtinger update uses $\partial L/\partial z^{\ast}$
 
-The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**, which matches how we pack the two real updates into one complex number. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward. That is why the update rule uses $\partial L/\partial z^{\ast}$, not by convention, but because it is the only one that descends correctly.
+So why $\partial L/\partial z^{\ast}$ and not $\partial L/\partial z$?
+
+Simple. The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**. That is exactly how we pack the two real updates into one complex number. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward.
+
+That is why the update rule uses $\partial L/\partial z^{\ast}$. Not by convention, but because it is the only one that actually descends.
 
 **A concrete example.** Take $L = u^2 + v^2$ at the point $z = 1 + i$ (so $u=1, v=1$):
 
@@ -928,7 +928,9 @@ The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and im
 - $\partial L/\partial z^{\ast} = 1 + i$ → update step $-2\eta(1 + i)$ moves down-left (correct)
 - $\partial L/\partial z = 1 - i$ → update step $-2\eta(1 - i)$ moves down-right (wrong, imaginary part flips sign)
 
-Now here is why the algebra works out in general. Start from the split real-imag update, which we know is correct for a real-valued loss:
+Now let's see why this works in general.
+
+Start with the split real-imag update. We know this is correct for a real-valued loss:
 
 $$
 u_{t+1} - u_t = -\frac{\eta}{2}\frac{\partial L}{\partial u},
@@ -936,7 +938,7 @@ u_{t+1} - u_t = -\frac{\eta}{2}\frac{\partial L}{\partial u},
 v_{t+1} - v_t = -\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-Combining those into a single complex step gives:
+Combine those into a single complex step:
 
 $$
 \Delta z_{\text{real split}}
@@ -956,7 +958,7 @@ $$
 i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-That is **identical** to the real split step: same real part, same imaginary part, same signs. So this update walks exactly where real gradient descent would walk.
+Identical. Same real part, same imaginary part, same signs. This update walks exactly where real gradient descent would walk.
 
 **What if we used the wrong one?** The two derivatives differ only in the sign of the imaginary piece:
 
@@ -964,9 +966,11 @@ That is **identical** to the real split step: same real part, same imaginary par
 >
 > **Wrong** ($\partial L/\partial z$): $\;-\frac{\eta}{2}\frac{\partial L}{\partial u} \;\mathbf{+}\; i\frac{\eta}{2}\frac{\partial L}{\partial v}$
 
-Same real part, opposite imaginary part. The wrong derivative flips the vertical move, sending the parameter in the opposite direction from what real gradient descent wants.
+Same real part, opposite imaginary part. The wrong derivative flips the vertical move. The parameter goes in the opposite direction from what real gradient descent wants.
 
-The two derivatives are both part of the calculus, not an either-or menu. For real-valued losses the descent step happens to use $\partial L/\partial z^{\ast}$, because its algebra lines up with the real gradient on $(u, v)$. **Bottom line:** $\partial L/\partial z^{\ast}$ is the one whose algebra matches real gradient descent. That is why the update rule uses it.
+Both derivatives are part of the calculus, not an either-or menu. For real-valued losses the descent step uses $\partial L/\partial z^{\ast}$ because its algebra lines up with the real gradient on $(u, v)$.
+
+**Bottom line:** $\partial L/\partial z^{\ast}$ is the one whose algebra matches real gradient descent. That is why the update rule uses it.
 
 <div id="wirtinger-chains-demo" style="max-width:780px;margin:1.2rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;font-size:0.82rem;line-height:1.5;font-variant-numeric:tabular-nums;">

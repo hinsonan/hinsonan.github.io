@@ -494,7 +494,7 @@ $$
 
 Most ML losses are real-valued and behave like the second case, which is the root of the problem we will see next.
 
-### Beginner Visual: Direction Check
+### Direction Visual
 
 This compares two tiny derivative estimates at the same point $z$:
 
@@ -920,13 +920,13 @@ where $u_t$ and $v_t$ are the real and imaginary parts of $z_t$, and $\partial L
 
 #### Why the Wirtinger update uses $\partial L/\partial z^{\ast}$
 
-The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**, which matches how we pack the two real updates into one complex number. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward. That is why the update rule uses $\partial L/\partial z^{\ast}$ — not by convention, but because it is the only one that descends correctly.
+The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**, which matches how we pack the two real updates into one complex number. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward. That is why the update rule uses $\partial L/\partial z^{\ast}$, not by convention, but because it is the only one that descends correctly.
 
 **A concrete example.** Take $L = u^2 + v^2$ at the point $z = 1 + i$ (so $u=1, v=1$):
 
 - Real gradient: $\partial L/\partial u = 2$, $\partial L/\partial v = 2$ → step goes toward $(-1, -1)$
 - $\partial L/\partial z^{\ast} = 1 + i$ → update step $-2\eta(1 + i)$ moves down-left (correct)
-- $\partial L/\partial z = 1 - i$ → update step $-2\eta(1 - i)$ moves down-right (wrong — imaginary part flips sign)
+- $\partial L/\partial z = 1 - i$ → update step $-2\eta(1 - i)$ moves down-right (wrong, imaginary part flips sign)
 
 Now here is why the algebra works out in general. Start from the split real-imag update, which we know is correct for a real-valued loss:
 
@@ -956,7 +956,7 @@ $$
 i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-That is **identical** to the real split step — same real part, same imaginary part, same signs. So this update walks exactly where real gradient descent would walk.
+That is **identical** to the real split step: same real part, same imaginary part, same signs. So this update walks exactly where real gradient descent would walk.
 
 **What if we used the wrong one?** The two derivatives differ only in the sign of the imaginary piece:
 
@@ -966,7 +966,170 @@ That is **identical** to the real split step — same real part, same imaginary 
 
 Same real part, opposite imaginary part. The wrong derivative flips the vertical move, sending the parameter in the opposite direction from what real gradient descent wants.
 
-The two derivatives are both part of the calculus, not an either-or menu. For real-valued losses the descent step happens to use $\partial L/\partial z^{\ast}$, because its algebra lines up with the real gradient on $(u, v)$. **Bottom line:** $\partial L/\partial z^{\ast}$ is the one whose algebra matches real gradient descent — that is why the update rule uses it.
+The two derivatives are both part of the calculus, not an either-or menu. For real-valued losses the descent step happens to use $\partial L/\partial z^{\ast}$, because its algebra lines up with the real gradient on $(u, v)$. **Bottom line:** $\partial L/\partial z^{\ast}$ is the one whose algebra matches real gradient descent. That is why the update rule uses it.
+
+<div id="wirtinger-chains-demo" style="max-width:780px;margin:1.2rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;font-size:0.82rem;line-height:1.5;font-variant-numeric:tabular-nums;">
+    <div>
+      <div style="font-weight:700;color:#4db0ff;margin-bottom:0.3rem;">Correct (∂L/∂z*)</div>
+      <div style="font-size:0.72rem;color:#999;margin-bottom:0.4rem;">Δv = −η · ∂L/∂v</div>
+      <div id="wchain-good" style="max-height:420px;overflow-y:auto;scroll-behavior:smooth;"></div>
+    </div>
+    <div>
+      <div style="font-weight:700;color:#ff6b6b;margin-bottom:0.3rem;">Wrong (∂L/∂z)</div>
+      <div style="font-size:0.72rem;color:#999;margin-bottom:0.4rem;">Δv = +η · ∂L/∂v (flipped!)</div>
+      <div id="wchain-bad" style="max-height:420px;overflow-y:auto;scroll-behavior:smooth;"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.8rem;margin-top:0.7rem;flex-wrap:wrap;align-items:center;">
+    <label style="font-size:0.85rem;">learning rate
+      <input id="wchain-lr" type="range" min="0.02" max="0.40" step="0.01" value="0.15" style="width:110px;vertical-align:middle;">
+      <span id="wchain-lr-val" style="font-size:0.85rem;min-width:2.4em;display:inline-block;">0.15</span>
+    </label>
+    <label style="font-size:0.85rem;">steps
+      <input id="wchain-steps" type="range" min="2" max="8" step="1" value="5" style="width:90px;vertical-align:middle;">
+      <span id="wchain-steps-val" style="font-size:0.85rem;">5</span>
+    </label>
+    <button id="wchain-replay" type="button" style="padding:0.2rem 0.5rem;border:1px solid #666;border-radius:6px;background:transparent;color:inherit;cursor:pointer;font-size:0.85rem;">Replay</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const lrInput = document.getElementById('wchain-lr');
+  const stepsInput = document.getElementById('wchain-steps');
+  const lrVal = document.getElementById('wchain-lr-val');
+  const stepsVal = document.getElementById('wchain-steps-val');
+  const replayBtn = document.getElementById('wchain-replay');
+  const goodContainer = document.getElementById('wchain-good');
+  const badContainer = document.getElementById('wchain-bad');
+  if (!lrInput || !stepsInput || !replayBtn || !goodContainer || !badContainer) return;
+
+  const startU = 1.0, startV = 1.0;
+
+  function buildChain(lr, steps, sign) {
+    const chain = [];
+    let u = startU, v = startV;
+    for (let i = 0; i <= steps; i++) {
+      const dLdu = 2 * u, dLdv = 2 * v;
+      const du = -lr * dLdu;
+      const dv = sign * lr * dLdv;
+      chain.push({ step: i, u, v, dLdu, dLdv, du, dv, L: u * u + v * v });
+      u += du;
+      v += dv;
+    }
+    return chain;
+  }
+
+  function fmt(n) { return n.toFixed(3); }
+  function fmtL(n) { return n.toFixed(4); }
+
+  function createStepBlock(r, color, sign) {
+    const block = document.createElement('div');
+    block.style.cssText = 'margin-bottom:0.6rem;padding:0.5rem;border-radius:6px;opacity:0;transition:opacity 0.4s;';
+    block.style.background = color === 'good' ? 'rgba(77,176,255,0.08)' : 'rgba(255,107,107,0.08)';
+    block.style.border = '1px solid ' + (color === 'good' ? 'rgba(77,176,255,0.2)' : 'rgba(255,107,107,0.2)');
+
+    const dvColor = color === 'good' ? '#4db0ff' : '#ff6b6b';
+    const dvSign = sign < 0 ? '-' : '+';
+
+    block.innerHTML = `
+      <div style="font-weight:600;color:#ccc;margin-bottom:0.3rem;">Step ${r.step}</div>
+      <div class="wchain-line" style="opacity:0;transition:opacity 0.3s;">
+        <span style="color:#aaa;">u =</span> <span style="color:#e0e0e0;">${fmt(r.u)}</span>,
+        <span style="color:#aaa;">v =</span> <span style="color:#e0e0e0;">${fmt(r.v)}</span>
+      </div>
+      <div class="wchain-arrow" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#666;margin:0.15rem 0;">↓</div>
+      <div class="wchain-line" style="opacity:0;transition:opacity 0.3s;">
+        <span style="color:#aaa;">∂L/∂u =</span> <span style="color:#e0e0e0;">${fmt(r.dLdu)}</span>,
+        <span style="color:#aaa;">∂L/∂v =</span> <span style="color:#e0e0e0;">${fmt(r.dLdv)}</span>
+      </div>
+      <div class="wchain-arrow" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#666;margin:0.15rem 0;">↓</div>
+      <div class="wchain-line" style="opacity:0;transition:opacity 0.3s;">
+        <span style="color:#aaa;">Δu =</span> <span style="color:#e0e0e0;">${fmt(r.du)}</span>,
+        <span style="color:#aaa;">Δv =</span> <span style="color:${dvColor};font-weight:700;">${dvSign}${fmt(Math.abs(r.dv))}</span>
+      </div>
+      <div class="wchain-arrow" style="opacity:0;transition:opacity 0.3s;text-align:center;color:#666;margin:0.15rem 0;">↓</div>
+      <div class="wchain-line" style="opacity:0;transition:opacity 0.3s;">
+        <span style="color:#aaa;">L =</span> <span style="color:#e0e0e0;">${fmtL(r.L)}</span>
+      </div>
+    `;
+    return block;
+  }
+
+  function revealStep(block) {
+    block.style.opacity = '1';
+    const lines = block.querySelectorAll('.wchain-line, .wchain-arrow');
+    lines.forEach((el, i) => {
+      setTimeout(() => { el.style.opacity = '1'; }, i * 120);
+    });
+  }
+
+  function fadeOldSteps(container) {
+    const blocks = container.querySelectorAll(':scope > div');
+    blocks.forEach((b, i) => {
+      if (i < blocks.length - 1) {
+        b.style.opacity = '0.35';
+      }
+    });
+  }
+
+  let animTimer = null;
+
+  function animate() {
+    const lr = Number(lrInput.value);
+    const steps = Number(stepsInput.value);
+    const goodChain = buildChain(lr, steps, -1);
+    const badChain = buildChain(lr, steps, +1);
+
+    lrVal.textContent = lr.toFixed(2);
+    stepsVal.textContent = String(steps);
+
+    goodContainer.innerHTML = '';
+    badContainer.innerHTML = '';
+
+    let currentStep = 0;
+
+    function showNext() {
+      if (currentStep > steps) {
+        if (animTimer) clearTimeout(animTimer);
+        return;
+      }
+
+      const gBlock = createStepBlock(goodChain[currentStep], 'good', -1);
+      const bBlock = createStepBlock(badChain[currentStep], 'bad', +1);
+
+      goodContainer.appendChild(gBlock);
+      badContainer.appendChild(bBlock);
+
+      fadeOldSteps(goodContainer);
+      fadeOldSteps(badContainer);
+
+      setTimeout(() => {
+        revealStep(gBlock);
+        revealStep(bBlock);
+        goodContainer.scrollTop = goodContainer.scrollHeight;
+        badContainer.scrollTop = badContainer.scrollHeight;
+      }, 50);
+
+      currentStep++;
+      animTimer = setTimeout(showNext, 1200);
+    }
+
+    showNext();
+  }
+
+  function restart() {
+    if (animTimer) clearTimeout(animTimer);
+    animate();
+  }
+
+  lrInput.addEventListener('input', restart);
+  stepsInput.addEventListener('input', restart);
+  replayBtn.addEventListener('click', restart);
+  restart();
+})();
+</script>
 
 ### Wirtinger Solves the Derivative Visual
 

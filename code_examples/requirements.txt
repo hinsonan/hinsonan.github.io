@@ -5,6 +5,7 @@ imbalanced-learn
 matplotlib
 seaborn
 plotly
+gradio>=4.44,<6
 kaleido
 jupyter
 notebook

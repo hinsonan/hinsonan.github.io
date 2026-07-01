@@ -1,17 +1,38 @@
 ---
 layout: post
 title: "Complex Numbers and Deep Learning Part 1"
-date: 2026-07-12
+date: 2026-07-01
 categories: ML
 ---
 
 No one knows what an imaginary number is. It's like asking ML people how this algorithm is meant to work outside of a notebook. That reality just does not exist. Imaginary numbers are very powerful for certain areas of engineering. Deep learning algorithms can also use imaginary numbers but often do not due to limitations of back propagation. There are ways to get around this and you can keep the natural relationship between real numbers and imaginary. Keeping this relationship together can have the model learn more efficiently and generalize better. Before we get into all that we need to understand what an imaginary number is and what a complex number is.
 
+<div class="post-toc" style="border:1px solid #444;border-radius:8px;padding:1rem 1.5rem;margin:1.5rem 0;background:rgba(40,50,60,0.25);" markdown="1">
+**Table of Contents**
+
+- [Complex Numbers](#complex-numbers)
+  - [Multiply by i Visualization](#multiply-by-i-visualization)
+  - [Polar Form](#polar-form)
+  - [Polar Form Visualization](#polar-form-visualization)
+  - [Rotation Visualization](#rotation-visualization)
+- [Complex Numbers and ML](#complex-numbers-and-ml)
+  - [Holomorphic vs Non-Holomorphic](#holomorphic-vs-non-holomorphic)
+  - [Direction Visual](#direction-visual)
+  - [Why Complex Derivatives Are Tough in ML](#why-complex-derivatives-are-tough-in-ml)
+- [Wirtinger Calculus has Entered the Fight](#wirtinger-calculus-has-entered-the-fight)
+  - [Explaining Wirtinger](#explaining-wirtinger)
+  - [Wirtinger Solves Optimizing Loss Functions with Complex Numbers](#wirtinger-solves-optimizing-loss-functions-with-complex-numbers)
+  - [Why It Captures Rotation Better](#why-it-captures-rotation-better)
+  - [Rotating Target Visual](#rotating-target-visual)
+- [Complex Conclusion](#complex-conclusion)
+  - [Signals Data Preview](#signals-data-preview)
+</div>
+
 ## Complex Numbers
 
 Imaginary numbers are a bad name. Imaginary makes it seem like it's not real but it is. This is in some ways hard to grasp like negative numbers were hard to grasp for many in mathematics. Which makes sense because if you have 3 apples and you take 4 apples away you now have -1 apples. How in the world can you have -1 apples? It sounds absurd but that doesn't mean negative numbers are not real. In banking it makes a lot of sense. You are in the hole and have negative dollars. You gotta get out of that hole.
 
-World most trusted source Wikipedia defines an imaginary number as: "the product of a real number and the imaginary unit $i$, which is defined by its property $i^2 = -1$."
+The world's most trusted source, Wikipedia, defines an imaginary number as: "the product of a real number and the imaginary unit $i$, which is defined by its property $i^2 = -1$."
 
 An imaginary number is then any real multiple of $i$, written as:
 
@@ -461,6 +482,14 @@ Here is an animation that shows the original vector and the rotated version.
     ctx.fillStyle = '#f4b942';
     ctx.fillText('Angle', 18, 56);
 
+    ctx.fillStyle = '#d6deeb';
+    ctx.font = '12px sans-serif';
+    ctx.fillText("z' = z \u00b7 e^(i\u03b8)", 18, 74);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px sans-serif';
+    ctx.fillText("x' = x cos\u03b8 \u2212 y sin\u03b8", 18, 88);
+    ctx.fillText("y' = x sin\u03b8 + y cos\u03b8", 18, 100);
+
     angleLabel.textContent = currentDeg.toFixed(1);
     time += 0.03;
     requestAnimationFrame(frame);
@@ -474,7 +503,7 @@ I hope defining these terms and showing these animations help get the point acro
 
 ## Complex Numbers and ML
 
-So if complex numbers contain rotation information then why are complex neural networks not that popular? It has to do with how back propagation works. Complex numbers do not propagate gradients well and the hardware is not optimized for this process
+So if complex numbers contain rotation information then why are complex neural networks not that popular? It has to do with how back propagation works. Complex numbers do not propagate gradients well and the hardware is not optimized for this process.
 
 ### Holomorphic vs Non-Holomorphic
 
@@ -876,9 +905,9 @@ Thankfully some crazy guy named Wilhelm Wirtinger introduced this calculus back 
 
 ### Explaining Wirtinger
 
-This smart math guy decided lets treat the complex numbers as two independent variables. A real-valued loss depends on **both** $z$ and $\overline{z}$. Since $z = u + iv$, that means the loss really just depends on two real numbers: $u$ and $v$. Two knobs to turn.
+This smart math guy decided let's treat the complex numbers as two independent variables. A real-valued loss depends on both $z$ and $\overline{z}$. Since $z = u + iv$, that means the loss really just depends on two real numbers: $u$ and $v$. That's the major piece.
 
-Because we have two knobs, we need two partial derivatives to describe how the loss changes. Wirtinger gives us exactly that:
+Because we have two numbers, we need two partial derivatives to describe the loss changes. Wirtinger calculus gives us the tools to do this:
 
 $$
 \frac{\partial L}{\partial z}
@@ -890,9 +919,7 @@ $$
 \frac{1}{2}\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)
 $$
 
-These are just the two real partial derivatives ($\partial L/\partial u$ and $\partial L/\partial v$) repackaged into complex form. One combines them with $-i$, the other with $+i$. That sign difference is the whole story.
-
-Neither derivative is optional. They are the two partial derivatives of the calculus, just as $\partial L/\partial u$ and $\partial L/\partial v$ are both needed in real calculus.
+These are the two real partial derivatives ($\partial L/\partial u$ and $\partial L/\partial v$) shown in their complex form. One combines them with $-i$, the other with $+i$. That sign delta is the big enchilada, it's what makes the magic happen.
 
 For gradient descent on a real-valued loss, the update rule is:
 
@@ -912,65 +939,39 @@ $$
 
 The factor of $1/2$ is the price of using the compact complex notation instead of writing out the two real updates.
 
-If you want to go deeper, [Kreutz-Delgado's paper](https://arxiv.org/abs/0906.4835) walks through the full calculus with worked examples, and [Wikipedia's Wirtinger derivatives page](https://en.wikipedia.org/wiki/Wirtinger_derivatives) covers the formal math side.
+If you want to go deeper, [Kreutz-Delgado's paper](https://arxiv.org/abs/0906.4835) walks through the full calculus with fancy examples.
 
 #### Why the Wirtinger update uses $\partial L/\partial z^{\ast}$
 
-So why $\partial L/\partial z^{\ast}$ and not $\partial L/\partial z$?
+So what's the point of using $\partial L/\partial z^{\ast}$ and not $\partial L/\partial z$?
 
-Simple. The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**. That is exactly how we pack the two real updates into one complex number. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward.
+The conjugate derivative $\partial L/\partial z^{\ast}$ combines the real and imaginary partials with **+i**. The other derivative $\partial L/\partial z$ uses **-i**, which flips the imaginary step backward. We will see how the sign being different is the golden nugget.
 
-That is why the update rule uses $\partial L/\partial z^{\ast}$. Not by convention, but because it is the only one that actually descends.
-
-**A concrete example.** Take $L = u^2 + v^2$ at the point $z = 1 + i$ (so $u=1, v=1$):
+Take a look at this example. Take $L = u^2 + v^2$ at the point $z = 1 + i$ (so $u=1, v=1$):
 
 - Real gradient: $\partial L/\partial u = 2$, $\partial L/\partial v = 2$ → step goes toward $(-1, -1)$
-- $\partial L/\partial z^{\ast} = 1 + i$ → update step $-2\eta(1 + i)$ moves down-left (correct)
-- $\partial L/\partial z = 1 - i$ → update step $-2\eta(1 - i)$ moves down-right (wrong, imaginary part flips sign)
+- $\partial L/\partial z^{\ast} = 1 + i$ → update step $-\eta(1 + i)$ moves down-left (correct)
+- $\partial L/\partial z = 1 - i$ → update step $-\eta(1 - i)$ moves down-right (wrong, imaginary part flips sign)
 
-Now let's see why this works in general.
-
-Start with the split real-imag update. We know this is correct for a real-valued loss:
+The real split update moves $u$ by $-\frac{\eta}{2}\frac{\partial L}{\partial u}$ and $v$ by $-\frac{\eta}{2}\frac{\partial L}{\partial v}$. Perform one complex step and the math works out to:
 
 $$
-u_{t+1} - u_t = -\frac{\eta}{2}\frac{\partial L}{\partial u},
-\qquad
-v_{t+1} - v_t = -\frac{\eta}{2}\frac{\partial L}{\partial v}
+\Delta z = -\frac{\eta}{2}\frac{\partial L}{\partial u} \;-\; i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-Combine those into a single complex step:
+Now expand the Wirtinger update $-\eta \frac{\partial L}{\partial z^*}$:
 
 $$
-\Delta z_{\text{real split}}
-=
--\frac{\eta}{2}\frac{\partial L}{\partial u}
-\;-\;
-i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
+-\eta \cdot \frac{1}{2}\!\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right) = -\frac{\eta}{2}\frac{\partial L}{\partial u} \;-\; i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
 $$
 
-Now plug in the Wirtinger derivative $\partial L/\partial z^{\ast} = \frac{1}{2}\!\left(\frac{\partial L}{\partial u} + i\frac{\partial L}{\partial v}\right)$:
+The $-\eta$ multiplied into the $+i$ flips it to $-i$, this is equivalent to the real split.
 
-$$
--\eta\frac{\partial L}{\partial z^*}
-=
--\frac{\eta}{2}\frac{\partial L}{\partial u}
-\;-\;
-i\,\frac{\eta}{2}\frac{\partial L}{\partial v}
-$$
-
-Identical. Same real part, same imaginary part, same signs. This update walks exactly where real gradient descent would walk.
-
-**What if we used the wrong one?** The two derivatives differ only in the sign of the imaginary piece:
+The only difference is the sign. If we were to take the wrong sign then we would move away from the loss. We would be adding and never reach the target.
 
 > **Correct** ($\partial L/\partial z^{\ast}$): $\;-\frac{\eta}{2}\frac{\partial L}{\partial u} \;\mathbf{-}\; i\frac{\eta}{2}\frac{\partial L}{\partial v}$
 >
 > **Wrong** ($\partial L/\partial z$): $\;-\frac{\eta}{2}\frac{\partial L}{\partial u} \;\mathbf{+}\; i\frac{\eta}{2}\frac{\partial L}{\partial v}$
-
-Same real part, opposite imaginary part. The wrong derivative flips the vertical move. The parameter goes in the opposite direction from what real gradient descent wants.
-
-Both derivatives are part of the calculus, not an either-or menu. For real-valued losses the descent step uses $\partial L/\partial z^{\ast}$ because its algebra lines up with the real gradient on $(u, v)$.
-
-**Bottom line:** $\partial L/\partial z^{\ast}$ is the one whose algebra matches real gradient descent. That is why the update rule uses it.
 
 <div id="wirtinger-chains-demo" style="max-width:780px;margin:1.2rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;font-size:0.82rem;line-height:1.5;font-variant-numeric:tabular-nums;">
@@ -1135,9 +1136,9 @@ Both derivatives are part of the calculus, not an either-or menu. For real-value
 })();
 </script>
 
-### Wirtinger Solves the Derivative Visual
+### Wirtinger Solves Optimizing Loss Functions with Complex Numbers
 
-This visual shows the toy loss $L(w) = \lvert w-a \rvert^2$ with a rotating target. Pick one of the two derivatives using the buttons and watch what happens.
+This visual shows the loss $L(w) = \lvert w-a \rvert^2$ with a rotating target.
 
 - **Wirtinger (correct):** use $$\frac{\partial L}{\partial w^*}$$, so the step $$w - \eta\frac{\partial L}{\partial w^*}$$ matches the real-imag gradient. $w$ tracks the target and loss falls.
 - **Naive complex derivative:** use $$\frac{\partial L}{\partial w}$$, which is the conjugate. It flips the imaginary step, so $w$ drifts away and loss rises.
@@ -1146,39 +1147,19 @@ Both derivatives are defined because the calculus needs both to describe a non-h
 
 ### Why It Captures Rotation Better
 
-Here is the part that connects back to the rotation theme of this whole article.
+Here is the part that connects back to the rotation theme of this whole article. This is the whole point. All this work to find a way to better capture rotation and geometric relationships in neural networks for problems that deal in complex numbers.
 
 A complex weight $w$ carries both magnitude and angle. When the target $a$ sits at some angle, the error vector $w - a$ points in a specific direction. The Wirtinger update $\frac{\partial L}{\partial w^{\ast}} = w - a$ preserves that direction, so each step moves $w$ along the true line toward $a$.
 
-The naive derivative $\frac{\partial L}{\partial w} = \overline{(w-a)}$ conjugates the error, which mirrors the angle across the real axis. That mirror flip is exactly the rotation bug: the step points in a direction that does not match the real geometry of the loss surface.
+The naive derivative $\frac{\partial L}{\partial w} = \overline{(w-a)}$ conjugates the error, which mirrors the angle across the real axis. That mirror flip is exactly the rotation problem: the step points in a direction that does not match the real geometry of the loss.
 
-So Wirtinger derivatives "capture rotation" because they respect the complex structure of the error instead of silently flipping part of it.
-
-For the toy loss used in the code,
-
-$$
-L(w)=\lvert w-a \rvert^2
-$$
-
-we get
-
-$$
-\frac{\partial L}{\partial u}=2\,\Re(w-a),
-\qquad
-\frac{\partial L}{\partial v}=2\,\Im(w-a)
-$$
-
-so
-
-$$
-\frac{\partial L}{\partial w^*}=w-a,
-\qquad
-\frac{\partial L}{\partial w}=\overline{(w-a)}
-$$
+So Wirtinger derivatives "capture rotation" because they respect the complex structure of the error instead of silently flipping the sign and sending you spiraling away from the target.
 
 ### Rotating Target Visual
 
-This visual shows the difference directly. The target $a$ rotates around the origin, so the model has to track a moving angle. The blue path uses $\frac{\partial L}{\partial w^{\ast}}$ and follows the target. The red path uses $\frac{\partial L}{\partial w}$ and drifts away because the imaginary update is mirrored.
+We are almost done with all this math. This is starting to saturate my brain.
+
+This plot shows the difference when using Wirtinger derivatives vs standard real derivatives. The target $a$ rotates around the origin, so the model has to track a moving angle. The blue path uses $\frac{\partial L}{\partial w^{\ast}}$ and follows the target. The red path uses $\frac{\partial L}{\partial w}$ and drifts away because the imaginary update is going in the wrong direction. For the purpose of the visual I clamp the standard derivative or else it falls off the plot.
 
 <div id="wirtinger-rotation-demo" style="max-width:560px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
   <canvas id="wirtinger-rotation-canvas" width="500" height="360" style="width:100%;height:auto;display:block;border-radius:6px;"></canvas>
@@ -1383,3 +1364,336 @@ This visual shows the difference directly. The target $a$ rotates around the ori
   frame();
 })();
 </script>
+
+## Complex Conclusion
+
+### TL;DR
+
+- **Complex numbers encode rotation and scaling together.**
+- **Real-valued ML losses are non-holomorphic.**
+- **Wirtinger calculus gives us two partial derivatives instead of one.**
+- **The conjugate derivative $\partial L/\partial z^{\ast}$ is the one that matches real gradient descent.** 
+- **Keeping I and Q together lets the model learn the geometric relationship naturally.**
+
+The industry has decided that to keep things simple and easy for hardware and software, we drop the imaginary component and separate the real and complex parts, treating them as separate pieces. 
+
+Most complex problems have you getting rid of this geometric relationship and training on large amounts of data so that you eventually learn how the two components relate to each other.
+
+I don't think this is a bad idea. It takes advantage of our current software-optimized computations and hardware acceleration. It makes training and inference easier.
+
+The disadvantage is you lose the natural geometric relationship. If you want to learn how complex numbers relate to scaling and rotating, then you need to keep them together and train using back prop with Wirtinger derivatives. That way you can keep the complex relationship intact.
+
+There are many advantages to doing this. In the next article we will compare some complex neural networks to real neural networks in a problem domain that is complex. We will be analyzing IQ data of different signal types. Here is a preview of what we are looking at in the next article.
+
+
+### Signals Data Preview
+
+This is the type of data that benefits from keeping the complex relationship together. Complex signals show up in radio, audio, and anywhere you need to model rotations and oscillations. Part 2 will train complex neural networks on IQ data, so here is a preview of what those signals actually look like.
+
+**Complex sinusoid.** One complex number that spins in time:
+
+<div id="signal-sinusoid-demo" style="max-width:720px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
+  <canvas id="signal-sinusoid-canvas" width="700" height="300" style="width:100%;height:auto;display:block;border-radius:6px;background:#10161d;"></canvas>
+  <div style="margin-top:0.6rem;font-size:0.85rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+    <label style="display:flex;gap:0.3rem;align-items:center;">frequency
+      <input id="sig-freq" type="range" min="0.2" max="3.0" step="0.1" value="1.0" style="width:90px;">
+      <span id="sig-freq-val" style="min-width:2.2em;">1.0</span>
+    </label>
+    <label style="display:flex;gap:0.3rem;align-items:center;">amplitude
+      <input id="sig-amp" type="range" min="0.3" max="1.0" step="0.05" value="0.9" style="width:90px;">
+      <span id="sig-amp-val" style="min-width:2.2em;">0.90</span>
+    </label>
+    <label style="display:flex;gap:0.3rem;align-items:center;">phase
+      <input id="sig-phase" type="range" min="0" max="360" step="5" value="0" style="width:90px;">
+      <span id="sig-phase-val" style="min-width:2.2em;">0°</span>
+    </label>
+  </div>
+</div>
+
+**IQ impairments.** Real received symbols are never perfect. The same constellation can look very different depending on what went wrong between the transmitter and receiver:
+
+<div id="signal-impairments-demo" style="max-width:720px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
+  <canvas id="signal-impairments-canvas" width="700" height="380" style="width:100%;height:auto;display:block;border-radius:6px;background:#10161d;"></canvas>
+  <div style="margin-top:0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;font-size:0.85rem;">
+    <span style="color:#aaa;">modulation:</span>
+    <button id="imp-mod-bpsk" type="button" style="padding:0.25rem 0.6rem;border:1px solid #4db0ff;border-radius:4px;background:transparent;color:#4db0ff;cursor:pointer;font-weight:700;">BPSK</button>
+    <button id="imp-mod-qpsk" type="button" style="padding:0.25rem 0.6rem;border:1px solid #555;border-radius:4px;background:transparent;color:#ccc;cursor:pointer;">QPSK</button>
+    <button id="imp-mod-8psk" type="button" style="padding:0.25rem 0.6rem;border:1px solid #555;border-radius:4px;background:transparent;color:#ccc;cursor:pointer;">8PSK</button>
+    <button id="imp-mod-16qam" type="button" style="padding:0.25rem 0.6rem;border:1px solid #555;border-radius:4px;background:transparent;color:#ccc;cursor:pointer;">16QAM</button>
+    <span style="margin-left:0.5rem;color:#aaa;">impairment strength</span>
+    <input id="imp-severity" type="range" min="0" max="10" step="1" value="4" style="width:100px;">
+    <span id="imp-severity-val">4</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  // --- Helpers ---
+  function rotate(z, rad) {
+    return { re: z.re*Math.cos(rad) - z.im*Math.sin(rad), im: z.re*Math.sin(rad) + z.im*Math.cos(rad) };
+  }
+
+  // --- Constellation library (matches complex_core.py normalizations) ---
+  const constellations = {
+    bpsk: { name: 'BPSK', bits: 1, points: [{re:1,im:0}, {re:-1,im:0}] },
+    qpsk: { name: 'QPSK', bits: 2, points: [{re:1,im:1},{re:-1,im:1},{re:-1,im:-1},{re:1,im:-1}].map(p => ({re:p.re/Math.SQRT2, im:p.im/Math.SQRT2})) },
+    '8psk': { name: '8PSK', bits: 3, points: Array.from({length:8}, (_,k)=>{ const a=2*Math.PI*k/8; return {re:Math.cos(a), im:Math.sin(a)}; }) },
+    '16qam': { name: '16QAM', bits: 4, points: (()=>{ const pts=[]; for(let i=-3;i<=3;i+=2) for(let j=-3;j<=3;j+=2) pts.push({re:i, im:j}); const n=Math.sqrt(10); return pts.map(p=>({re:p.re/n, im:p.im/n})); })() }
+  };
+
+  function sampleSymbols(modName, n) {
+    const pts = constellations[modName].points;
+    const syms = [];
+    for (let i = 0; i < n; i++) syms.push({ ...pts[i % pts.length] });
+    // shuffle-ish for visual variety
+    for (let i = syms.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [syms[i], syms[j]] = [syms[j], syms[i]];
+    }
+    return syms;
+  }
+
+  // --- Sinusoid visual ---
+  const sinCanvas = document.getElementById('signal-sinusoid-canvas');
+  const freqInput = document.getElementById('sig-freq');
+  const ampInput = document.getElementById('sig-amp');
+  const phaseInput = document.getElementById('sig-phase');
+  if (!sinCanvas || !freqInput || !ampInput || !phaseInput) return;
+
+  const sctx = sinCanvas.getContext('2d');
+  const W = sinCanvas.width, H = sinCanvas.height;
+  const phasorCx = 150, phasorCy = H/2, phasorR = 90;
+  const traceX = 300, traceW = W - traceX - 20, traceH = (H - 50)/2;
+  const maxHist = 120;
+  let iHist = [], qHist = [];
+  let t = 0;
+
+  function drawAxes(ctx, cx, cy, halfLen) {
+    ctx.strokeStyle = 'rgba(210,210,210,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - halfLen, cy); ctx.lineTo(cx + halfLen, cy);
+    ctx.moveTo(cx, cy - halfLen); ctx.lineTo(cx, cy + halfLen);
+    ctx.stroke();
+  }
+
+  function drawSinusoid() {
+    const freq = Number(freqInput.value);
+    const amp = Number(ampInput.value);
+    const phaseDeg = Number(phaseInput.value);
+    const phaseRad = phaseDeg * Math.PI / 180;
+    const angle = 2 * Math.PI * freq * t * 0.02 + phaseRad;
+    const re = amp * Math.cos(angle);
+    const im = amp * Math.sin(angle);
+
+    sctx.fillStyle = '#10161d';
+    sctx.fillRect(0, 0, W, H);
+
+    // Phasor panel
+    sctx.strokeStyle = 'rgba(210,210,210,0.1)';
+    sctx.lineWidth = 1;
+    sctx.beginPath();
+    sctx.arc(phasorCx, phasorCy, phasorR, 0, Math.PI*2);
+    sctx.stroke();
+    drawAxes(sctx, phasorCx, phasorCy, phasorR + 10);
+
+    const px = phasorCx + phasorR * re;
+    const py = phasorCy - phasorR * im;
+
+    // Shadow projections
+    sctx.strokeStyle = 'rgba(77,176,255,0.2)';
+    sctx.setLineDash([3,3]);
+    sctx.beginPath();
+    sctx.moveTo(px, phasorCy); sctx.lineTo(px, py);
+    sctx.moveTo(phasorCx, py); sctx.lineTo(px, py);
+    sctx.stroke();
+    sctx.setLineDash([]);
+
+    // Phasor arrow
+    sctx.strokeStyle = '#4db0ff';
+    sctx.lineWidth = 2.5;
+    sctx.beginPath();
+    sctx.moveTo(phasorCx, phasorCy);
+    sctx.lineTo(px, py);
+    sctx.stroke();
+
+    sctx.fillStyle = '#4db0ff';
+    sctx.beginPath();
+    sctx.arc(px, py, 5, 0, Math.PI*2);
+    sctx.fill();
+
+    sctx.fillStyle = '#888';
+    sctx.font = '12px sans-serif';
+    sctx.fillText('I', phasorCx + phasorR + 8, phasorCy + 4);
+    sctx.fillText('Q', phasorCx - 4, phasorCy - phasorR - 8);
+    sctx.fillStyle = '#4db0ff';
+    sctx.fillText('z(t) = I + iQ', 14, 22);
+
+    // I/Q traces
+    iHist.push(re); qHist.push(im);
+    if (iHist.length > maxHist) iHist.shift();
+    if (qHist.length > maxHist) qHist.shift();
+
+    function drawTrace(data, y0, color) {
+      sctx.strokeStyle = color;
+      sctx.lineWidth = 2;
+      sctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = traceX + (i / (maxHist - 1)) * traceW;
+        const y = y0 - data[i] * traceH * 0.85;
+        i === 0 ? sctx.moveTo(x, y) : sctx.lineTo(x, y);
+      }
+      sctx.stroke();
+    }
+
+    sctx.strokeStyle = 'rgba(210,210,210,0.12)';
+    sctx.beginPath();
+    sctx.moveTo(traceX, 25 + traceH/2); sctx.lineTo(traceX + traceW, 25 + traceH/2);
+    sctx.moveTo(traceX, 35 + traceH*1.5); sctx.lineTo(traceX + traceW, 35 + traceH*1.5);
+    sctx.stroke();
+
+    drawTrace(iHist, 25 + traceH/2, '#4db0ff');
+    drawTrace(qHist, 35 + traceH*1.5, '#ffb74d');
+
+    sctx.fillStyle = '#4db0ff'; sctx.font = '11px sans-serif';
+    sctx.fillText('I(t)', traceX + 6, 22);
+    sctx.fillStyle = '#ffb74d';
+    sctx.fillText('Q(t)', traceX + 6, 32 + traceH);
+
+    t += 1;
+  }
+
+  function updateSinusoid() {
+    document.getElementById('sig-freq-val').textContent = freqInput.value;
+    document.getElementById('sig-amp-val').textContent = Number(ampInput.value).toFixed(2);
+    document.getElementById('sig-phase-val').textContent = phaseInput.value + '\u00b0';
+    drawSinusoid();
+    requestAnimationFrame(updateSinusoid);
+  }
+  updateSinusoid();
+
+  function resetSinusoid() { t = 0; iHist = []; qHist = []; }
+  freqInput.addEventListener('input', resetSinusoid);
+  ampInput.addEventListener('input', resetSinusoid);
+  phaseInput.addEventListener('input', resetSinusoid);
+
+  // --- IQ impairments visual ---
+  const impCanvas = document.getElementById('signal-impairments-canvas');
+  const impBtns = {
+    bpsk: document.getElementById('imp-mod-bpsk'),
+    qpsk: document.getElementById('imp-mod-qpsk'),
+    '8psk': document.getElementById('imp-mod-8psk'),
+    '16qam': document.getElementById('imp-mod-16qam'),
+  };
+  const sevInput = document.getElementById('imp-severity');
+  if (!impCanvas || !sevInput) return;
+
+  const ictx = impCanvas.getContext('2d');
+  const IW = impCanvas.width, IH = impCanvas.height;
+  let currentMod = 'bpsk';
+  let seedOffset = 0;
+
+  function panelLayout() {
+    const pad = 16, gap = 14;
+    const pw = (IW - 2*pad - 2*gap) / 3;
+    const ph = (IH - 2*pad - gap) / 2;
+    return [
+      { x: pad, y: pad, w: pw, h: ph, label: 'clean' },
+      { x: pad + pw + gap, y: pad, w: pw, h: ph, label: 'phase rotation' },
+      { x: pad + 2*(pw + gap), y: pad, w: pw, h: ph, label: 'amplitude scale' },
+      { x: pad + (pw + gap)/2, y: pad + ph + gap, w: pw, h: ph, label: 'AWGN noise' },
+      { x: pad + (pw + gap)/2 + pw + gap, y: pad + ph + gap, w: pw, h: ph, label: 'frequency offset' },
+    ];
+  }
+
+  function drawPanelAxes(ctx, panel) {
+    const cx = panel.x + panel.w/2, cy = panel.y + panel.h/2;
+    ctx.strokeStyle = 'rgba(210,210,210,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(panel.x + 8, cy); ctx.lineTo(panel.x + panel.w - 8, cy);
+    ctx.moveTo(cx, panel.y + 18); ctx.lineTo(cx, panel.y + panel.h - 8);
+    ctx.stroke();
+  }
+
+  function toPanel(panel, re, im) {
+    const cx = panel.x + panel.w/2, cy = panel.y + panel.h/2;
+    const scale = Math.min(panel.w, panel.h) * 0.34;
+    return { x: cx + re * scale, y: cy - im * scale };
+  }
+
+  function rng(i) {
+    // simple deterministic pseudo-rng based on index + seed
+    const x = Math.sin(i * 12.9898 + seedOffset * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function gauss(i) {
+    const u1 = Math.max(1e-7, rng(i));
+    const u2 = rng(i + 10000);
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  function drawImpairments() {
+    const sev = Number(sevInput.value);
+    document.getElementById('imp-severity-val').textContent = sev;
+    ictx.fillStyle = '#10161d';
+    ictx.fillRect(0, 0, IW, IH);
+
+    const panels = panelLayout();
+    const nSyms = 80;
+    const baseSyms = sampleSymbols(currentMod, nSyms);
+
+    panels.forEach((panel, pi) => {
+      drawPanelAxes(ictx, panel);
+      ictx.fillStyle = '#777';
+      ictx.font = '11px sans-serif';
+      ictx.fillText(panel.label, panel.x + 8, panel.y + 14);
+
+      for (let i = 0; i < nSyms; i++) {
+        let z = { ...baseSyms[i] };
+        const s = sev / 10;
+        if (panel.label === 'phase rotation') z = rotate(z, s * Math.PI / 3);
+        if (panel.label === 'amplitude scale') { z.re *= (1 - 0.35*s); z.im *= (1 - 0.35*s); }
+        if (panel.label === 'AWGN noise') { const ns = 0.22 * s; z.re += ns * gauss(i); z.im += ns * gauss(i + 5000); }
+        if (panel.label === 'frequency offset') z = rotate(z, s * 2 * Math.PI * i / nSyms);
+        const p = toPanel(panel, z.re, z.im);
+        ictx.fillStyle = panel.label === 'clean' ? '#4db0ff' : '#4db0ff';
+        ictx.globalAlpha = panel.label === 'clean' ? 1.0 : 0.75;
+        ictx.beginPath();
+        ictx.arc(p.x, p.y, panel.label === 'AWGN noise' ? 2.5 : 3, 0, Math.PI*2);
+        ictx.fill();
+        ictx.globalAlpha = 1.0;
+      }
+    });
+
+    // Title
+    const c = constellations[currentMod];
+    ictx.fillStyle = '#aaa';
+    ictx.font = '12px sans-serif';
+    ictx.fillText(c.name + '  (' + c.points.length + ' constellation points, ' + c.bits + ' bit' + (c.bits > 1 ? 's' : '') + '/symbol)', 14, IH - 8);
+  }
+
+  function setImpMod(name) {
+    currentMod = name;
+    seedOffset += 1;
+    Object.entries(impBtns).forEach(([k, btn]) => {
+      if (btn) {
+        btn.style.borderColor = k === name ? '#4db0ff' : '#555';
+        btn.style.color = k === name ? '#4db0ff' : '#ccc';
+        btn.style.fontWeight = k === name ? '700' : '400';
+      }
+    });
+    drawImpairments();
+  }
+
+  Object.entries(impBtns).forEach(([name, btn]) => {
+    if (btn) btn.addEventListener('click', () => setImpMod(name));
+  });
+  sevInput.addEventListener('input', drawImpairments);
+
+  setImpMod('bpsk');
+})();
+</script>
+
+See you in part 2. Assuming you survived this math barrage

@@ -82,13 +82,32 @@ so the complex net confuses QPSK↔8PSK (both unit-circle). BPSK and 16QAM are
 near-perfect. This is a genuine representation/invariance tradeoff, discussed in
 the post. The `complex_moment` run tests that richer invariant directly.
 
-### Reproduce
+In plain language: if you only look at "how far points are from the origin"
+you become perfectly rotation-robust, but you also throw away the subtle angular
+pattern that tells QPSK and 8PSK apart. The `complex_moment` head adds that
+missing phase-structure signal back while staying rotation-invariant.
+
+### Run guide (step-by-step)
 
 From the repository root:
 
 ```bash
 conda activate blog-code-examples
 cd code_examples/complex_vs_real_nn
+```
+
+Install dependencies once (from the repo root):
+
+```bash
+python -m pip install -r ../requirements.txt
+```
+
+If your environment already has CUDA-enabled PyTorch and pip upgrades to an
+incompatible torchaudio build, reinstall the matching build (example for
+`torch==2.9.0+cu128`):
+
+```bash
+python -m pip install --force-reinstall --no-deps --index-url "https://download.pytorch.org/whl/cu128" "torchaudio==2.9.0+cu128"
 ```
 
 The experiment is driven by two entry points:
@@ -119,6 +138,10 @@ saved visualizations/modclass_constellations.png
 saved visualizations/modclass_rotation_nuisance.png
 ```
 
+Expected artifacts:
+- `visualizations/modclass_constellations.png`
+- `visualizations/modclass_rotation_nuisance.png`
+
 #### 2) `train` — train the models
 
 What it does:
@@ -139,6 +162,12 @@ Optional example:
 python modclass_cli.py train --runs complex_narrow real_narrow --epochs 10
 ```
 
+Quick smoke test example (fast):
+
+```bash
+python modclass_cli.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
+```
+
 Expected output:
 
 ```text
@@ -153,6 +182,11 @@ Run: complex_moment  (model=complex_moment, train theta in +/-15 deg)
 Summary
 complex_moment   in-dist=...  full-circle=...  gap=...
 ```
+
+What to look for:
+- Each run prints epoch-by-epoch loss and both validation accuracies.
+- `best_model.pt` is updated when full-circle validation improves.
+- Final summary includes in-band, full-circle, and their gap.
 
 Artifacts:
 - `trained_modclass/<run>/best_model.pt`
@@ -175,6 +209,12 @@ Run:
 python modclass_cli.py eval
 ```
 
+Quick smoke test example (faster, fewer samples):
+
+```bash
+python modclass_cli.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
+```
+
 Expected output:
 
 ```text
@@ -188,6 +228,11 @@ saved visualizations/rotation_per_modulation.png
 saved visualizations/snr_sweep_modclass.png
 saved visualizations/confusion_in_vs_ood.png
 ```
+
+What to look for:
+- One `rotation sweep done: <run>` line per loaded checkpoint.
+- A `rotation_sweep.json` file with numeric metrics for plotting/reporting.
+- Four figure files saved under the chosen `viz_dir`.
 
 Artifacts:
 - `results/rotation_sweep.json`
@@ -221,6 +266,22 @@ app will show a warning until you run `python modclass_cli.py train` first.
 
 Existing checked-in plots may predate `complex_moment`; rerun `train` and `eval`
 to regenerate figures with the new model included.
+
+### Typical workflow
+
+```bash
+# 1) build intuition figures
+python modclass_cli.py viz
+
+# 2) train all runs
+python modclass_cli.py train
+
+# 3) generate evaluation JSON + paper figures
+python modclass_cli.py eval
+
+# 4) inspect samples/predictions interactively
+python modclass_viewer.py
+```
 
 ---
 

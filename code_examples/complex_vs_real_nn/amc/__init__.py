@@ -1,7 +1,7 @@
-"""Backward-compatible API surface for the AMC experiment modules."""
+"""AMC experiment components for the complex-vs-real neural network example."""
 
-from amc.config import ModClassConfig
-from amc.data import (
+from .config import ModClassConfig
+from .data import (
     CONSTELLATIONS,
     add_awgn,
     constellation,
@@ -10,7 +10,7 @@ from amc.data import (
     generate_dataset,
     rotate_burst,
 )
-from amc.models import (
+from .models import (
     ComplexConv1d,
     ComplexModClassifier,
     ComplexMomentClassifier,
@@ -23,17 +23,17 @@ from amc.models import (
 __all__ = [
     "ModClassConfig",
     "CONSTELLATIONS",
-    "constellation",
-    "generate_clean_burst",
-    "rotate_burst",
     "add_awgn",
+    "constellation",
     "generate_burst",
+    "generate_clean_burst",
     "generate_dataset",
+    "rotate_burst",
     "ComplexConv1d",
-    "modReLU",
     "ComplexModClassifier",
     "ComplexMomentClassifier",
     "RealModClassifier",
-    "count_parameters",
     "build_model",
+    "count_parameters",
+    "modReLU",
 ]

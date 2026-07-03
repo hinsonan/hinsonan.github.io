@@ -8,14 +8,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import torch
 
-from modclass_core import (
-    ModClassConfig,
-    add_awgn,
-    build_model,
-    constellation,
-    generate_clean_burst,
-    rotate_burst,
-)
+from amc.config import ModClassConfig
+from amc.data import add_awgn, constellation, generate_clean_burst, rotate_burst
+from amc.models import build_model
 
 
 RUNS = {

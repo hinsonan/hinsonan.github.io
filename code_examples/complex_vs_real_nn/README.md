@@ -112,9 +112,9 @@ python -m pip install --force-reinstall --no-deps --index-url "https://download.
 
 The experiment is driven by two entry points:
 
-- `python modclass_cli.py ...` — train models, evaluate rotation generalization,
+- `python scripts/train.py ...` — train models, evaluate rotation generalization,
   and generate diagnostics plots.
-- `python modclass_viewer.py` — launch a local Gradio/Plotly app for
+- `python scripts/view.py` — launch a local Gradio/Plotly app for
   interactive inspection of burst samples and model predictions.
 
 #### 1) `viz` — generate the basic figures
@@ -128,7 +128,7 @@ What it does:
 Run:
 
 ```bash
-python modclass_cli.py viz
+python scripts/train.py viz
 ```
 
 Expected output:
@@ -153,19 +153,19 @@ What it does:
 Run:
 
 ```bash
-python modclass_cli.py train
+python scripts/train.py train
 ```
 
 Optional example:
 
 ```bash
-python modclass_cli.py train --runs complex_narrow real_narrow --epochs 10
+python scripts/train.py train --runs complex_narrow real_narrow --epochs 10
 ```
 
 Quick smoke test example (fast):
 
 ```bash
-python modclass_cli.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
+python scripts/train.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
 ```
 
 Expected output:
@@ -206,13 +206,13 @@ What it does:
 Run:
 
 ```bash
-python modclass_cli.py eval
+python scripts/train.py eval
 ```
 
 Quick smoke test example (faster, fewer samples):
 
 ```bash
-python modclass_cli.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
+python scripts/train.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
 ```
 
 Expected output:
@@ -241,7 +241,7 @@ Artifacts:
 - `visualizations/snr_sweep_modclass.png`
 - `visualizations/confusion_in_vs_ood.png`
 
-#### 4) `modclass_viewer.py` — interactive browser UI
+#### 4) `scripts/view.py` — interactive browser UI
 
 What it does:
 - Launches a local Gradio app that lets you inspect:
@@ -252,7 +252,7 @@ What it does:
 Run:
 
 ```bash
-python modclass_viewer.py
+python scripts/view.py
 ```
 
 Expected output:
@@ -262,7 +262,7 @@ Running on local URL: http://127.0.0.1:7860
 ```
 
 Open the printed URL in your browser. If no checkpoints are present yet, the
-app will show a warning until you run `python modclass_cli.py train` first.
+app will show a warning until you run `python scripts/train.py train` first.
 
 Existing checked-in plots may predate `complex_moment`; rerun `train` and `eval`
 to regenerate figures with the new model included.
@@ -271,27 +271,32 @@ to regenerate figures with the new model included.
 
 ```bash
 # 1) build intuition figures
-python modclass_cli.py viz
+python scripts/train.py viz
 
 # 2) train all runs
-python modclass_cli.py train
+python scripts/train.py train
 
 # 3) generate evaluation JSON + paper figures
-python modclass_cli.py eval
+python scripts/train.py eval
 
 # 4) inspect samples/predictions interactively
-python modclass_viewer.py
+python scripts/view.py
 ```
 
 ---
 
 ## Files
 
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| `modclass_core.py` | Core reusable pieces: `ModClassConfig`, TorchSig-backed data generation, complex layers, and both model definitions/factories. |
-| `modclass_cli.py` | Unified CLI with subcommands: `train`, `eval`, and `viz`. |
-| `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions. |
+| `amc/config.py` | Experiment configuration (`ModClassConfig`) and shared defaults. |
+| `amc/data.py` | TorchSig-backed burst generation, rotation/AWGN helpers, and dataset construction. |
+| `amc/models.py` | Complex and real model definitions plus the model factory. |
+| `modclass_core.py` | Backward-compatible shim that re-exports the refactored API. |
+| `modclass_cli.py` | Unified CLI with subcommands: `train`, `eval`, and `viz` (kept as a compatibility entry point). |
+| `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions (kept as a compatibility entry point). |
+| `scripts/train.py` | Thin wrapper for the training CLI. |
+| `scripts/view.py` | Thin wrapper for the viewer app. |
 
 ## Key figures (`visualizations/`)
 

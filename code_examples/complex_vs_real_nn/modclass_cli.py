@@ -15,17 +15,16 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from modclass_core import (
+from amc.config import ModClassConfig
+from amc.data import (
     CONSTELLATIONS,
-    ModClassConfig,
-    build_model,
-    count_parameters,
-    generate_clean_burst,
+    add_awgn,
     generate_burst,
+    generate_clean_burst,
     generate_dataset,
     rotate_burst,
-    add_awgn,
 )
+from amc.models import build_model, count_parameters
 
 BASE_DIR = Path(__file__).resolve().parent
 

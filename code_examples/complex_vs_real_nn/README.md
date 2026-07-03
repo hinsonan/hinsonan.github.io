@@ -112,9 +112,9 @@ python -m pip install --force-reinstall --no-deps --index-url "https://download.
 
 The experiment is driven by two entry points:
 
-- `python scripts/train.py ...` — train models, evaluate rotation generalization,
+- `python train.py ...` — train models, evaluate rotation generalization,
   and generate diagnostics plots.
-- `python scripts/view.py` — launch a local Gradio/Plotly app for
+- `python view.py` — launch a local Gradio/Plotly app for
   interactive inspection of burst samples and model predictions.
 
 #### 1) `viz` — generate the basic figures
@@ -128,7 +128,7 @@ What it does:
 Run:
 
 ```bash
-python scripts/train.py viz
+python train.py viz
 ```
 
 Expected output:
@@ -153,19 +153,19 @@ What it does:
 Run:
 
 ```bash
-python scripts/train.py train
+python train.py train
 ```
 
 Optional example:
 
 ```bash
-python scripts/train.py train --runs complex_narrow real_narrow --epochs 10
+python train.py train --runs complex_narrow real_narrow --epochs 10
 ```
 
 Quick smoke test example (fast):
 
 ```bash
-python scripts/train.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
+python train.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
 ```
 
 Expected output:
@@ -206,13 +206,13 @@ What it does:
 Run:
 
 ```bash
-python scripts/train.py eval
+python train.py eval
 ```
 
 Quick smoke test example (faster, fewer samples):
 
 ```bash
-python scripts/train.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
+python train.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
 ```
 
 Expected output:
@@ -241,7 +241,7 @@ Artifacts:
 - `visualizations/snr_sweep_modclass.png`
 - `visualizations/confusion_in_vs_ood.png`
 
-#### 4) `scripts/view.py` — interactive browser UI
+#### 4) `view.py` — interactive browser UI
 
 What it does:
 - Launches a local Gradio app that lets you inspect:
@@ -252,7 +252,7 @@ What it does:
 Run:
 
 ```bash
-python scripts/view.py
+python view.py
 ```
 
 Expected output:
@@ -262,7 +262,7 @@ Running on local URL: http://127.0.0.1:7860
 ```
 
 Open the printed URL in your browser. If no checkpoints are present yet, the
-app will show a warning until you run `python scripts/train.py train` first.
+app will show a warning until you run `python train.py train` first.
 
 Existing checked-in plots may predate `complex_moment`; rerun `train` and `eval`
 to regenerate figures with the new model included.
@@ -271,16 +271,16 @@ to regenerate figures with the new model included.
 
 ```bash
 # 1) build intuition figures
-python scripts/train.py viz
+python train.py viz
 
 # 2) train all runs
-python scripts/train.py train
+python train.py train
 
 # 3) generate evaluation JSON + paper figures
-python scripts/train.py eval
+python train.py eval
 
 # 4) inspect samples/predictions interactively
-python scripts/view.py
+python view.py
 ```
 
 ---
@@ -289,14 +289,14 @@ python scripts/view.py
 
 | Path | Purpose |
 |------|---------|
-| `amc/config.py` | Experiment configuration (`ModClassConfig`) and shared defaults. |
-| `amc/data.py` | TorchSig-backed burst generation, rotation/AWGN helpers, and dataset construction. |
-| `amc/models.py` | Complex and real model definitions plus the model factory. |
+| `config.py` | Experiment configuration (`ModClassConfig`) and shared defaults. |
+| `data.py` | TorchSig-backed burst generation, rotation/AWGN helpers, and dataset construction. |
+| `models.py` | Complex and real model definitions plus the model factory. |
 | `modclass_core.py` | Backward-compatible shim that re-exports the refactored API. |
 | `modclass_cli.py` | Unified CLI with subcommands: `train`, `eval`, and `viz` (kept as a compatibility entry point). |
 | `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions (kept as a compatibility entry point). |
-| `scripts/train.py` | Thin wrapper for the training CLI. |
-| `scripts/view.py` | Thin wrapper for the viewer app. |
+| `train.py` | Thin wrapper for the training CLI. |
+| `view.py` | Thin wrapper for the viewer app. |
 
 ## Key figures (`visualizations/`)
 

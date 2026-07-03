@@ -17,6 +17,8 @@ flake8
 numba
 tabulate
 torch
+torchaudio==2.9.0
+torchsig==2.1.1
 torchvision
 cupy-cuda12x
 numba-cuda[cu12]

@@ -7,6 +7,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchsig.signals.builders.constellation import constellation_modulator_baseband
+from torchsig.signals.builders.constellation_maps import all_symbol_maps
+from torchsig.transforms.functional import awgn as torchsig_awgn
+from torchsig.transforms.functional import phase_offset as torchsig_phase_offset
 
 
 @dataclass
@@ -46,34 +50,13 @@ class ModClassConfig:
         return len(self.modulations)
 
 
-def _bpsk() -> np.ndarray:
-    pts = np.array([1.0, -1.0], dtype=np.complex64)
-    return pts / np.sqrt(np.mean(np.abs(pts) ** 2))
-
-
-def _qpsk() -> np.ndarray:
-    pts = np.array([1 + 1j, -1 + 1j, 1 - 1j, -1 - 1j], dtype=np.complex64)
-    return pts / np.sqrt(np.mean(np.abs(pts) ** 2))
-
-
-def _psk8() -> np.ndarray:
-    k = np.arange(8)
-    pts = np.exp(1j * 2 * np.pi * k / 8).astype(np.complex64)
-    return pts / np.sqrt(np.mean(np.abs(pts) ** 2))
-
-
-def _qam16() -> np.ndarray:
-    levels = np.array([-3, -1, 1, 3], dtype=np.float32)
-    re, im = np.meshgrid(levels, levels)
-    pts = (re + 1j * im).astype(np.complex64).ravel()
-    return pts / np.sqrt(np.mean(np.abs(pts) ** 2))
+def _normalize_constellation(points) -> np.ndarray:
+    pts = np.asarray(points, dtype=np.complex64)
+    return (pts / np.sqrt(np.mean(np.abs(pts) ** 2))).astype(np.complex64)
 
 
 CONSTELLATIONS = {
-    "bpsk": _bpsk(),
-    "qpsk": _qpsk(),
-    "8psk": _psk8(),
-    "16qam": _qam16(),
+    name: _normalize_constellation(pts) for name, pts in all_symbol_maps.items()
 }
 
 
@@ -81,14 +64,29 @@ def constellation(name: str) -> np.ndarray:
     return CONSTELLATIONS[name]
 
 
+def generate_clean_burst(
+    mod_name: str, config: ModClassConfig, rng: np.random.Generator
+) -> np.ndarray:
+    return constellation_modulator_baseband(
+        constellation_name=mod_name,
+        pulse_shape_name="rectangular",
+        max_num_samples=config.burst_len,
+        oversampling_rate_nominal=1,
+        rng=rng,
+    ).astype(np.complex64)
+
+
+def rotate_burst(signal: np.ndarray, theta: float) -> np.ndarray:
+    return torchsig_phase_offset(signal.astype(np.complex64), theta).astype(np.complex64)
+
+
 def add_awgn(signal: np.ndarray, snr_db: float, rng: np.random.Generator) -> np.ndarray:
     signal_power = float(np.mean(np.abs(signal) ** 2))
     noise_power = signal_power / (10.0 ** (snr_db / 10.0))
-    sigma = np.sqrt(noise_power / 2.0)
-    noise = (
-        rng.standard_normal(signal.shape) + 1j * rng.standard_normal(signal.shape)
-    ) * sigma
-    return (signal + noise).astype(np.complex64)
+    noise_power_db = 10.0 * np.log10(noise_power)
+    return torchsig_awgn(signal, noise_power_db=noise_power_db, rng=rng).astype(
+        np.complex64
+    )
 
 
 def generate_burst(
@@ -99,12 +97,9 @@ def generate_burst(
     phase_high_deg: float,
     snr_db: float,
 ) -> "tuple[np.ndarray, np.float32]":
-    pts = CONSTELLATIONS[mod_name]
-    idx = rng.integers(0, len(pts), size=config.burst_len)
-    symbols = pts[idx]
-
+    symbols = generate_clean_burst(mod_name, config, rng)
     theta = rng.uniform(np.deg2rad(phase_low_deg), np.deg2rad(phase_high_deg))
-    rotated = (symbols * np.exp(1j * theta)).astype(np.complex64)
+    rotated = rotate_burst(symbols, theta)
     noisy = add_awgn(rotated, snr_db, rng)
     return noisy, np.float32(theta)
 

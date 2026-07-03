@@ -20,8 +20,11 @@ from modclass_core import (
     ModClassConfig,
     build_model,
     count_parameters,
+    generate_clean_burst,
     generate_burst,
     generate_dataset,
+    rotate_burst,
+    add_awgn,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -527,12 +530,9 @@ def plot_rotation_nuisance(cfg, out_dir, mod="qpsk"):
     rng = np.random.default_rng(1)
     fig, axes = plt.subplots(1, len(angles), figsize=(3.0 * len(angles), 3.2))
 
-    pts = CONSTELLATIONS[mod]
+    burst = generate_clean_burst(mod, cfg, rng)
     for ax, ang in zip(axes, angles):
-        idx = rng.integers(0, len(pts), size=cfg.burst_len)
-        sym = pts[idx] * np.exp(1j * np.deg2rad(ang))
-        noise = rng.standard_normal(sym.shape) + 1j * rng.standard_normal(sym.shape)
-        sym = sym + noise * 0.08
+        sym = add_awgn(rotate_burst(burst, np.deg2rad(ang)), cfg.snr_db, rng)
         ax.scatter(sym.real, sym.imag, s=12, alpha=0.5, color="tab:purple")
         ax.set_title(f"{ang} deg rotation", fontsize=10)
         _square_axes(ax, lim=1.8)

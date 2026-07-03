@@ -8,7 +8,14 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import torch
 
-from modclass_core import ModClassConfig, build_model, constellation
+from modclass_core import (
+    ModClassConfig,
+    add_awgn,
+    build_model,
+    constellation,
+    generate_clean_burst,
+    rotate_burst,
+)
 
 
 RUNS = {
@@ -54,19 +61,13 @@ def clean_seed(seed, default):
 
 def make_symbols(modulation, cfg, seed):
     rng = np.random.default_rng(clean_seed(seed, cfg.seed))
-    pts = constellation(modulation)
-    return pts[rng.integers(0, len(pts), size=cfg.burst_len)].astype(np.complex64)
+    return generate_clean_burst(modulation, cfg, rng)
 
 
 def rotate_and_noise(symbols, angle_deg, snr_db, seed):
-    rotated = symbols * np.exp(1j * np.deg2rad(angle_deg))
     rng = np.random.default_rng(clean_seed(seed, 0) + 10_000)
-    noise_power = float(np.mean(np.abs(rotated) ** 2)) / (10.0 ** (snr_db / 10.0))
-    sigma = np.sqrt(noise_power / 2.0)
-    noise = (
-        rng.standard_normal(symbols.shape) + 1j * rng.standard_normal(symbols.shape)
-    ) * sigma
-    return (rotated + noise).astype(np.complex64), rotated.astype(np.complex64)
+    rotated = rotate_burst(symbols, np.deg2rad(angle_deg))
+    return add_awgn(rotated, snr_db, rng), rotated
 
 
 @torch.no_grad()
@@ -101,7 +102,7 @@ def iq_scatter(noisy, modulation, angle_deg, show_reference):
         )
     )
     if show_reference:
-        ref = constellation(modulation) * np.exp(1j * np.deg2rad(angle_deg))
+        ref = rotate_burst(constellation(modulation), np.deg2rad(angle_deg))
         fig.add_trace(
             go.Scatter(
                 x=ref.real,

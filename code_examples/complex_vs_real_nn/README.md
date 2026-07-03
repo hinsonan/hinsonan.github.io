@@ -16,7 +16,8 @@ conda activate blog-code-examples           # numpy, torch, matplotlib
 cd code_examples/complex_vs_real_nn
 ```
 
-Training uses PyTorch (CUDA if available). CLI plotting uses numpy + matplotlib.
+Training uses PyTorch (CUDA if available) and TorchSig for IQ burst generation,
+carrier phase rotation, and AWGN. CLI plotting uses numpy + matplotlib.
 The interactive viewer also needs `gradio`, `plotly`, and `pandas`.
 
 ---
@@ -83,18 +84,143 @@ the post. The `complex_moment` run tests that richer invariant directly.
 
 ### Reproduce
 
+From the repository root:
+
 ```bash
-python modclass_cli.py viz       # constellation + rotation-nuisance figures
-python modclass_cli.py train     # trains complex_moment, complex_narrow, real_narrow, real_full
-python modclass_cli.py eval      # rotation sweep + SNR sweep + confusion plots
-python modclass_viewer.py        # Gradio + Plotly interactive data/model viewer
+conda activate blog-code-examples
+cd code_examples/complex_vs_real_nn
 ```
+
+The experiment is driven by two entry points:
+
+- `python modclass_cli.py ...` — train models, evaluate rotation generalization,
+  and generate diagnostics plots.
+- `python modclass_viewer.py` — launch a local Gradio/Plotly app for
+  interactive inspection of burst samples and model predictions.
+
+#### 1) `viz` — generate the basic figures
+
+What it does:
+- Writes `modclass_constellations.png` (ideal constellation vs noisy/rotated
+  bursts)
+- Writes `modclass_rotation_nuisance.png` (same label, different I/Q pattern at
+  different carrier phases)
+
+Run:
+
+```bash
+python modclass_cli.py viz
+```
+
+Expected output:
+
+```text
+saved visualizations/modclass_constellations.png
+saved visualizations/modclass_rotation_nuisance.png
+```
+
+#### 2) `train` — train the models
+
+What it does:
+- Trains the four runs by default: `complex_moment`, `complex_narrow`,
+  `real_narrow`, and `real_full`
+- Saves checkpoints and metrics under `trained_modclass/<run>/`
+- Plots training curves in each run directory
+
+Run:
+
+```bash
+python modclass_cli.py train
+```
+
+Optional example:
+
+```bash
+python modclass_cli.py train --runs complex_narrow real_narrow --epochs 10
+```
+
+Expected output:
+
+```text
+Device: cpu  | classes: ['bpsk', 'qpsk', '8psk', '16qam']  | SNR: 10 dB
+Train/Val sizes: 12000/4000  | epochs: 25
+
+Run: complex_moment  (model=complex_moment, train theta in +/-15 deg)
+  params: ...
+  epoch ...
+  best full-circle acc: ...
+...
+Summary
+complex_moment   in-dist=...  full-circle=...  gap=...
+```
+
+Artifacts:
+- `trained_modclass/<run>/best_model.pt`
+- `trained_modclass/<run>/metrics.json`
+- `trained_modclass/<run>/training_curves.png`
+- `trained_modclass/<run>/train.log`
+
+#### 3) `eval` — evaluate and make the paper-style figures
+
+What it does:
+- Loads the checkpoints from `trained_modclass/`
+- Sweeps accuracy across rotations from `-180°` to `+180°`
+- Sweeps accuracy across SNRs
+- Writes confusion matrices for in-band vs out-of-distribution rotations
+- Saves a JSON summary and the figures used in the post
+
+Run:
+
+```bash
+python modclass_cli.py eval
+```
+
+Expected output:
+
+```text
+Device: cpu  classes=['bpsk', 'qpsk', '8psk', '16qam']
+  loaded ...
+  rotation sweep done: ...
+...
+saved results/rotation_sweep.json
+saved visualizations/rotation_generalization.png
+saved visualizations/rotation_per_modulation.png
+saved visualizations/snr_sweep_modclass.png
+saved visualizations/confusion_in_vs_ood.png
+```
+
+Artifacts:
+- `results/rotation_sweep.json`
+- `visualizations/rotation_generalization.png`
+- `visualizations/rotation_per_modulation.png`
+- `visualizations/snr_sweep_modclass.png`
+- `visualizations/confusion_in_vs_ood.png`
+
+#### 4) `modclass_viewer.py` — interactive browser UI
+
+What it does:
+- Launches a local Gradio app that lets you inspect:
+  - synthetic IQ bursts
+  - rotated/noisy samples
+  - prediction probabilities for each trained checkpoint
+
+Run:
+
+```bash
+python modclass_viewer.py
+```
+
+Expected output:
+
+```text
+Running on local URL: http://127.0.0.1:7860
+```
+
+Open the printed URL in your browser. If no checkpoints are present yet, the
+app will show a warning until you run `python modclass_cli.py train` first.
 
 Existing checked-in plots may predate `complex_moment`; rerun `train` and `eval`
 to regenerate figures with the new model included.
-
-Artifacts: checkpoints/metrics in `trained_modclass/<run>/`, results JSON in
-`results/rotation_sweep.json`, figures in `visualizations/`.
 
 ---
 
@@ -102,7 +228,7 @@ Artifacts: checkpoints/metrics in `trained_modclass/<run>/`, results JSON in
 
 | File | Purpose |
 |------|---------|
-| `modclass_core.py` | Core reusable pieces: `ModClassConfig`, data generation, complex layers, and both model definitions/factories. |
+| `modclass_core.py` | Core reusable pieces: `ModClassConfig`, TorchSig-backed data generation, complex layers, and both model definitions/factories. |
 | `modclass_cli.py` | Unified CLI with subcommands: `train`, `eval`, and `viz`. |
 | `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions. |
 

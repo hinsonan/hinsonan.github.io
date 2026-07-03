@@ -290,10 +290,13 @@ python view.py
 | Path | Purpose |
 |------|---------|
 | `config.py` | Experiment configuration (`ModClassConfig`) and shared defaults. |
+| `training.py` | Training loops, loaders, checkpoints, and training CLI logic. |
+| `evaluation.py` | Evaluation sweeps, metrics, and eval CLI logic. |
+| `plotting.py` | Figure generation for the visualization and evaluation workflows. |
 | `data.py` | TorchSig-backed burst generation, rotation/AWGN helpers, and dataset construction. |
 | `models.py` | Complex and real model definitions plus the model factory. |
 | `modclass_core.py` | Backward-compatible shim that re-exports the refactored API. |
-| `modclass_cli.py` | Unified CLI with subcommands: `train`, `eval`, and `viz` (kept as a compatibility entry point). |
+| `modclass_cli.py` | Thin CLI wrapper that dispatches to the training/evaluation/plotting modules. |
 | `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions (kept as a compatibility entry point). |
 | `train.py` | Thin wrapper for the training CLI. |
 | `view.py` | Thin wrapper for the viewer app. |

@@ -17,6 +17,12 @@ except ImportError:
 
 
 def _square_axes(ax, lim):
+    """Set square axes with equal aspect and grid lines.
+
+    Args:
+        ax: Matplotlib Axes object.
+        lim: Half-width of both x and y limits.
+    """
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     ax.set_aspect("equal")
@@ -26,6 +32,13 @@ def _square_axes(ax, lim):
 
 
 def plot_constellations(cfg, out_dir):
+    """Save a grid showing ideal constellations alongside noisy, rotated
+    received bursts for each modulation class.
+
+    Args:
+        cfg: Experiment configuration (defines modulations, SNR, etc.).
+        out_dir: Directory to save the figure in.
+    """
     mods = list(cfg.modulations)
     rng = np.random.default_rng(0)
     fig, axes = plt.subplots(2, len(mods), figsize=(3.2 * len(mods), 6.4))
@@ -64,6 +77,16 @@ def plot_constellations(cfg, out_dir):
 
 
 def plot_rotation_nuisance(cfg, out_dir, mod="qpsk"):
+    """Save a figure illustrating how rotation changes I/Q appearance.
+
+    Shows the same clean burst rotated by 0, 30, 60, 90 degrees with
+    added noise — same label but very different I/Q patterns.
+
+    Args:
+        cfg: Experiment configuration.
+        out_dir: Directory to save the figure in.
+        mod: Modulation scheme to demonstrate (default 'qpsk').
+    """
     angles = [0, 30, 60, 90]
     rng = np.random.default_rng(1)
     fig, axes = plt.subplots(1, len(angles), figsize=(3.0 * len(angles), 3.2))
@@ -89,6 +112,14 @@ def plot_rotation_nuisance(cfg, out_dir, mod="qpsk"):
 
 
 def plot_rotation_generalization(angles, sweep, cfg, out_path):
+    """Plot accuracy vs rotation angle for all trained runs.
+
+    Args:
+        angles: Array of rotation angles (degrees) used for evaluation.
+        sweep: Dictionary mapping run names to accuracy arrays.
+        cfg: Experiment configuration (provides training band, n_classes).
+        out_path: Path to save the figure.
+    """
     fig, ax = plt.subplots(figsize=(9, 5))
     for run, (_, color, label) in RUNS.items():
         if run in sweep:
@@ -118,6 +149,18 @@ def plot_rotation_generalization(angles, sweep, cfg, out_path):
 
 
 def plot_per_modulation(angles, per_mod, cfg, out_path):
+    """Plot per-modulation accuracy vs rotation angle.
+
+    Highlights how each constellation's rotational symmetry affects
+    real-network performance.
+
+    Args:
+        angles: Array of rotation angles (degrees).
+        per_mod: Dictionary mapping run names to lists of per-class
+            accuracy arrays.
+        cfg: Experiment configuration.
+        out_path: Path to save the figure.
+    """
     mods = list(cfg.modulations)
     fig, axes = plt.subplots(1, len(mods), figsize=(4 * len(mods), 3.6), sharey=True)
     for mi, (mod, ax) in enumerate(zip(mods, axes)):
@@ -145,6 +188,14 @@ def plot_per_modulation(angles, per_mod, cfg, out_path):
 
 
 def plot_snr_sweep(snrs, snr_acc, cfg, out_path):
+    """Plot full-circle accuracy vs SNR for all trained runs.
+
+    Args:
+        snrs: Array of SNR values (dB).
+        snr_acc: Dictionary mapping run names to accuracy arrays.
+        cfg: Experiment configuration.
+        out_path: Path to save the figure.
+    """
     fig, ax = plt.subplots(figsize=(8, 5))
     for run, (_, color, label) in RUNS.items():
         if run in snr_acc:
@@ -163,6 +214,14 @@ def plot_snr_sweep(snrs, snr_acc, cfg, out_path):
 
 
 def plot_confusion(cms, cfg, out_path):
+    """Save a confusion matrix grid across rotation angles for key runs.
+
+    Args:
+        cms: Dictionary mapping run names to dicts of
+            ``{angle: confusion_matrix}``.
+        cfg: Experiment configuration.
+        out_path: Path to save the figure.
+    """
     runs = [r for r in ("complex_moment", "complex_narrow", "real_narrow") if r in cms]
     if not runs:
         print("  skipped confusion plot (needs a narrow-trained complex or real model)")

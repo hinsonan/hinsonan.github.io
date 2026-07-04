@@ -37,4 +37,5 @@ class ModClassConfig:
 
     @property
     def n_classes(self) -> int:
+        """Number of modulation classes."""
         return len(self.modulations)

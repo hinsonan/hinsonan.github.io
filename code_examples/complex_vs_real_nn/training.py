@@ -26,6 +26,14 @@ RUNS = {
 
 
 def run_specs(cfg: ModClassConfig):
+    """Build a mapping from run name to (model key, training phase width).
+
+    Args:
+        cfg: Experiment configuration.
+
+    Returns:
+        Dictionary mapping run names to ``(model_key, phase_degrees)``.
+    """
     return {
         "complex_narrow": ("complex", cfg.train_phase_deg),
         "complex_moment": ("complex_moment", cfg.train_phase_deg),
@@ -35,6 +43,17 @@ def run_specs(cfg: ModClassConfig):
 
 
 def _tensor_loader(data, batch_size, device, shuffle):
+    """Build a DataLoader from a dataset dictionary.
+
+    Args:
+        data: Dataset dict with keys 'iq', 'label', 'theta'.
+        batch_size: Number of samples per batch.
+        device: Target device for tensors.
+        shuffle: Whether to shuffle the data.
+
+    Returns:
+        A DataLoader yielding ``(iq, label, theta)`` tuples.
+    """
     iq = torch.from_numpy(data["iq"]).to(device)
     label = torch.from_numpy(data["label"]).to(device)
     theta = torch.from_numpy(data["theta"]).to(device)
@@ -43,6 +62,19 @@ def _tensor_loader(data, batch_size, device, shuffle):
 
 
 def make_loaders(cfg: ModClassConfig, train_phase_deg: float, device):
+    """Create train, in-distribution val, and out-of-distribution val loaders.
+
+    The training and in-distribution sets share the same rotation range
+    (``±train_phase_deg``), while the OOD set spans ``±full_phase_deg``.
+
+    Args:
+        cfg: Experiment configuration.
+        train_phase_deg: Half-width of training rotation range (degrees).
+        device: Target device.
+
+    Returns:
+        Tuple of ``(train_loader, val_ind_loader, val_ood_loader)``.
+    """
     train = generate_dataset(
         cfg.n_train, cfg, -train_phase_deg, train_phase_deg, seed_offset=0
     )
@@ -61,6 +93,15 @@ def make_loaders(cfg: ModClassConfig, train_phase_deg: float, device):
 
 @torch.no_grad()
 def evaluate(model, loader) -> float:
+    """Compute top-1 classification accuracy over a dataloader.
+
+    Args:
+        model: PyTorch classifier model.
+        loader: DataLoader yielding ``(iq, label, _)`` tuples.
+
+    Returns:
+        Accuracy as a float in ``[0, 1]``.
+    """
     model.eval()
     correct = total = 0
     for iq, label, _ in loader:
@@ -71,6 +112,12 @@ def evaluate(model, loader) -> float:
 
 
 def _plot_curves(history, out_dir):
+    """Save training loss and validation accuracy curves to disk.
+
+    Args:
+        history: Training history dict containing epoch-wise metrics.
+        out_dir: Directory to save the figure in.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -101,6 +148,23 @@ def _plot_curves(history, out_dir):
 
 
 def train_one(run_name, model_name, train_phase_deg, cfg, device, out_root):
+    """Train a single model and save the best checkpoint.
+
+    The model with the highest OOD validation accuracy is saved as
+    ``best_model.pt``.  Training curves and a JSON metrics file are
+    also written to the run directory.
+
+    Args:
+        run_name: Human-readable name for this run (used as sub-directory).
+        model_name: Model key passed to :func:`build_model`.
+        train_phase_deg: Half-width of training rotation range (degrees).
+        cfg: Experiment configuration.
+        device: Device to train on.
+        out_root: Root directory under which run sub-directories are created.
+
+    Returns:
+        History dictionary with epoch-wise metrics and a summary.
+    """
     print(
         f"\n{'='*64}\n  Run: {run_name}  (model={model_name}, train theta in +/-{train_phase_deg:.0f} deg)\n{'='*64}"
     )

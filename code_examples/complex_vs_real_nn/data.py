@@ -8,7 +8,10 @@ from torchsig.signals.builders.constellation_maps import all_symbol_maps
 from torchsig.transforms.functional import awgn as torchsig_awgn
 from torchsig.transforms.functional import phase_offset as torchsig_phase_offset
 
-from .config import ModClassConfig
+try:
+    from .config import ModClassConfig
+except ImportError:
+    from config import ModClassConfig
 
 
 def _normalize_constellation(points) -> np.ndarray:

@@ -2,9 +2,14 @@
 
 import argparse
 
-from evaluation import cmd_eval
-from plotting import cmd_viz
-from training import cmd_train
+try:
+    from .evaluation import cmd_eval
+    from .plotting import cmd_viz
+    from .training import cmd_train
+except ImportError:
+    from evaluation import cmd_eval
+    from plotting import cmd_viz
+    from training import cmd_train
 
 
 def build_parser():

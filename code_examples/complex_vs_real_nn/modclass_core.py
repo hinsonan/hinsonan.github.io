@@ -1,24 +1,45 @@
 """Backward-compatible API surface for the AMC experiment modules."""
 
-from config import ModClassConfig
-from data import (
-    CONSTELLATIONS,
-    add_awgn,
-    constellation,
-    generate_burst,
-    generate_clean_burst,
-    generate_dataset,
-    rotate_burst,
-)
-from models import (
-    ComplexConv1d,
-    ComplexModClassifier,
-    ComplexMomentClassifier,
-    RealModClassifier,
-    build_model,
-    count_parameters,
-    modReLU,
-)
+try:
+    from .config import ModClassConfig
+    from .data import (
+        CONSTELLATIONS,
+        add_awgn,
+        constellation,
+        generate_burst,
+        generate_clean_burst,
+        generate_dataset,
+        rotate_burst,
+    )
+    from .models import (
+        ComplexConv1d,
+        ComplexModClassifier,
+        ComplexMomentClassifier,
+        RealModClassifier,
+        build_model,
+        count_parameters,
+        modReLU,
+    )
+except ImportError:
+    from config import ModClassConfig
+    from data import (
+        CONSTELLATIONS,
+        add_awgn,
+        constellation,
+        generate_burst,
+        generate_clean_burst,
+        generate_dataset,
+        rotate_burst,
+    )
+    from models import (
+        ComplexConv1d,
+        ComplexModClassifier,
+        ComplexMomentClassifier,
+        RealModClassifier,
+        build_model,
+        count_parameters,
+        modReLU,
+    )
 
 __all__ = [
     "ModClassConfig",

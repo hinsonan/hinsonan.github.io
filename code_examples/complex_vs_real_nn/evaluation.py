@@ -7,20 +7,35 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from config import ModClassConfig
-from data import generate_dataset
-from models import count_parameters
-from plotting import (
-    plot_confusion,
-    plot_per_modulation,
-    plot_rotation_generalization,
-    plot_snr_sweep,
-)
-from training import RUNS, resolve_dir
+try:
+    from .config import ModClassConfig
+    from .data import generate_dataset
+    from .models import count_parameters
+    from .plotting import (
+        plot_confusion,
+        plot_per_modulation,
+        plot_rotation_generalization,
+        plot_snr_sweep,
+    )
+    from .training import RUNS, resolve_dir
+except ImportError:
+    from config import ModClassConfig
+    from data import generate_dataset
+    from models import count_parameters
+    from plotting import (
+        plot_confusion,
+        plot_per_modulation,
+        plot_rotation_generalization,
+        plot_snr_sweep,
+    )
+    from training import RUNS, resolve_dir
 
 
 def load_run(run_name, cfg, model_dir, device):
-    from models import build_model
+    try:
+        from .models import build_model
+    except ImportError:
+        from models import build_model
 
     model_name = RUNS[run_name][0]
     ckpt = os.path.join(model_dir, run_name, "best_model.pt")

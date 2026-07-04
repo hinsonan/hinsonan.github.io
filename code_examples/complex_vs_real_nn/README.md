@@ -16,9 +16,8 @@ conda activate blog-code-examples           # numpy, torch, matplotlib
 cd code_examples/complex_vs_real_nn
 ```
 
-Training uses PyTorch (CUDA if available) and TorchSig for IQ burst generation,
-carrier phase rotation, and AWGN. CLI plotting uses numpy + matplotlib.
-The interactive viewer also needs `gradio`, `plotly`, and `pandas`.
+Training/evaluation use PyTorch (CUDA if available) and TorchSig for IQ burst
+generation, carrier phase rotation, and AWGN. Plotting uses numpy + matplotlib.
 
 ---
 
@@ -87,200 +86,55 @@ you become perfectly rotation-robust, but you also throw away the subtle angular
 pattern that tells QPSK and 8PSK apart. The `complex_moment` head adds that
 missing phase-structure signal back while staying rotation-invariant.
 
-### Run guide (step-by-step)
+### Run guide (single notebook)
 
 From the repository root:
 
 ```bash
 conda activate blog-code-examples
+python -m pip install -r code_examples/requirements.txt
 cd code_examples/complex_vs_real_nn
 ```
 
-Install dependencies once (from the repo root):
+Open the notebook:
 
 ```bash
-python -m pip install -r ../requirements.txt
+jupyter notebook complex_vs_real_nn.ipynb
 ```
 
-If your environment already has CUDA-enabled PyTorch and pip upgrades to an
-incompatible torchaudio build, reinstall the matching build (example for
-`torch==2.9.0+cu128`):
+The notebook is the primary workflow and is organized into sections for:
+- environment and configuration
+- intuition plots (`modclass_constellations.png`, `modclass_rotation_nuisance.png`)
+- data and model sanity checks
+- training runs (`complex_moment`, `complex_narrow`, `real_narrow`, `real_full`)
+- evaluation sweeps and figure generation
+- summary table and JSON export
 
-```bash
-python -m pip install --force-reinstall --no-deps --index-url "https://download.pytorch.org/whl/cu128" "torchaudio==2.9.0+cu128"
-```
-
-The experiment is driven by two entry points:
-
-- `python train.py ...` — train models, evaluate rotation generalization,
-  and generate diagnostics plots.
-- `python view.py` — launch a local Gradio/Plotly app for
-  interactive inspection of burst samples and model predictions.
-
-#### 1) `viz` — generate the basic figures
-
-What it does:
-- Writes `modclass_constellations.png` (ideal constellation vs noisy/rotated
-  bursts)
-- Writes `modclass_rotation_nuisance.png` (same label, different I/Q pattern at
-  different carrier phases)
-
-Run:
-
-```bash
-python train.py viz
-```
-
-Expected output:
-
-```text
-saved visualizations/modclass_constellations.png
-saved visualizations/modclass_rotation_nuisance.png
-```
-
-Expected artifacts:
-- `visualizations/modclass_constellations.png`
-- `visualizations/modclass_rotation_nuisance.png`
-
-#### 2) `train` — train the models
-
-What it does:
-- Trains the four runs by default: `complex_moment`, `complex_narrow`,
-  `real_narrow`, and `real_full`
-- Saves checkpoints and metrics under `trained_modclass/<run>/`
-- Plots training curves in each run directory
-
-Run:
-
-```bash
-python train.py train
-```
-
-Optional example:
-
-```bash
-python train.py train --runs complex_narrow real_narrow --epochs 10
-```
-
-Quick smoke test example (fast):
-
-```bash
-python train.py train --runs complex_moment --epochs 1 --out_dir /tmp/opencode/complex_vs_real_nn_train
-```
-
-Expected output:
-
-```text
-Device: cpu  | classes: ['bpsk', 'qpsk', '8psk', '16qam']  | SNR: 10 dB
-Train/Val sizes: 12000/4000  | epochs: 25
-
-Run: complex_moment  (model=complex_moment, train theta in +/-15 deg)
-  params: ...
-  epoch ...
-  best full-circle acc: ...
-...
-Summary
-complex_moment   in-dist=...  full-circle=...  gap=...
-```
-
-What to look for:
-- Each run prints epoch-by-epoch loss and both validation accuracies.
-- `best_model.pt` is updated when full-circle validation improves.
-- Final summary includes in-band, full-circle, and their gap.
-
-Artifacts:
+Expected outputs created by the notebook:
 - `trained_modclass/<run>/best_model.pt`
 - `trained_modclass/<run>/metrics.json`
 - `trained_modclass/<run>/training_curves.png`
 - `trained_modclass/<run>/train.log`
-
-#### 3) `eval` — evaluate and make the paper-style figures
-
-What it does:
-- Loads the checkpoints from `trained_modclass/`
-- Sweeps accuracy across rotations from `-180°` to `+180°`
-- Sweeps accuracy across SNRs
-- Writes confusion matrices for in-band vs out-of-distribution rotations
-- Saves a JSON summary and the figures used in the post
-
-Run:
-
-```bash
-python train.py eval
-```
-
-Quick smoke test example (faster, fewer samples):
-
-```bash
-python train.py eval --n 200 --model_dir /tmp/opencode/complex_vs_real_nn_train --results_dir /tmp/opencode/complex_vs_real_nn_results --viz_dir /tmp/opencode/complex_vs_real_nn_viz
-```
-
-Expected output:
-
-```text
-Device: cpu  classes=['bpsk', 'qpsk', '8psk', '16qam']
-  loaded ...
-  rotation sweep done: ...
-...
-saved results/rotation_sweep.json
-saved visualizations/rotation_generalization.png
-saved visualizations/rotation_per_modulation.png
-saved visualizations/snr_sweep_modclass.png
-saved visualizations/confusion_in_vs_ood.png
-```
-
-What to look for:
-- One `rotation sweep done: <run>` line per loaded checkpoint.
-- A `rotation_sweep.json` file with numeric metrics for plotting/reporting.
-- Four figure files saved under the chosen `viz_dir`.
-
-Artifacts:
-- `results/rotation_sweep.json`
+- `results/rotation_sweep_notebook.json`
+- `visualizations/modclass_constellations.png`
+- `visualizations/modclass_rotation_nuisance.png`
 - `visualizations/rotation_generalization.png`
 - `visualizations/rotation_per_modulation.png`
 - `visualizations/snr_sweep_modclass.png`
 - `visualizations/confusion_in_vs_ood.png`
 
-#### 4) `view.py` — interactive browser UI
+Quick smoke-test workflow inside the notebook:
+- set `FAST_MODE = True`
+- keep `epochs = 1..5`
+- reduce eval sample counts (`n=200..1000`)
+- switch back to `FAST_MODE = False` for final numbers
 
-What it does:
-- Launches a local Gradio app that lets you inspect:
-  - synthetic IQ bursts
-  - rotated/noisy samples
-  - prediction probabilities for each trained checkpoint
-
-Run:
+Optional CLI parity (same underlying modules):
 
 ```bash
-python view.py
-```
-
-Expected output:
-
-```text
-Running on local URL: http://127.0.0.1:7860
-```
-
-Open the printed URL in your browser. If no checkpoints are present yet, the
-app will show a warning until you run `python train.py train` first.
-
-Existing checked-in plots may predate `complex_moment`; rerun `train` and `eval`
-to regenerate figures with the new model included.
-
-### Typical workflow
-
-```bash
-# 1) build intuition figures
-python train.py viz
-
-# 2) train all runs
-python train.py train
-
-# 3) generate evaluation JSON + paper figures
-python train.py eval
-
-# 4) inspect samples/predictions interactively
-python view.py
+python modclass_cli.py viz
+python modclass_cli.py train
+python modclass_cli.py eval
 ```
 
 ---
@@ -297,9 +151,8 @@ python view.py
 | `models.py` | Complex and real model definitions plus the model factory. |
 | `modclass_core.py` | Backward-compatible shim that re-exports the refactored API. |
 | `modclass_cli.py` | Thin CLI wrapper that dispatches to the training/evaluation/plotting modules. |
-| `modclass_viewer.py` | Interactive Gradio/Plotly viewer for bursts, rotations, and checkpoint predictions (kept as a compatibility entry point). |
-| `train.py` | Thin wrapper for the training CLI. |
-| `view.py` | Thin wrapper for the viewer app. |
+| `train.py` | Thin wrapper for the CLI (`viz`, `train`, `eval`). |
+| `complex_vs_real_nn.ipynb` | Main end-to-end notebook workflow for setup, training, evaluation, and plots. |
 
 ## Key figures (`visualizations/`)
 

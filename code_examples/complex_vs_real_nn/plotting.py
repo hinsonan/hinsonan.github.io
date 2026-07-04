@@ -8,9 +8,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from config import ModClassConfig
-from data import CONSTELLATIONS, add_awgn, generate_burst, generate_clean_burst, rotate_burst
-from training import RUNS
+try:
+    from .config import ModClassConfig
+    from .data import CONSTELLATIONS, add_awgn, generate_burst, generate_clean_burst, rotate_burst
+    from .training import RUNS
+except ImportError:
+    from config import ModClassConfig
+    from data import CONSTELLATIONS, add_awgn, generate_burst, generate_clean_burst, rotate_burst
+    from training import RUNS
 
 
 def _square_axes(ax, lim):

@@ -9,9 +9,14 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from config import ModClassConfig
-from data import generate_dataset
-from models import build_model, count_parameters
+try:
+    from .config import ModClassConfig
+    from .data import generate_dataset
+    from .models import build_model, count_parameters
+except ImportError:
+    from config import ModClassConfig
+    from data import generate_dataset
+    from models import build_model, count_parameters
 
 BASE_DIR = Path(__file__).resolve().parent
 

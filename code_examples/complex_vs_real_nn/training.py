@@ -2,7 +2,6 @@
 
 import os
 import time
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -17,8 +16,6 @@ except ImportError:
     from config import ModClassConfig
     from data import generate_dataset
     from models import build_model, count_parameters
-
-BASE_DIR = Path(__file__).resolve().parent
 
 RUNS = {
     "complex_narrow": ("complex", "tab:blue", "Complex (trained +/-15 deg)"),
@@ -35,13 +32,6 @@ def run_specs(cfg: ModClassConfig):
         "real_narrow": ("real", cfg.train_phase_deg),
         "real_full": ("real", cfg.full_phase_deg),
     }
-
-
-def resolve_dir(path_str: str) -> str:
-    path = Path(path_str)
-    if path.is_absolute():
-        return str(path)
-    return str(BASE_DIR / path)
 
 
 def _tensor_loader(data, batch_size, device, shuffle):
@@ -199,30 +189,3 @@ def train_one(run_name, model_name, train_phase_deg, cfg, device, out_root):
         f"  final in-dist={acc_ind:.4f}  full-circle={acc_ood:.4f}  gap={acc_ind-acc_ood:+.4f}"
     )
     return history
-
-
-def cmd_train(args):
-    cfg = ModClassConfig()
-    if args.epochs is not None:
-        cfg.epochs = args.epochs
-    out_dir = args.out_dir if args.out_dir is not None else cfg.out_dir
-    cfg.out_dir = resolve_dir(out_dir)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}  | classes: {cfg.modulations}  | SNR: {cfg.snr_db} dB")
-    print(f"Train/Val sizes: {cfg.n_train}/{cfg.n_val}  | epochs: {cfg.epochs}")
-
-    specs = run_specs(cfg)
-    summary = {}
-    for run in args.runs:
-        if run not in specs:
-            raise ValueError(f"unknown run '{run}', choices: {list(specs)}")
-        model_name, phase = specs[run]
-        h = train_one(run, model_name, phase, cfg, device, cfg.out_dir)
-        summary[run] = h["summary"]
-
-    print(f"\n{'='*64}\n  Summary\n{'='*64}")
-    for run, s in summary.items():
-        print(
-            f"  {run:16s}  in-dist={s['final_val_acc_indist']:.4f}  full-circle={s['final_val_acc_ood']:.4f}  gap={s['gap_indist_minus_ood']:+.4f}"
-        )

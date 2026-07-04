@@ -9,11 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 try:
-    from .config import ModClassConfig
     from .data import CONSTELLATIONS, add_awgn, generate_burst, generate_clean_burst, rotate_burst
     from .training import RUNS
 except ImportError:
-    from config import ModClassConfig
     from data import CONSTELLATIONS, add_awgn, generate_burst, generate_clean_burst, rotate_burst
     from training import RUNS
 
@@ -200,11 +198,3 @@ def plot_confusion(cms, cfg, out_path):
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  saved {out_path}")
-
-
-def cmd_viz(args):
-    cfg = ModClassConfig()
-    viz_dir = os.path.join(os.path.dirname(__file__), args.viz_dir)
-    os.makedirs(viz_dir, exist_ok=True)
-    plot_constellations(cfg, viz_dir)
-    plot_rotation_nuisance(cfg, viz_dir)

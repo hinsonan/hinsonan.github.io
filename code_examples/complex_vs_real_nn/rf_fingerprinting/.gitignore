@@ -1,0 +1,6 @@
+# Trained model checkpoints (large binaries; regenerate via train scripts)
+*.pt
+
+# Python cache
+__pycache__/
+*.pyc

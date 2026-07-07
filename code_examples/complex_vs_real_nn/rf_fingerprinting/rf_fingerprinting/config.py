@@ -60,6 +60,14 @@ class RFConfig:
     noise_std: float = 0.04
     phase_jitter_rad: float = 0.35
     time_shift: int = 8
+    cfo_jitter_rad: float = 0.02
+    amplitude_jitter: float = 0.1
+    aug_prob: float = 0.8
+
+    grad_clip: float = 0.0
+    dropout: float = 0.0
+    encoder_lr_scale: float = 1.0
+    warmup_epochs: int = 1
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to a plain dictionary."""
@@ -81,7 +89,7 @@ def _preset_overrides(mode: str) -> Dict[str, Any]:
             "n_samples": 800,
             "batch_size": 64,
             "pretrain_epochs": 2,
-            "finetune_epochs": 2,
+            "finetune_epochs": 5,
         }
     if mode == "full":
         return {

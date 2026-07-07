@@ -35,6 +35,9 @@ def pretrain_simclr(
 
     params = list(encoder.parameters()) + list(proj.parameters())
     opt = torch.optim.Adam(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        opt, T_max=max(cfg.pretrain_epochs, 1), eta_min=cfg.lr * 0.1
+    )
 
     history = {"loss": []}
     for _ in range(cfg.pretrain_epochs):
@@ -50,8 +53,11 @@ def pretrain_simclr(
             loss = nt_xent_loss(z1, z2, temperature=cfg.temperature)
             opt.zero_grad()
             loss.backward()
+            if cfg.grad_clip:
+                torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip)
             opt.step()
             running += float(loss.item())
             count += 1
+        scheduler.step()
         history["loss"].append(running / max(count, 1))
     return history

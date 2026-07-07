@@ -22,3 +22,10 @@ temperature: 0.2
 noise_std: 0.03
 phase_jitter_rad: 0.3
 time_shift: 8
+cfo_jitter_rad: 0.015
+amplitude_jitter: 0.08
+aug_prob: 0.9
+
+grad_clip: 1.0
+dropout: 0.15
+encoder_lr_scale: 0.1

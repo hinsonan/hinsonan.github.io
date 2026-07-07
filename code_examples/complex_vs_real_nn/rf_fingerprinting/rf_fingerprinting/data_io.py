@@ -59,34 +59,108 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
     n = cfg.n_samples
     t = np.arange(cfg.seq_len, dtype=np.float32)
 
-    device_amp = 1.0 + 0.08 * rng.standard_normal(cfg.n_devices)
-    device_phase = 0.6 * rng.standard_normal(cfg.n_devices)
-    device_freq = 0.03 * rng.standard_normal(cfg.n_devices)
+    constellations = [
+        np.array([-1 + 0j, 1 + 0j], dtype=np.complex64),
+        np.array([1 + 1j, 1 - 1j, -1 + 1j, -1 - 1j], dtype=np.complex64) / np.sqrt(2),
+        np.array(
+            [
+                -3 - 3j,
+                -3 - 1j,
+                -3 + 1j,
+                -3 + 3j,
+                -1 - 3j,
+                -1 - 1j,
+                -1 + 1j,
+                -1 + 3j,
+                1 - 3j,
+                1 - 1j,
+                1 + 1j,
+                1 + 3j,
+                3 - 3j,
+                3 - 1j,
+                3 + 1j,
+                3 + 3j,
+            ],
+            dtype=np.complex64,
+        )
+        / np.sqrt(10),
+    ]
 
+    # Device-specific hardware fingerprints.
+    iq_gain = 1.0 + 0.08 * rng.standard_normal((cfg.n_devices, 2))
+    iq_phase_skew = 0.08 * rng.standard_normal(cfg.n_devices)
+    cfo = 0.01 * rng.standard_normal(cfg.n_devices)
+    nonlinearity = 0.03 + 0.05 * rng.random(cfg.n_devices)
+    dc_offset = 0.04 * (
+        rng.standard_normal(cfg.n_devices) + 1j * rng.standard_normal(cfg.n_devices)
+    )
+    pa_memory = (
+        0.18
+        * (rng.standard_normal((cfg.n_devices, 5)) + 1j * rng.standard_normal((cfg.n_devices, 5)))
+    ).astype(np.complex64)
+    pa_memory[:, 2] += 1.0
+
+    # Session-level propagation/channel perturbations.
+    session_phase = rng.uniform(-np.pi, np.pi, size=cfg.n_sessions)
+    session_snr_db = rng.uniform(14.0, 24.0, size=cfg.n_sessions)
+    session_channel = (
+        0.2 * (rng.standard_normal((cfg.n_sessions, 3)) + 1j * rng.standard_normal((cfg.n_sessions, 3)))
+    ).astype(np.complex64)
+    session_channel[:, 1] += 1.0
+
+    counts = [n // cfg.n_devices + (1 if i < n % cfg.n_devices else 0) for i in range(cfg.n_devices)]
     iq = np.zeros((n, cfg.seq_len), dtype=np.complex64)
     device_id = np.zeros(n, dtype=np.int64)
     session_id = np.zeros(n, dtype=np.int64)
 
-    for i in range(n):
-        d = int(rng.integers(0, cfg.n_devices))
-        s = int(rng.integers(0, cfg.n_sessions))
+    row = 0
+    for d in range(cfg.n_devices):
+        for _ in range(counts[d]):
+            s = int(rng.integers(0, cfg.n_sessions))
+            alphabet = constellations[int(rng.integers(0, len(constellations)))]
+            base = rng.choice(alphabet, size=cfg.seq_len).astype(np.complex64)
 
-        base_sym = rng.choice(np.array([1 + 1j, 1 - 1j, -1 + 1j, -1 - 1j], dtype=np.complex64), size=cfg.seq_len)
-        session_phase = 0.2 * (s - 0.5 * (cfg.n_sessions - 1))
+            # Device PA memory effect.
+            x = np.convolve(base, pa_memory[d], mode="same").astype(np.complex64)
 
-        rot = np.exp(1j * (device_phase[d] + session_phase + device_freq[d] * t))
-        amp = device_amp[d] * (1.0 + 0.02 * rng.standard_normal())
-        noise = cfg.noise_std * (
-            rng.standard_normal(cfg.seq_len) + 1j * rng.standard_normal(cfg.seq_len)
-        )
+            # Device IQ imbalance and phase skew.
+            i_part = x.real * iq_gain[d, 0]
+            q_part = x.imag * iq_gain[d, 1]
+            skew = iq_phase_skew[d]
+            q_mix = q_part * np.cos(skew) + i_part * np.sin(skew)
+            x = (i_part + 1j * q_mix).astype(np.complex64)
 
-        x = amp * base_sym * rot + noise
-        power = np.sqrt(np.mean(np.abs(x) ** 2) + 1e-8)
-        iq[i] = (x / power).astype(np.complex64)
-        device_id[i] = d
-        session_id[i] = s
+            # Device nonlinearity + CFO + DC offset.
+            x = x + nonlinearity[d] * (np.abs(x) ** 2) * x
+            init_phase = rng.uniform(-np.pi, np.pi)
+            x = x * np.exp(1j * (init_phase + cfo[d] * t)).astype(np.complex64)
+            x = x + dc_offset[d]
 
-    return {"iq": iq, "device_id": device_id, "session_id": session_id}
+            # Session channel and nuisance effects.
+            x = np.convolve(x, session_channel[s], mode="same").astype(np.complex64)
+            x = x * np.exp(1j * session_phase[s]).astype(np.complex64)
+
+            snr_db = float(session_snr_db[s] + rng.normal(0.0, 1.0))
+            signal_power = float(np.mean(np.abs(x) ** 2) + 1e-8)
+            noise_power = signal_power / (10.0 ** (snr_db / 10.0))
+            noise_std = np.sqrt(noise_power / 2.0)
+            noise = noise_std * (
+                rng.standard_normal(cfg.seq_len) + 1j * rng.standard_normal(cfg.seq_len)
+            )
+            x = x + noise.astype(np.complex64)
+
+            power = np.sqrt(np.mean(np.abs(x) ** 2) + 1e-8)
+            iq[row] = (x / power).astype(np.complex64)
+            device_id[row] = d
+            session_id[row] = s
+            row += 1
+
+    perm = rng.permutation(n)
+    return {
+        "iq": iq[perm],
+        "device_id": device_id[perm],
+        "session_id": session_id[perm],
+    }
 
 
 def load_or_generate_npz(cfg: RFConfig, dataset_path: Optional[str] = None) -> Dict[str, np.ndarray]:

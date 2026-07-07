@@ -33,7 +33,13 @@ def main():
 
     cfg = load_config(args.config)
     data = load_or_generate_npz(cfg)
-    splits = split_indices(data["iq"].shape[0], cfg.test_size, cfg.val_size, cfg.seed)
+    splits = split_indices(
+        data["iq"].shape[0],
+        cfg.test_size,
+        cfg.val_size,
+        cfg.seed,
+        labels=data["device_id"],
+    )
 
     train_ds = IQDataset(data["iq"][splits["train"]], data["device_id"][splits["train"]])
     test_ds = IQDataset(data["iq"][splits["test"]], data["device_id"][splits["test"]])

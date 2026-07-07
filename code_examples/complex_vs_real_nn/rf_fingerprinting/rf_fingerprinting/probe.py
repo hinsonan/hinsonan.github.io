@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 
 
@@ -56,7 +57,12 @@ def run_linear_probe(
     """
     x_train, y_train = extract_embeddings(encoder, train_dataset, device)
     x_test, y_test = extract_embeddings(encoder, test_dataset, device)
-    clf = LogisticRegression(max_iter=max_iter, n_jobs=1)
+
+    scaler = StandardScaler()
+    x_train = scaler.fit_transform(x_train)
+    x_test = scaler.transform(x_test)
+
+    clf = LogisticRegression(max_iter=max_iter, n_jobs=1, class_weight="balanced")
     clf.fit(x_train, y_train)
     pred = clf.predict(x_test)
     return {"probe_acc": float(accuracy_score(y_test, pred))}

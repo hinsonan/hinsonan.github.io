@@ -1,66 +1,39 @@
-# RF Fingerprinting: Complex vs Real Neural Encoders
+# RF Fingerprinting: Complex vs Real Encoders
 
-This module is a lightweight, notebook-first project for comparing real-valued and
-complex-valued neural encoders on RF fingerprinting tasks.
+Notebook-first comparison of real-valued and complex-valued neural encoders for RF fingerprinting.
 
-## What this includes
+## Structure
 
-- NPZ data loader for RF captures with expected keys:
-  - `iq` (`complex64`, shape `[N, T]`)
-  - `device_id` (`int64`, shape `[N]`)
-  - optional `session_id` (`int64`, shape `[N]`)
-- Synthetic fallback dataset generator when no NPZ file is provided/found.
-- SimCLR-style pretraining (`TwoView` dataset + NT-Xent loss).
-- Matching embedding dimension for:
-  - real encoder (`models_real.py`)
-  - complex encoder (`models_complex.py`)
-- Linear probe, supervised fine-tuning, evaluation, and open-set helpers.
-- Notebook workflow in `rf_fingerprint.ipynb` as the main entry point.
+```
+rf_fingerprinting/
+├── rf_fingerprint.ipynb   # main entry point
+├── config.py              # config presets and small helpers
+├── data.py                # data loading + synthetic generator
+├── datasets.py            # datasets, splits, augmentations
+├── models.py              # real/complex encoders and heads
+├── training.py            # SimCLR, fine-tune, probe, eval
+└── visualize.py           # plotting helpers
+```
 
-## Install
+No nested package, no scripts, no YAML configs. All interaction happens through the notebook.
 
-Minimal dependencies:
+## Quick start
+
+```bash
+cd code_examples/complex_vs_real_nn/rf_fingerprinting
+jupyter notebook rf_fingerprint.ipynb
+```
+
+The notebook has a ``MODE`` cell at the top:
+
+- ``MODE = "fast"`` — small synthetic dataset, short training (smoke test / iteration)
+- ``MODE = "base"`` — balanced default
+- ``MODE = "full"`` — larger dataset and longer training
+
+Edit ``MODE`` and rerun the notebook cells to switch between profiles.
+
+## Dependencies
 
 ```bash
 python -m pip install numpy torch matplotlib scikit-learn
 ```
-
-Optional (for YAML config loading):
-
-```bash
-python -m pip install pyyaml
-```
-
-## Notebook-first workflow
-
-Open and run:
-
-- `rf_fingerprint.ipynb`
-
-The notebook defaults to a short runtime (`fast` mode):
-
-1. Setup config
-2. Load NPZ data (or generate synthetic fallback)
-3. Preview augmentations
-4. Initialize encoder
-5. Short SimCLR pretraining
-6. Linear probe
-7. Short fine-tune
-8. Evaluate + export scorecard CSV
-
-## CLI scripts
-
-From this directory:
-
-```bash
-python scripts/run_pretrain.py --config configs/rf_fp_fast.yaml
-python scripts/run_probe.py --config configs/rf_fp_fast.yaml --encoder real
-python scripts/run_finetune.py --config configs/rf_fp_fast.yaml --encoder real
-python scripts/run_eval.py --config configs/rf_fp_fast.yaml --encoder real
-```
-
-## Configuration presets
-
-- `configs/rf_fp_base.yaml`: balanced default
-- `configs/rf_fp_fast.yaml`: shortest runtime
-- `configs/rf_fp_full.yaml`: larger synthetic dataset and more epochs

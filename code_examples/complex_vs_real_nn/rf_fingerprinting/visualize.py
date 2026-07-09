@@ -1,4 +1,4 @@
-"""Visualization utilities for RF fingerprinting notebooks and scripts."""
+"""Visualization utilities for RF fingerprinting notebooks."""
 
 from __future__ import annotations
 
@@ -8,13 +8,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_iq_views(base: np.ndarray, views: Iterable[np.ndarray], title: str = "Augmentation Preview"):
+def plot_iq_views(
+    base: np.ndarray, views: Iterable[np.ndarray], title: str = "Augmentation Preview"
+):
     """Plot original IQ trace and augmented views.
 
     Args:
         base: Original waveform ``[T]``.
         views: Iterable of augmented waveforms.
         title: Figure title.
+
+    Returns:
+        Matplotlib figure.
     """
     views = list(views)
     fig, axes = plt.subplots(1, 1 + len(views), figsize=(3.6 * (1 + len(views)), 3.0))
@@ -41,6 +46,9 @@ def plot_history(history: dict, key: str, title: str):
         history: Dictionary containing list values.
         key: Metric key to plot.
         title: Plot title.
+
+    Returns:
+        Matplotlib figure.
     """
     fig, ax = plt.subplots(figsize=(4.5, 3.0))
     ax.plot(history.get(key, []), marker="o")

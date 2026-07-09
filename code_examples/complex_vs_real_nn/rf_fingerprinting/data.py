@@ -1,4 +1,4 @@
-"""Data loading and synthetic fallback generation for RF fingerprinting."""
+"""Data loading and synthetic RF fingerprint generation."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
-from .config import RFConfig
+from config import RFConfig
 
 
 def _validate_npz_dict(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
@@ -46,11 +46,13 @@ def _validate_npz_dict(data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
 def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
     """Generate lightweight synthetic RF fingerprints.
 
-    Each device gets a small signature in amplitude/phase/frequency response,
-    plus per-session perturbations.
+    Each device gets persistent hardware impairments (IQ imbalance, CFO,
+    nonlinearity, DC offset, PA memory) while each session contributes
+    channel and SNR variation. This creates a learnable but nontrivial
+    device-identification problem.
 
     Args:
-        cfg: Runtime config.
+        cfg: Runtime configuration.
 
     Returns:
         Dictionary with keys ``iq``, ``device_id``, ``session_id``.
@@ -164,11 +166,11 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
 
 
 def load_or_generate_npz(cfg: RFConfig, dataset_path: Optional[str] = None) -> Dict[str, np.ndarray]:
-    """Load RF data from NPZ or generate synthetic fallback.
+    """Load RF data from an NPZ file or generate synthetic fallback data.
 
     Args:
-        cfg: Runtime config.
-        dataset_path: Optional override path to NPZ file.
+        cfg: Runtime configuration.
+        dataset_path: Optional override path to an NPZ file.
 
     Returns:
         Dictionary with keys ``iq``, ``device_id``, ``session_id``.

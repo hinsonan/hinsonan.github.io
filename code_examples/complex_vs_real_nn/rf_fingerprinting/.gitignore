@@ -1,6 +1,10 @@
-# Trained model checkpoints (large binaries; regenerate via train scripts)
+# Trained checkpoints and generated artifacts
+outputs/
 *.pt
 
 # Python cache
 __pycache__/
 *.pyc
+
+# Jupyter checkpoints
+.ipynb_checkpoints/

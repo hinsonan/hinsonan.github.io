@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -53,6 +53,40 @@ def nt_xent_loss(
     return F.cross_entropy(sim, labels)
 
 
+def supervised_contrastive_loss(
+    features: torch.Tensor,
+    labels: torch.Tensor,
+    temperature: float = 0.2,
+) -> torch.Tensor:
+    """Supervised contrastive loss (Khosla et al., 2020).
+
+    Pulls same-label samples together and pushes different-label samples
+    apart using cosine similarity in projection/embedding space.
+    """
+    features = F.normalize(features, dim=1)
+    n = features.shape[0]
+    device = features.device
+
+    sim = torch.matmul(features, features.T) / temperature
+    self_mask = torch.eye(n, device=device, dtype=torch.bool)
+    sim = sim.masked_fill(self_mask, float("-inf"))
+
+    labels = labels.view(-1, 1)
+    pos_mask = (labels == labels.T) & ~self_mask
+
+    sim = sim - sim.max(dim=1, keepdim=True).values.detach()
+    exp = torch.exp(sim)
+    exp = exp.masked_fill(self_mask, 0.0)
+    log_prob = sim - torch.log(exp.sum(dim=1, keepdim=True) + 1e-12)
+
+    pos_count = pos_mask.sum(dim=1)
+    valid = pos_count > 0
+    log_prob = torch.where(pos_mask, log_prob, torch.zeros_like(log_prob))
+    mean_log_prob_pos = log_prob.sum(dim=1) / pos_count.clamp(min=1)
+    loss = -mean_log_prob_pos[valid]
+    return loss.mean() if valid.any() else features.new_zeros(())
+
+
 def _infer_encoder_dim(
     encoder: nn.Module, dataset=None, device: Optional[torch.device] = None
 ) -> int:
@@ -91,17 +125,14 @@ def pretrain_simclr(
     worker_init_fn: Optional[Callable[[int], None]] = None,
     deterministic: bool = False,
     projection_dim: Optional[int] = None,
+    supcon_weight: float = 0.0,
 ) -> Dict[str, List[float]]:
-    """Run SimCLR pretraining on a two-view dataset.
+    """Run SimCLR (optionally with SupCon) pretraining.
 
-    Args:
-        encoder: Feature encoder.
-        dataset: Two-view dataset yielding ``(v1, v2)``.
-        cfg: Runtime configuration.
-        device: Compute device.
+    When ``supcon_weight > 0`` the dataset must yield three tensors
+    ``(v1, v2, label)``. The total loss is::
 
-    Returns:
-        History dictionary with epoch losses.
+        loss = nt_xent(z1, z2) + supcon_weight * supcon([z1;z2], [y;y])
     """
     effective_seed = cfg.seed if seed is None else seed
     seed_everything(effective_seed, deterministic=deterministic)
@@ -133,27 +164,45 @@ def pretrain_simclr(
         opt, T_max=max(cfg.pretrain_epochs, 1), eta_min=cfg.lr * 0.1
     )
 
-    history = {"loss": []}
-    for _ in range(cfg.pretrain_epochs):
+    use_supcon = supcon_weight > 0.0
+    history: Dict[str, List[float]] = {"loss": [], "loss_nt_xent": [], "loss_supcon": []} if use_supcon else {"loss": []}
+    for epoch in range(cfg.pretrain_epochs):
+        if hasattr(dataset, "set_epoch"):
+            dataset.set_epoch(epoch)
         encoder.train()
         proj.train()
-        running = 0.0
+        running = running_ntx = running_sup = 0.0
         count = 0
-        for v1, v2 in loader:
-            v1 = v1.to(device)
-            v2 = v2.to(device)
+        for batch in loader:
+            if use_supcon:
+                v1, v2, y = (t.to(device) for t in batch)
+            else:
+                v1, v2 = (t.to(device) for t in batch)
+                y = None
             z1 = proj(encoder(v1))
             z2 = proj(encoder(v2))
-            loss = nt_xent_loss(z1, z2, temperature=cfg.temperature)
+            loss_ntx = nt_xent_loss(z1, z2, temperature=cfg.temperature)
+            if use_supcon:
+                feats = torch.cat([z1, z2], dim=0)
+                labels = torch.cat([y, y], dim=0)
+                loss_sup = supervised_contrastive_loss(feats, labels, temperature=cfg.temperature)
+                loss = loss_ntx + supcon_weight * loss_sup
+                running_sup += float(loss_sup.item())
+            else:
+                loss = loss_ntx
             opt.zero_grad()
             loss.backward()
             if cfg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip)
             opt.step()
             running += float(loss.item())
+            running_ntx += float(loss_ntx.item())
             count += 1
         scheduler.step()
         history["loss"].append(running / max(count, 1))
+        if use_supcon:
+            history["loss_nt_xent"].append(running_ntx / max(count, 1))
+            history["loss_supcon"].append(running_sup / max(count, 1))
     return history
 
 
@@ -209,6 +258,7 @@ def finetune_classifier(
     num_classes: int,
     cfg: RFConfig,
     device: torch.device,
+    supcon_lambda: float = 0.0,
 ) -> tuple[nn.Module, Dict[str, List[float]]]:
     """Fine-tune encoder + classifier head with supervised labels.
 
@@ -221,6 +271,8 @@ def finetune_classifier(
         num_classes: Number of device classes.
         cfg: Runtime config.
         device: Compute device.
+        supcon_lambda: Weight on supervised contrastive loss applied to
+            encoder embeddings when > 0.
 
     Returns:
         Tuple of ``(best_model, history)``.
@@ -238,30 +290,45 @@ def finetune_classifier(
         opt, T_max=max(cfg.finetune_epochs, 1), eta_min=cfg.lr * 0.1
     )
 
-    history: Dict[str, List[float]] = {"loss": [], "val_acc": []}
+    use_supcon = supcon_lambda > 0.0
+    history: Dict[str, List[float]] = (
+        {"loss": [], "loss_ce": [], "loss_supcon": [], "val_acc": []}
+        if use_supcon
+        else {"loss": [], "val_acc": []}
+    )
     best_val = -1.0
     best_state = None
 
     for _ in range(cfg.finetune_epochs):
         model.train()
-        running = 0.0
+        running = running_ce = running_sup = 0.0
         count = 0
         for x, y in train_loader:
             x = x.to(device)
             y = y.to(device)
-            logits = model(x)
-            loss = criterion(logits, y)
+            emb = model.encoder(x)
+            logits = model.head(emb)
+            loss_ce = criterion(logits, y)
+            loss = loss_ce
+            if use_supcon:
+                loss_sup = supervised_contrastive_loss(emb, y, temperature=cfg.temperature)
+                loss = loss_ce + supcon_lambda * loss_sup
+                running_sup += float(loss_sup.item())
             opt.zero_grad()
             loss.backward()
             if cfg.grad_clip:
                 nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
             running += float(loss.item())
+            running_ce += float(loss_ce.item())
             count += 1
         scheduler.step()
 
         val_acc = _accuracy(model, val_loader, device)
         history["loss"].append(running / max(count, 1))
+        if use_supcon:
+            history["loss_ce"].append(running_ce / max(count, 1))
+            history["loss_supcon"].append(running_sup / max(count, 1))
         history["val_acc"].append(val_acc)
 
         if val_acc > best_val:
@@ -579,6 +646,196 @@ def evaluate_open_set(id_logits: np.ndarray, ood_logits: np.ndarray) -> Dict[str
     ood_score = max_softmax_scores(ood_logits)
     y = np.concatenate([np.ones(id_score.size, dtype=np.int64), np.zeros(ood_score.size, dtype=np.int64)])
     return _roc_metrics(y, np.concatenate([id_score, ood_score]))
+
+
+def open_set_scores(logits: np.ndarray, temperature: float = 1.0) -> Dict[str, np.ndarray]:
+    """Return alternative confidence scores for open-set detection.
+
+    Scores are oriented so larger values indicate greater known-device
+    confidence. Energy returns ``-E_free = T*logsumexp(logits/T)``, which
+    is higher for known devices (Liu et al. define ``E_free`` as lower
+    for known).
+    """
+    logits = _validate_logits(logits, "logits")
+    if temperature <= 0 or not np.isfinite(temperature):
+        raise ValueError("temperature must be finite and positive")
+    scaled = logits / temperature
+    shifted = scaled - np.max(scaled, axis=1, keepdims=True)
+    probabilities = np.exp(shifted)
+    probabilities /= np.sum(probabilities, axis=1, keepdims=True)
+    ordered = np.sort(logits, axis=1)
+    neg_energy = temperature * (
+        np.log(np.sum(np.exp(shifted), axis=1)) + np.max(scaled, axis=1)
+    )
+    return {
+        "max_softmax": np.max(probabilities, axis=1),
+        "logit_margin": ordered[:, -1] - ordered[:, -2] if logits.shape[1] >= 2 else ordered[:, -1],
+        "negative_entropy": np.sum(probabilities * np.log(np.maximum(probabilities, 1e-12)), axis=1),
+        "energy": neg_energy,
+    }
+
+
+def prototype_scores(
+    train_embeddings: np.ndarray,
+    train_labels: np.ndarray,
+    embeddings: np.ndarray,
+) -> np.ndarray:
+    """Return maximum cosine similarity to known-device prototypes."""
+    reference = np.asarray(train_embeddings, dtype=np.float64)
+    labels = np.asarray(train_labels).reshape(-1)
+    query = np.asarray(embeddings, dtype=np.float64)
+    if reference.ndim != 2 or query.ndim != 2 or reference.shape[1] != query.shape[1]:
+        raise ValueError("embedding arrays must be two-dimensional with matching widths")
+    if labels.shape[0] != reference.shape[0] or reference.shape[0] == 0:
+        raise ValueError("train_labels must align with non-empty train_embeddings")
+    if not np.isfinite(reference).all() or not np.isfinite(query).all():
+        raise ValueError("embedding arrays must be finite")
+    classes = np.unique(labels)
+    prototypes = np.stack([reference[labels == label].mean(axis=0) for label in classes])
+    prototypes /= np.maximum(np.linalg.norm(prototypes, axis=1, keepdims=True), 1e-12)
+    query /= np.maximum(np.linalg.norm(query, axis=1, keepdims=True), 1e-12)
+    return np.max(query @ prototypes.T, axis=1)
+
+
+def calibrate_rejection_threshold(
+    known_scores: np.ndarray,
+    unknown_scores: np.ndarray,
+    target_unknown_far: float = 0.05,
+) -> float:
+    """Choose a threshold that maximizes known coverage at target unknown FAR."""
+    known_scores = np.asarray(known_scores, dtype=np.float64).reshape(-1)
+    unknown_scores = np.asarray(unknown_scores, dtype=np.float64).reshape(-1)
+    if known_scores.size == 0 or unknown_scores.size == 0:
+        raise ValueError("calibration score arrays must be non-empty")
+    if not 0.0 < target_unknown_far < 1.0:
+        raise ValueError("target_unknown_far must be between 0 and 1")
+    if not np.isfinite(known_scores).all() or not np.isfinite(unknown_scores).all():
+        raise ValueError("calibration scores must be finite")
+
+    candidates = np.unique(np.r_[known_scores, unknown_scores])
+    unknown_far = np.array([np.mean(unknown_scores >= t) for t in candidates])
+    known_coverage = np.array([np.mean(known_scores >= t) for t in candidates])
+
+    feasible = np.flatnonzero(unknown_far <= target_unknown_far)
+    if feasible.size == 0:
+        best = int(np.argmin(unknown_far))
+        return float(candidates[best])
+
+    feasible_coverage = known_coverage[feasible]
+    best = int(feasible[np.argmax(feasible_coverage)])
+    return float(candidates[best])
+
+
+def rejection_sweep(
+    known_scores: np.ndarray,
+    unknown_scores: np.ndarray,
+    far_targets: Sequence[float] = (0.01, 0.05, 0.10, 0.20, 0.50),
+) -> Dict[float, Dict[str, float]]:
+    """Return rejection operating points at several FAR budgets."""
+    known_scores = np.asarray(known_scores, dtype=np.float64).reshape(-1)
+    unknown_scores = np.asarray(unknown_scores, dtype=np.float64).reshape(-1)
+    if known_scores.size == 0 or unknown_scores.size == 0:
+        raise ValueError("score arrays must be non-empty")
+    if not np.isfinite(known_scores).all() or not np.isfinite(unknown_scores).all():
+        raise ValueError("scores must be finite")
+    targets = [float(t) for t in far_targets]
+    if any(not (0.0 < t < 1.0) for t in targets):
+        raise ValueError("all far_targets must lie in the open interval (0, 1)")
+
+    candidates = np.unique(np.r_[known_scores, unknown_scores])
+    unknown_far = np.array([np.mean(unknown_scores >= t) for t in candidates])
+    known_coverage = np.array([np.mean(known_scores >= t) for t in candidates])
+
+    operating_points: Dict[float, Dict[str, float]] = {}
+    for target in targets:
+        feasible = np.flatnonzero(unknown_far <= target)
+        if feasible.size == 0:
+            idx = int(np.argmin(unknown_far))
+        else:
+            feasible_coverage = known_coverage[feasible]
+            idx = int(feasible[np.argmax(feasible_coverage)])
+        threshold = float(candidates[idx])
+        operating_points[target] = {
+            "threshold": threshold,
+            "known_coverage": float(known_coverage[idx]),
+            "unknown_far": float(unknown_far[idx]),
+            "known_acceptance_rate": float(known_coverage[idx]),
+        }
+    return operating_points
+
+
+def evaluate_rejection(
+    known_scores: np.ndarray,
+    unknown_scores: np.ndarray,
+    known_labels: Optional[np.ndarray] = None,
+    known_predictions: Optional[np.ndarray] = None,
+    threshold: float = 0.0,
+) -> Dict[str, float]:
+    """Evaluate known coverage and unknown false acceptance at a threshold."""
+    known_scores = np.asarray(known_scores, dtype=np.float64).reshape(-1)
+    unknown_scores = np.asarray(unknown_scores, dtype=np.float64).reshape(-1)
+    known_accept = known_scores >= threshold
+    unknown_accept = unknown_scores >= threshold
+    result = {
+        "threshold": float(threshold),
+        "known_coverage": float(np.mean(known_accept)),
+        "unknown_false_accept_rate": float(np.mean(unknown_accept)),
+        "unknown_rejection_rate": float(1.0 - np.mean(unknown_accept)),
+    }
+    if known_labels is not None and known_predictions is not None:
+        labels = np.asarray(known_labels).reshape(-1)
+        predictions = np.asarray(known_predictions).reshape(-1)
+        if labels.shape != predictions.shape or labels.shape[0] != known_scores.shape[0]:
+            raise ValueError("known labels, predictions, and scores must align")
+        result["accepted_known_accuracy"] = float(
+            np.mean(predictions[known_accept] == labels[known_accept])
+        ) if np.any(known_accept) else float("nan")
+    return result
+
+
+def evaluate_prototype_oscr(
+    known_scores: np.ndarray,
+    known_labels: np.ndarray,
+    known_predictions: np.ndarray,
+    unknown_scores: np.ndarray,
+) -> Dict[str, object]:
+    """Compute OSCR using prototype confidence scores and classifier labels."""
+    known_scores = np.asarray(known_scores, dtype=np.float64).reshape(-1)
+    unknown_scores = np.asarray(unknown_scores, dtype=np.float64).reshape(-1)
+    labels = np.asarray(known_labels).reshape(-1)
+    predictions = np.asarray(known_predictions).reshape(-1)
+    if known_scores.size == 0 or unknown_scores.size == 0:
+        raise ValueError("known and unknown prototype scores must be non-empty")
+    if labels.shape != predictions.shape or labels.shape[0] != known_scores.shape[0]:
+        raise ValueError("known labels, predictions, and scores must align")
+    if not np.isfinite(known_scores).all() or not np.isfinite(unknown_scores).all():
+        raise ValueError("prototype scores must be finite")
+    correct = predictions == labels
+    thresholds = np.r_[np.inf, np.sort(np.unique(np.r_[known_scores, unknown_scores]))[::-1], -np.inf]
+    ccr = np.array([np.mean(correct & (known_scores >= threshold)) for threshold in thresholds])
+    far = np.array([np.mean(unknown_scores >= threshold) for threshold in thresholds])
+    order = np.argsort(far)
+    return {
+        "far": far[order],
+        "ccr": ccr[order],
+        "oscr_auc": float(auc(far[order], ccr[order])),
+        "thresholds": thresholds[order],
+    }
+
+
+def compare_open_set_scores(
+    known_scores: Dict[str, np.ndarray], unknown_scores: Dict[str, np.ndarray]
+) -> Dict[str, Dict[str, object]]:
+    """Evaluate alternative known-confidence scores with common ROC metrics."""
+    if set(known_scores) != set(unknown_scores):
+        raise ValueError("known and unknown score dictionaries must have matching keys")
+    return {
+        name: _roc_metrics(
+            np.concatenate([np.ones(len(known), dtype=np.int64), np.zeros(len(unknown), dtype=np.int64)]),
+            np.concatenate([known, unknown]),
+        )
+        for name, (known, unknown) in ((key, (known_scores[key], unknown_scores[key])) for key in known_scores)
+    }
 
 
 def evaluate_oscr(

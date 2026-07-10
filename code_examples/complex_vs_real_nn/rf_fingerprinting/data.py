@@ -114,25 +114,37 @@ def _same_length_convolve(signal: np.ndarray, taps: np.ndarray) -> np.ndarray:
 
 
 def _apply_device_effects(x: np.ndarray, params: Dict[str, np.ndarray], device: int,
-                          t: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+                          t: np.ndarray, rng: np.random.Generator,
+                          impairments=None) -> np.ndarray:
     """Apply persistent oscillator, IQ, PA, and memory impairments."""
-    i = x.real * params["i_gain"][device]
-    q = x.imag * params["q_gain"][device]
-    q = q * np.cos(params["iq_skew"][device]) + i * np.sin(params["iq_skew"][device])
+    if impairments is None or impairments.iq_imbalance:
+        i = x.real * params["i_gain"][device]
+        q = x.imag * params["q_gain"][device]
+        q = q * np.cos(params["iq_skew"][device]) + i * np.sin(params["iq_skew"][device])
+    else:
+        i, q = x.real, x.imag
     x = (i + 1j * q).astype(np.complex64)
-    delayed = np.concatenate((np.zeros(1, dtype=x.dtype), x[:-1]))
-    x = x + params["memory"][device] * delayed
-    amplitude = np.abs(x)
-    x = x * (1.0 + params["pa"][device] * amplitude**2) / (1.0 + 0.12 * amplitude**2)
-    phase = params["cfo"][device] * t + np.cumsum(
-        rng.normal(0.0, params["phase_noise"][device], size=t.shape[0])
-    )
-    return (x * np.exp(1j * phase) + params["dc"][device]).astype(np.complex64)
+    if impairments is None or impairments.pa_memory:
+        delayed = np.concatenate((np.zeros(1, dtype=x.dtype), x[:-1]))
+        x = x + params["memory"][device] * delayed
+    if impairments is None or impairments.pa_nonlinearity:
+        amplitude = np.abs(x)
+        x = x * (1.0 + params["pa"][device] * amplitude**2) / (1.0 + 0.12 * amplitude**2)
+    phase = np.zeros_like(t)
+    if impairments is None or impairments.cfo:
+        phase += params["cfo"][device] * t
+    if impairments is None or impairments.phase_noise:
+        phase += np.cumsum(rng.normal(0.0, params["phase_noise"][device], size=t.shape[0]))
+    if impairments is None or impairments.dc_offset:
+        x = x + params["dc"][device]
+    return (x * np.exp(1j * phase)).astype(np.complex64)
 
 
 def _apply_channel(x: np.ndarray, channel: Dict[str, np.ndarray], session: int,
-                   rng: np.random.Generator) -> np.ndarray:
+                    rng: np.random.Generator, enabled: bool = True) -> np.ndarray:
     """Apply multipath fading, slow phase drift, and session-specific Doppler."""
+    if not enabled:
+        return x
     x = _same_length_convolve(x, channel["taps"][session])
     t = np.arange(x.shape[0], dtype=np.float32)
     phase = channel["phase"][session] + channel["doppler"][session] * t
@@ -142,28 +154,34 @@ def _apply_channel(x: np.ndarray, channel: Dict[str, np.ndarray], session: int,
 
 def _apply_receiver(x: np.ndarray, receiver: Dict[str, np.ndarray], receiver_id: int,
                     rng: np.random.Generator, quantization_scale: float = 2.0,
-                    quantization_bits: int = 10) -> tuple[np.ndarray, float]:
+                    quantization_bits: int = 10, impairments=None) -> tuple[np.ndarray, float]:
     """Apply receiver gain/imbalance, AGC, quantization, and thermal noise."""
-    i = x.real * receiver["i_gain"][receiver_id]
-    q = x.imag * receiver["q_gain"][receiver_id]
-    x = (i + 1j * q + receiver["dc"][receiver_id]).astype(np.complex64)
-    x = x * np.exp(1j * receiver["phase"][receiver_id]).astype(np.complex64)
-    x = x / np.sqrt(np.mean(np.abs(x) ** 2) + 1e-8) * receiver["agc"][receiver_id]
+    if impairments is None or impairments.receiver:
+        i = x.real * receiver["i_gain"][receiver_id]
+        q = x.imag * receiver["q_gain"][receiver_id]
+        x = (i + 1j * q + receiver["dc"][receiver_id]).astype(np.complex64)
+        x = x * np.exp(1j * receiver["phase"][receiver_id]).astype(np.complex64)
+        x = x / np.sqrt(np.mean(np.abs(x) ** 2) + 1e-8) * receiver["agc"][receiver_id]
     snr_db = float(receiver["snr_db"][receiver_id] + rng.normal(0.0, 1.0))
-    noise_std = np.sqrt(1.0 / (2.0 * 10.0 ** (snr_db / 10.0)))
-    noise = noise_std * (rng.standard_normal(x.shape[0]) + 1j * rng.standard_normal(x.shape[0]))
-    x = x + noise
+    if impairments is not None and not impairments.awgn:
+        noise = np.zeros(x.shape[0], dtype=np.complex64)
+    else:
+        noise_std = np.sqrt(1.0 / (2.0 * 10.0 ** (snr_db / 10.0)))
+        noise = noise_std * (rng.standard_normal(x.shape[0]) + 1j * rng.standard_normal(x.shape[0]))
+        x = x + noise
     actual_snr_db = 10.0 * np.log10(
         (np.mean(np.abs(x - noise) ** 2) + 1e-12) /
         (np.mean(np.abs(noise) ** 2) + 1e-12)
     )
     # A fixed full-scale range makes clipping and quantization comparable across samples.
-    levels = 2**quantization_bits - 1
-    real = np.clip(np.round((x.real / quantization_scale + 1.0) * levels / 2.0), 0, levels)
-    imag = np.clip(np.round((x.imag / quantization_scale + 1.0) * levels / 2.0), 0, levels)
-    real = real * 2.0 / levels - 1.0
-    imag = imag * 2.0 / levels - 1.0
-    return (quantization_scale * (real + 1j * imag)).astype(np.complex64), float(actual_snr_db)
+    if impairments is None or impairments.quantization:
+        levels = 2**quantization_bits - 1
+        real = np.clip(np.round((x.real / quantization_scale + 1.0) * levels / 2.0), 0, levels)
+        imag = np.clip(np.round((x.imag / quantization_scale + 1.0) * levels / 2.0), 0, levels)
+        real = real * 2.0 / levels - 1.0
+        imag = imag * 2.0 / levels - 1.0
+        x = quantization_scale * (real + 1j * imag)
+    return x.astype(np.complex64), float(actual_snr_db)
 
 
 def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
@@ -174,28 +192,30 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
     are independent nuisance factors and are returned as metadata.
     """
     rng = np.random.default_rng(cfg.seed)
+    device_impairments = cfg.device_impairments
+    nuisance_impairments = cfg.nuisance_impairments
     n, length = cfg.n_samples, cfg.seq_len
     t = np.arange(length, dtype=np.float32)
     n_receivers = cfg.n_receivers
 
     device = {
-        "i_gain": 1.0 + 0.06 * rng.standard_normal(cfg.n_devices),
-        "q_gain": 1.0 + 0.06 * rng.standard_normal(cfg.n_devices),
-        "iq_skew": 0.06 * rng.standard_normal(cfg.n_devices),
-        "cfo": rng.uniform(-0.012, 0.012, cfg.n_devices),
-        "phase_noise": rng.uniform(0.0008, 0.0025, cfg.n_devices),
-        "pa": rng.uniform(0.03, 0.11, cfg.n_devices),
-        "memory": rng.uniform(-0.06, 0.06, cfg.n_devices),
-        "dc": (0.025 * (rng.standard_normal(cfg.n_devices) + 1j * rng.standard_normal(cfg.n_devices))).astype(np.complex64),
+        "i_gain": 1.0 + device_impairments.iq_gain_std * rng.standard_normal(cfg.n_devices),
+        "q_gain": 1.0 + device_impairments.iq_gain_std * rng.standard_normal(cfg.n_devices),
+        "iq_skew": device_impairments.iq_skew_std_rad * rng.standard_normal(cfg.n_devices),
+        "cfo": rng.uniform(*device_impairments.cfo_range_rad, cfg.n_devices),
+        "phase_noise": rng.uniform(*device_impairments.phase_noise_range, cfg.n_devices),
+        "pa": rng.uniform(*device_impairments.pa_range, cfg.n_devices),
+        "memory": rng.uniform(*device_impairments.memory_range, cfg.n_devices),
+        "dc": (device_impairments.dc_std * (rng.standard_normal(cfg.n_devices) + 1j * rng.standard_normal(cfg.n_devices))).astype(np.complex64),
     }
     session_channel = {
-        "taps": (0.10 * (rng.standard_normal((cfg.n_sessions, 5)) + 1j * rng.standard_normal((cfg.n_sessions, 5)))).astype(np.complex64),
+        "taps": (nuisance_impairments.session_tap_scale * (rng.standard_normal((cfg.n_sessions, 5)) + 1j * rng.standard_normal((cfg.n_sessions, 5)))).astype(np.complex64),
         "phase": rng.uniform(-np.pi, np.pi, cfg.n_sessions),
         "doppler": rng.uniform(-0.001, 0.001, cfg.n_sessions),
     }
     session_channel["taps"][:, 2] += 1.0
     channel = {
-        "taps": (0.12 * (rng.standard_normal((cfg.n_channels, 5)) + 1j * rng.standard_normal((cfg.n_channels, 5)))).astype(np.complex64),
+        "taps": (nuisance_impairments.channel_tap_scale * (rng.standard_normal((cfg.n_channels, 5)) + 1j * rng.standard_normal((cfg.n_channels, 5)))).astype(np.complex64),
         "phase": rng.uniform(-np.pi, np.pi, cfg.n_channels),
         "doppler": rng.uniform(-0.002, 0.002, cfg.n_channels),
     }
@@ -206,7 +226,7 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
         "phase": rng.uniform(-0.08, 0.08, n_receivers),
         "dc": (0.012 * (rng.standard_normal(n_receivers) + 1j * rng.standard_normal(n_receivers))).astype(np.complex64),
         "agc": rng.uniform(0.88, 1.12, n_receivers),
-        "snr_db": rng.uniform(16.0, 27.0, n_receivers),
+        "snr_db": rng.uniform(*nuisance_impairments.snr_db_range, n_receivers),
     }
 
     counts = [n // cfg.n_devices + (i < n % cfg.n_devices) for i in range(cfg.n_devices)]
@@ -225,13 +245,14 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
             session_id = int(rng.integers(cfg.n_sessions))
             channel_id = int(rng.integers(cfg.n_channels))
             receiver_id = int(rng.integers(n_receivers))
-            waveform_id = int(rng.integers(3))
+            waveform_id = int(rng.integers(3)) if nuisance_impairments.waveform_variation else 0
             x = _make_burst(length, waveform_id, rng)
-            x = _apply_device_effects(x, device, device_id, t, rng)
-            x = _apply_channel(x, session_channel, session_id, rng)
-            x = _apply_channel(x, channel, channel_id, rng)
+            x = _apply_device_effects(x, device, device_id, t, rng, device_impairments)
+            x = _apply_channel(x, session_channel, session_id, rng, nuisance_impairments.session_channel)
+            x = _apply_channel(x, channel, channel_id, rng, nuisance_impairments.channel)
             x, snr_db = _apply_receiver(
-                x, receiver, receiver_id, rng, cfg.quantization_scale, cfg.quantization_bits
+                x, receiver, receiver_id, rng, cfg.quantization_scale, cfg.quantization_bits,
+                nuisance_impairments
             )
             if cfg.normalize_output:
                 x = x / np.sqrt(np.mean(np.abs(x) ** 2) + 1e-8)

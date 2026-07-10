@@ -4,9 +4,43 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
+
+
+@dataclass
+class DeviceImpairments:
+    """Persistent transmitter impairments sampled once per device."""
+
+    iq_imbalance: bool = True
+    cfo: bool = True
+    phase_noise: bool = True
+    pa_nonlinearity: bool = True
+    pa_memory: bool = True
+    dc_offset: bool = False
+    iq_gain_std: float = 0.06
+    iq_skew_std_rad: float = 0.06
+    cfo_range_rad: tuple[float, float] = (-0.012, 0.012)
+    phase_noise_range: tuple[float, float] = (0.0008, 0.0025)
+    pa_range: tuple[float, float] = (0.03, 0.11)
+    memory_range: tuple[float, float] = (-0.06, 0.06)
+    dc_std: float = 0.025
+
+
+@dataclass
+class NuisanceImpairments:
+    """Capture and receiver impairments that should not identify a device."""
+
+    session_channel: bool = True
+    channel: bool = True
+    receiver: bool = True
+    waveform_variation: bool = True
+    awgn: bool = True
+    quantization: bool = True
+    session_tap_scale: float = 0.10
+    channel_tap_scale: float = 0.12
+    snr_db_range: tuple[float, float] = (16.0, 27.0)
 
 
 @dataclass
@@ -58,6 +92,10 @@ class RFConfig:
     normalize_output: bool = True
     quantization_scale: float = 2.0
     quantization_bits: int = 10
+    impairment_profile: str = "default"
+    impairment_ablation: Optional[str] = None
+    device_impairments: DeviceImpairments = field(default_factory=DeviceImpairments)
+    nuisance_impairments: NuisanceImpairments = field(default_factory=NuisanceImpairments)
 
     def __post_init__(self) -> None:
         """Reject dimensions and probabilities that cannot produce a dataset."""
@@ -74,6 +112,115 @@ class RFConfig:
             raise ValueError("aug_prob must be between 0 and 1.")
         if self.quantization_scale <= 0 or self.quantization_bits < 2:
             raise ValueError("quantization_scale must be positive and quantization_bits at least 2.")
+        self.validate_impairments()
+
+    def validate_impairments(self) -> None:
+        """Validate nested impairment settings after notebook overrides."""
+        device = self.device_impairments
+        nuisance = self.nuisance_impairments
+        for name, value in (
+            ("iq_gain_std", device.iq_gain_std),
+            ("iq_skew_std_rad", device.iq_skew_std_rad),
+            ("phase_noise_min", device.phase_noise_range[0]),
+            ("phase_noise_max", device.phase_noise_range[1]),
+            ("pa_min", device.pa_range[0]),
+            ("pa_max", device.pa_range[1]),
+            ("dc_std", device.dc_std),
+            ("session_tap_scale", nuisance.session_tap_scale),
+            ("channel_tap_scale", nuisance.channel_tap_scale),
+        ):
+            if value < 0:
+                raise ValueError(f"{name} must be non-negative.")
+        for name, bounds in (
+            ("cfo_range_rad", device.cfo_range_rad),
+            ("phase_noise_range", device.phase_noise_range),
+            ("pa_range", device.pa_range),
+            ("memory_range", device.memory_range),
+            ("snr_db_range", nuisance.snr_db_range),
+        ):
+            if len(bounds) != 2 or not all(isinstance(v, (int, float)) for v in bounds) or bounds[0] > bounds[1]:
+                raise ValueError(f"{name} must be a finite (min, max) range.")
+
+
+def _impairment_profile(name: str) -> tuple[DeviceImpairments, NuisanceImpairments]:
+    """Return independent impairment settings for a named experiment profile."""
+    device = DeviceImpairments()
+    nuisance = NuisanceImpairments()
+    if name == "oracle":
+        return replace(device, iq_imbalance=False, cfo=False, phase_noise=False,
+                       pa_nonlinearity=False, pa_memory=False, dc_offset=False), replace(
+                           nuisance, session_channel=False, channel=False,
+                           receiver=False, waveform_variation=False, awgn=False,
+                           quantization=False)
+    if name == "device_full":
+        return replace(device, dc_offset=False), replace(
+            nuisance, session_channel=False, channel=False, receiver=False,
+            waveform_variation=False, awgn=False, quantization=False)
+    if name == "controlled":
+        return replace(device, cfo_range_rad=(-0.003, 0.003), iq_gain_std=0.03,
+                       iq_skew_std_rad=0.03, phase_noise_range=(0.0003, 0.0012),
+                       pa_range=(0.02, 0.08), memory_range=(-0.04, 0.04),
+                       dc_offset=False), replace(
+                           nuisance, session_channel=False, channel=False,
+                           waveform_variation=False)
+    if name == "receiver_only":
+        return replace(device, cfo_range_rad=(-0.003, 0.003), iq_gain_std=0.03,
+                       iq_skew_std_rad=0.03, phase_noise_range=(0.0003, 0.0012),
+                       pa_range=(0.02, 0.08), memory_range=(-0.04, 0.04),
+                       dc_offset=False), replace(
+                           nuisance, session_channel=False, channel=False,
+                           waveform_variation=False, receiver=True, awgn=True,
+                           quantization=True)
+    if name == "stress_channel":
+        return replace(device, cfo_range_rad=(-0.003, 0.003), iq_gain_std=0.03,
+                       iq_skew_std_rad=0.03, phase_noise_range=(0.0003, 0.0012),
+                       pa_range=(0.02, 0.08), memory_range=(-0.04, 0.04),
+                       dc_offset=False), replace(
+                           nuisance, session_channel=True, channel=False,
+                           waveform_variation=False)
+    if name == "stress_waveform":
+        return replace(device, cfo_range_rad=(-0.003, 0.003), iq_gain_std=0.03,
+                       iq_skew_std_rad=0.03, phase_noise_range=(0.0003, 0.0012),
+                       pa_range=(0.02, 0.08), memory_range=(-0.04, 0.04),
+                       dc_offset=False), replace(
+                           nuisance, session_channel=False, channel=False,
+                           waveform_variation=True)
+    if name == "full":
+        return replace(device, dc_offset=True), nuisance
+    if name == "default":
+        # Preserve the pre-profile generator behavior for existing callers.
+        return replace(device, dc_offset=True), nuisance
+    raise ValueError("Unknown impairment profile. Choose oracle, device_full, controlled, receiver_only, stress_channel, stress_waveform, default, or full.")
+
+
+def _apply_impairment_ablation(cfg: RFConfig) -> None:
+    """Disable one named source impairment without changing other settings."""
+    name = cfg.impairment_ablation
+    if not name:
+        return
+    device = cfg.device_impairments
+    nuisance = cfg.nuisance_impairments
+    mapping = {
+        "no_iq": ("device", "iq_imbalance"),
+        "no_cfo": ("device", "cfo"),
+        "no_phase_noise": ("device", "phase_noise"),
+        "no_pa": ("device", "pa_nonlinearity"),
+        "no_memory": ("device", "pa_memory"),
+        "no_dc": ("device", "dc_offset"),
+        "no_session_channel": ("nuisance", "session_channel"),
+        "no_channel": ("nuisance", "channel"),
+        "no_receiver": ("nuisance", "receiver"),
+        "no_waveform_variation": ("nuisance", "waveform_variation"),
+        "no_awgn": ("nuisance", "awgn"),
+        "no_quantization": ("nuisance", "quantization"),
+    }
+    if name not in mapping:
+        raise ValueError(f"Unknown impairment ablation: {name}")
+    group, field_name = mapping[name]
+    if group == "device":
+        cfg.device_impairments = replace(device, **{field_name: False})
+    else:
+        cfg.nuisance_impairments = replace(nuisance, **{field_name: False})
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the configuration to a plain dictionary."""
@@ -147,7 +294,8 @@ def _preset_overrides(mode: str) -> Dict[str, Any]:
     }
 
 
-def load_config(mode: str = "base") -> RFConfig:
+def load_config(mode: str = "base", impairment_profile: str = "default",
+                impairment_ablation: Optional[str] = None) -> RFConfig:
     """Load a configuration preset.
 
     Args:
@@ -156,9 +304,18 @@ def load_config(mode: str = "base") -> RFConfig:
     Returns:
         Populated :class:`RFConfig`.
     """
-    cfg = RFConfig()
+    device_impairments, nuisance_impairments = _impairment_profile(impairment_profile)
+    cfg = RFConfig(
+        impairment_profile=impairment_profile,
+        impairment_ablation=impairment_ablation,
+        device_impairments=device_impairments,
+        nuisance_impairments=nuisance_impairments,
+    )
     for key, value in _preset_overrides(mode).items():
         setattr(cfg, key, value)
+
+    _apply_impairment_ablation(cfg)
+    cfg.validate_impairments()
 
     if cfg.dataset_path and not Path(cfg.dataset_path).is_absolute():
         cfg.dataset_path = str(project_root() / cfg.dataset_path)

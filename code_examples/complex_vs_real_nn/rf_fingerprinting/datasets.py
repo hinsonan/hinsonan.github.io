@@ -420,3 +420,25 @@ def seeded_dataloader(dataset: Dataset, cfg: RFConfig, shuffle: bool = False) ->
         worker_init_fn=seed_worker if cfg.num_workers else None,
         generator=generator,
     )
+
+
+class TwoViewLabeledIQDataset(Dataset):
+    """Two augmented views plus a device label, for SupCon pretraining."""
+
+    def __init__(self, iq: np.ndarray, device_id: np.ndarray, cfg: RFConfig,
+                 seed: Optional[int] = None):
+        if len(iq) != len(device_id):
+            raise ValueError("iq and device_id must have equal length")
+        self.inner = TwoViewIQDataset(iq, cfg, seed=seed)
+        self.device_id = device_id.astype(np.int64)
+
+    def set_epoch(self, epoch: int) -> None:
+        self.inner.set_epoch(epoch)
+
+    def __len__(self) -> int:
+        return len(self.inner)
+
+    def __getitem__(self, index: int):
+        v1, v2 = self.inner[index]
+        y = torch.tensor(self.device_id[index], dtype=torch.long)
+        return v1, v2, y

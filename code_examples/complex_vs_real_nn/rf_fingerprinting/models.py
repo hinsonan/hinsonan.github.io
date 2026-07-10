@@ -68,8 +68,17 @@ class RealEncoder1D(nn.Module):
             nn.BatchNorm1d(c3),
             nn.ReLU(),
         )
-        pooled_dim = c3 if pooling != "stats" else 2 * c3
-        self.fc = nn.Linear(pooled_dim, embed_dim)
+        pooled_dim = c3
+        if pooling == "stats":
+            pooled_dim = 3 * c3
+            self.head = nn.Sequential(
+                nn.Linear(pooled_dim, embed_dim),
+                nn.BatchNorm1d(embed_dim),
+                nn.ReLU(),
+                nn.Linear(embed_dim, embed_dim),
+            )
+        else:
+            self.fc = nn.Linear(pooled_dim, embed_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Encode a batch of IQ waveforms.
@@ -87,8 +96,11 @@ class RealEncoder1D(nn.Module):
         elif self.pooling == "max":
             pooled = F.adaptive_max_pool1d(h, 1).squeeze(-1)
         else:
-            pooled = torch.cat([h.mean(dim=2), h.std(dim=2, unbiased=False)], dim=1)
-        return self.fc(pooled)
+            mean = h.mean(dim=2)
+            std = h.std(dim=2, unbiased=False)
+            mx = h.amax(dim=2)
+            pooled = torch.cat([mean, std, mx], dim=1)
+        return self.head(pooled) if self.pooling == "stats" else self.fc(pooled)
 
 
 class ComplexConv1d(nn.Module):

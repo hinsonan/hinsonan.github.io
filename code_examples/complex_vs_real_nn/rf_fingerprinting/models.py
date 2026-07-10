@@ -9,6 +9,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def _validate_encoder_options(
+    channels: tuple[int, int, int],
+    kernel_sizes: tuple[int, int, int],
+    strides: tuple[int, int, int],
+    pooling: str,
+) -> None:
+    """Validate options shared by the real and complex encoders."""
+    if len(channels) != 3 or any(c <= 0 for c in channels):
+        raise ValueError("channels must contain three positive widths")
+    if len(kernel_sizes) != 3 or any(k <= 0 for k in kernel_sizes):
+        raise ValueError("kernel_sizes must contain three positive values")
+    if len(strides) != 3 or any(s <= 0 for s in strides):
+        raise ValueError("strides must contain three positive values")
+    if pooling not in {"avg", "max", "stats"}:
+        raise ValueError("pooling must be 'avg', 'max', or 'stats'")
+
+
 class RealEncoder1D(nn.Module):
     """Real-valued 1D convolutional encoder over I/Q channels.
 
@@ -17,29 +34,42 @@ class RealEncoder1D(nn.Module):
     """
 
     def __init__(
-        self, embed_dim: int = 64, channels: tuple[int, int, int] = (32, 64, 64)
+        self,
+        embed_dim: int = 64,
+        channels: tuple[int, int, int] = (32, 64, 64),
+        kernel_sizes: tuple[int, int, int] = (7, 5, 5),
+        strides: tuple[int, int, int] = (2, 2, 2),
+        pooling: str = "avg",
     ):
         """Initialize a real-valued RF encoder.
 
         Args:
             embed_dim: Output embedding dimension.
             channels: Convolution channel widths.
+            kernel_sizes: Kernel sizes for the three convolution blocks.
+            strides: Strides for the three convolution blocks.
+            pooling: Global pooling mode. ``avg`` is the matched default;
+                ``max`` and ``stats`` are also available for ablations.
         """
         super().__init__()
+        _validate_encoder_options(channels, kernel_sizes, strides, pooling)
         c1, c2, c3 = channels
+        k1, k2, k3 = kernel_sizes
+        s1, s2, s3 = strides
+        self.pooling = pooling
         self.net = nn.Sequential(
-            nn.Conv1d(2, c1, kernel_size=7, stride=2, padding=3),
+            nn.Conv1d(2, c1, kernel_size=k1, stride=s1, padding=k1 // 2),
             nn.BatchNorm1d(c1),
             nn.ReLU(),
-            nn.Conv1d(c1, c2, kernel_size=5, stride=2, padding=2),
+            nn.Conv1d(c1, c2, kernel_size=k2, stride=s2, padding=k2 // 2),
             nn.BatchNorm1d(c2),
             nn.ReLU(),
-            nn.Conv1d(c2, c3, kernel_size=5, stride=2, padding=2),
+            nn.Conv1d(c2, c3, kernel_size=k3, stride=s3, padding=k3 // 2),
             nn.BatchNorm1d(c3),
             nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1),
         )
-        self.fc = nn.Linear(c3, embed_dim)
+        pooled_dim = c3 if pooling != "stats" else 2 * c3
+        self.fc = nn.Linear(pooled_dim, embed_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Encode a batch of IQ waveforms.
@@ -51,8 +81,14 @@ class RealEncoder1D(nn.Module):
             Embeddings with shape ``[B, embed_dim]``.
         """
         xr = torch.stack([x.real, x.imag], dim=1)
-        h = self.net(xr).squeeze(-1)
-        return self.fc(h)
+        h = self.net(xr)
+        if self.pooling == "avg":
+            pooled = F.adaptive_avg_pool1d(h, 1).squeeze(-1)
+        elif self.pooling == "max":
+            pooled = F.adaptive_max_pool1d(h, 1).squeeze(-1)
+        else:
+            pooled = torch.cat([h.mean(dim=2), h.std(dim=2, unbiased=False)], dim=1)
+        return self.fc(pooled)
 
 
 class ComplexConv1d(nn.Module):
@@ -159,7 +195,7 @@ class ComplexBatchNorm1d(nn.Module):
 
     @staticmethod
     def _inv_sqrt(cov: torch.Tensor, eps: float) -> torch.Tensor:
-        """Compute the inverse square root of a batch of 2x2 symmetric matrices.
+        """Compute a stable inverse square root of 2x2 symmetric matrices.
 
         Args:
             cov: Tensor of shape ``[..., 2, 2]`` containing symmetric PSD matrices.
@@ -167,11 +203,31 @@ class ComplexBatchNorm1d(nn.Module):
 
         Returns:
             Tensor of the same shape as ``cov`` with V^{-1/2} per matrix.
+
+        The closed-form 2x2 expression avoids ``eigh`` eigenvector gradients,
+        which are undefined when the covariance has repeated eigenvalues.
         """
-        eigvals, eigvecs = torch.linalg.eigh(cov)
-        eigvals = torch.clamp(eigvals, min=eps)
-        inv_sqrt = eigvecs @ torch.diag_embed(1.0 / torch.sqrt(eigvals)) @ eigvecs.transpose(-1, -2)
-        return inv_sqrt
+        eye = torch.eye(2, dtype=cov.dtype, device=cov.device)
+        regularized = cov + eps * eye
+        a = regularized[..., 0, 0]
+        b = regularized[..., 0, 1]
+        c = regularized[..., 1, 1]
+        determinant = torch.clamp(a * c - b.square(), min=eps * eps)
+        root_det = torch.sqrt(determinant)
+        trace_term = torch.sqrt(torch.clamp(a + c + 2 * root_det, min=eps))
+
+        # A^-1/2 = sqrt(tr(A)+2sqrt(det(A))) * (A+sqrt(det(A))I)^-1.
+        shifted_a = a + root_det
+        shifted_c = c + root_det
+        shifted_det = torch.clamp(shifted_a * shifted_c - b.square(), min=eps * eps)
+        inverse = torch.stack(
+            [
+                torch.stack([shifted_c, -b], dim=-1),
+                torch.stack([-b, shifted_a], dim=-1),
+            ],
+            dim=-2,
+        ) / shifted_det.unsqueeze(-1).unsqueeze(-1)
+        return trace_term.unsqueeze(-1).unsqueeze(-1) * inverse
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         """Apply complex batch normalization.
@@ -219,13 +275,16 @@ class ComplexBatchNorm1d(nn.Module):
 
 
 class ComplexEncoder1D(nn.Module):
-    """Complex-valued 1D encoder with normalized blocks and rich pooling."""
+    """Complex-valued 1D encoder with configurable matched pooling."""
 
     def __init__(
         self,
         embed_dim: int = 64,
-        channels: tuple[int, int, int] = (24, 48, 48),
+        channels: tuple[int, int, int] = (32, 64, 64),
         moment_orders: tuple[int, ...] = (2, 4),
+        kernel_sizes: tuple[int, int, int] = (7, 5, 5),
+        strides: tuple[int, int, int] = (2, 2, 2),
+        pooling: str = "avg",
     ):
         """Initialize a complex-valued RF encoder.
 
@@ -233,36 +292,48 @@ class ComplexEncoder1D(nn.Module):
             embed_dim: Output embedding dimension.
             channels: Convolution channel widths.
             moment_orders: Circular moment orders used in pooled statistics.
+            kernel_sizes: Kernel sizes for the three convolution blocks.
+            strides: Strides for the three convolution blocks.
+            pooling: ``avg`` pools magnitude like the real encoder, ``max``
+                pools magnitude with max pooling, and ``stats`` enables the
+                original phase-aware statistics pooling.
         """
         super().__init__()
+        _validate_encoder_options(channels, kernel_sizes, strides, pooling)
         c1, c2, c3 = channels
+        k1, k2, k3 = kernel_sizes
+        s1, s2, s3 = strides
         self.moment_orders = moment_orders
+        self.pooling = pooling
         self.blocks = nn.ModuleList(
             [
                 nn.Sequential(
-                    ComplexConv1d(1, c1, 7, stride=2, padding=3),
+                    ComplexConv1d(1, c1, k1, stride=s1, padding=k1 // 2),
                     ComplexBatchNorm1d(c1),
                     ModReLU(),
                 ),
                 nn.Sequential(
-                    ComplexConv1d(c1, c2, 5, stride=2, padding=2),
+                    ComplexConv1d(c1, c2, k2, stride=s2, padding=k2 // 2),
                     ComplexBatchNorm1d(c2),
                     ModReLU(),
                 ),
                 nn.Sequential(
-                    ComplexConv1d(c2, c3, 5, stride=2, padding=2),
+                    ComplexConv1d(c2, c3, k3, stride=s3, padding=k3 // 2),
                     ComplexBatchNorm1d(c3),
                     ModReLU(),
                 ),
             ]
         )
-        n_stats = 6 + len(moment_orders)
-        self.head = nn.Sequential(
-            nn.Linear(n_stats * c3, embed_dim),
-            nn.BatchNorm1d(embed_dim),
-            nn.ReLU(),
-            nn.Linear(embed_dim, embed_dim),
-        )
+        if pooling == "stats":
+            pooled_dim = (6 + len(moment_orders)) * c3
+            self.head = nn.Sequential(
+                nn.Linear(pooled_dim, embed_dim),
+                nn.BatchNorm1d(embed_dim),
+                nn.ReLU(),
+                nn.Linear(embed_dim, embed_dim),
+            )
+        else:
+            self.head = nn.Linear(c3, embed_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Encode a batch of IQ waveforms.
@@ -276,15 +347,22 @@ class ComplexEncoder1D(nn.Module):
         h = x.unsqueeze(1)
         for block in self.blocks:
             h = block(h)
+        if self.pooling == "avg":
+            pooled = F.adaptive_avg_pool1d(torch.abs(h), 1).squeeze(-1)
+            return self.head(pooled)
+        if self.pooling == "max":
+            pooled = F.adaptive_max_pool1d(torch.abs(h), 1).squeeze(-1)
+            return self.head(pooled)
+
         mag = torch.abs(h)
         unit = h / (mag + 1e-8)
         stats = [
             mag.mean(dim=2),
-            mag.std(dim=2),
+            mag.std(dim=2, unbiased=False),
             h.real.mean(dim=2),
-            h.real.std(dim=2),
+            h.real.std(dim=2, unbiased=False),
             h.imag.mean(dim=2),
-            h.imag.std(dim=2),
+            h.imag.std(dim=2, unbiased=False),
         ]
         for order in self.moment_orders:
             stats.append(torch.abs(torch.mean(unit ** order, dim=2)))
@@ -359,3 +437,98 @@ class EncoderClassifier(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute class logits for a batch."""
         return self.head(self.encoder(x))
+
+
+def count_parameters(model: nn.Module, trainable_only: bool = False) -> int:
+    """Return the number of scalar tensor elements in a model."""
+    return sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if not trainable_only or parameter.requires_grad
+    )
+
+
+def model_report(
+    model: nn.Module,
+    input_shape: tuple[int, int] = (1, 256),
+) -> dict[str, int | tuple[int, ...]]:
+    """Return parameter, real-scalar, MAC, and output-shape information.
+
+    ``parameters`` counts tensor elements, while ``real_scalar_parameters``
+    counts stored real and imaginary scalars. The latter is the appropriate
+    capacity comparison between real and complex models. MACs are for one
+    forward pass: ``conv_macs`` and ``linear_macs`` count real MAC-equivalents,
+    with each complex convolution MAC counted as four real multiplications.
+    Batch normalization, activations, pooling, and complex whitening are not
+    included. The input is complex IQ, preserving the encoder interface.
+    """
+    if len(input_shape) != 2 or any(size <= 0 for size in input_shape):
+        raise ValueError("input_shape must be (batch, sequence_length)")
+
+    real_conv_macs = 0
+    complex_conv_macs = 0
+    linear_macs = 0
+    hooks = []
+
+    def record(module: nn.Module, inputs: tuple[torch.Tensor, ...], output: torch.Tensor):
+        nonlocal real_conv_macs, complex_conv_macs, linear_macs
+        if isinstance(module, ComplexConv1d):
+            batch, out_channels, length = output.shape
+            complex_conv_macs += (
+                batch
+                * out_channels
+                * length
+                * module.weight.shape[1]
+                * module.weight.shape[2]
+                * 4
+            )
+        elif isinstance(module, nn.Conv1d):
+            batch, out_channels, length = output.shape
+            real_conv_macs += batch * out_channels * length * module.in_channels * module.kernel_size[0]
+        elif isinstance(module, nn.Linear):
+            linear_macs += output.numel() * module.in_features
+
+    for module in model.modules():
+        if isinstance(module, (ComplexConv1d, nn.Conv1d, nn.Linear)):
+            hooks.append(module.register_forward_hook(record))
+
+    was_training = model.training
+    try:
+        model.eval()
+        parameter = next(model.parameters())
+        device = parameter.device
+        if parameter.is_complex():
+            input_dtype = parameter.dtype
+        elif parameter.dtype == torch.float64:
+            input_dtype = torch.complex128
+        else:
+            input_dtype = torch.complex64
+        x = torch.zeros(input_shape, dtype=input_dtype, device=device)
+        with torch.no_grad():
+            output = model(x)
+    finally:
+        for hook in hooks:
+            hook.remove()
+        model.train(was_training)
+
+    real_scalar_parameters = sum(
+        parameter.numel() * (2 if parameter.is_complex() else 1)
+        for parameter in model.parameters()
+    )
+    trainable_real_scalar_parameters = sum(
+        parameter.numel() * (2 if parameter.is_complex() else 1)
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
+    return {
+        "parameters": count_parameters(model),
+        "trainable_parameters": count_parameters(model, trainable_only=True),
+        "real_scalar_parameters": real_scalar_parameters,
+        "trainable_real_scalar_parameters": trainable_real_scalar_parameters,
+        "real_conv_macs": real_conv_macs,
+        "complex_conv_macs": complex_conv_macs,
+        "conv_macs": real_conv_macs + complex_conv_macs,
+        "linear_macs": linear_macs,
+        "macs": real_conv_macs + complex_conv_macs + linear_macs,
+        "output_shape": tuple(output.shape),
+    }

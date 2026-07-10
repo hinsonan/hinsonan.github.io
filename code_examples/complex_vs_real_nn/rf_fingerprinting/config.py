@@ -51,6 +51,30 @@ class RFConfig:
     encoder_lr_scale: float = 1.0
     warmup_epochs: int = 1
 
+    # Appended fields preserve the positional order of the original config.
+    n_receivers: int = 2
+    num_workers: int = 0
+    n_channels: int = 3
+    normalize_output: bool = True
+    quantization_scale: float = 2.0
+    quantization_bits: int = 10
+
+    def __post_init__(self) -> None:
+        """Reject dimensions and probabilities that cannot produce a dataset."""
+        for name in ("seq_len", "n_devices", "n_sessions", "n_receivers", "n_channels", "batch_size", "embed_dim"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be positive.")
+        if self.n_samples <= 0 or self.num_workers < 0:
+            raise ValueError("n_samples must be positive and num_workers non-negative.")
+        if not 0.0 <= self.test_size <= 1.0 or not 0.0 <= self.val_size <= 1.0:
+            raise ValueError("test_size and val_size must be between 0 and 1.")
+        if self.test_size + self.val_size >= 1.0:
+            raise ValueError("test_size + val_size must be less than 1.")
+        if not 0.0 <= self.aug_prob <= 1.0:
+            raise ValueError("aug_prob must be between 0 and 1.")
+        if self.quantization_scale <= 0 or self.quantization_bits < 2:
+            raise ValueError("quantization_scale must be positive and quantization_bits at least 2.")
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the configuration to a plain dictionary."""
         return asdict(self)
@@ -71,6 +95,7 @@ def _preset_overrides(mode: str) -> Dict[str, Any]:
             "output_dir": "outputs/rf_fingerprinting_fast",
             "n_samples": 800,
             "n_sessions": 3,
+            "n_receivers": 2,
             "pretrain_epochs": 2,
             "finetune_epochs": 5,
             "batch_size": 64,
@@ -89,6 +114,7 @@ def _preset_overrides(mode: str) -> Dict[str, Any]:
             "output_dir": "outputs/rf_fingerprinting_full",
             "n_samples": 4000,
             "n_sessions": 4,
+            "n_receivers": 2,
             "pretrain_epochs": 10,
             "finetune_epochs": 10,
             "batch_size": 128,
@@ -106,6 +132,7 @@ def _preset_overrides(mode: str) -> Dict[str, Any]:
         "output_dir": "outputs/rf_fingerprinting",
         "n_samples": 1200,
         "n_sessions": 3,
+        "n_receivers": 2,
         "pretrain_epochs": 4,
         "finetune_epochs": 6,
         "batch_size": 64,

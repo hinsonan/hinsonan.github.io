@@ -6,9 +6,12 @@ from typing import Dict, Optional
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 
-from config import RFConfig
+try:
+    from .config import RFConfig
+except ImportError:
+    from config import RFConfig
 
 
 def split_indices(
@@ -18,6 +21,10 @@ def split_indices(
     seed: int,
     labels: np.ndarray | None = None,
     session_ids: np.ndarray | None = None,
+    device_ids: np.ndarray | None = None,
+    receiver_ids: np.ndarray | None = None,
+    group_ids: np.ndarray | None = None,
+    group_by: str | None = None,
 ) -> Dict[str, np.ndarray]:
     """Create train/val/test index splits.
 
@@ -39,24 +46,71 @@ def split_indices(
     """
     rng = np.random.default_rng(seed)
 
-    if session_ids is not None:
-        session_ids = np.asarray(session_ids)
-        unique_sessions = np.unique(session_ids)
-        rng.shuffle(unique_sessions)
-        n_test_sessions = max(1, int(len(unique_sessions) * test_size))
-        n_val_sessions = max(1, int(len(unique_sessions) * val_size))
-        test_sessions = set(unique_sessions[:n_test_sessions].tolist())
-        val_sessions = set(
-            unique_sessions[n_test_sessions : n_test_sessions + n_val_sessions].tolist()
-        )
-        test_mask = np.array([sid in test_sessions for sid in session_ids], dtype=bool)
-        val_mask = np.array([sid in val_sessions for sid in session_ids], dtype=bool)
-        train_mask = ~(test_mask | val_mask)
-        return {
-            "train": np.flatnonzero(train_mask),
+    if n <= 0 or not 0.0 <= test_size <= 1.0 or not 0.0 <= val_size <= 1.0:
+        raise ValueError("n must be positive and split sizes must be in [0, 1].")
+    if test_size + val_size >= 1.0:
+        raise ValueError("test_size + val_size must be less than 1.")
+
+    if group_by not in (None, "session", "device", "receiver", "combined"):
+        raise ValueError("group_by must be session, device, receiver, combined, or None.")
+    required = {"session": session_ids, "device": device_ids, "receiver": receiver_ids}
+    if group_by in required and required[group_by] is None:
+        raise ValueError(f"group_by='{group_by}' requires matching metadata.")
+    metadata = [x for x in (session_ids, device_ids, receiver_ids) if x is not None]
+    if metadata:
+        if any(np.asarray(x).ndim != 1 or len(x) != n for x in metadata):
+            raise ValueError("All grouping metadata must be one-dimensional and have length n.")
+    if labels is not None:
+        labels = np.asarray(labels)
+        if labels.ndim != 1 or labels.shape[0] != n:
+            raise ValueError("labels must be one-dimensional and have length n.")
+        if labels.dtype.kind == "f" and not np.all(np.isfinite(labels)):
+            raise ValueError("labels must contain finite values.")
+        if labels.size == 0:
+            raise ValueError("labels must not be empty.")
+    if group_by is not None:
+        required = {"session": session_ids, "device": device_ids, "receiver": receiver_ids}.get(group_by)
+        if group_by != "combined" and required is None:
+            raise ValueError(f"group_by='{group_by}' requires matching metadata.")
+    if group_ids is not None:
+        group_ids = np.asarray(group_ids)
+        if group_ids.ndim != 1 or len(group_ids) != n:
+            raise ValueError("group_ids must be one-dimensional and have length n.")
+        selected_groups = group_ids
+    elif group_by == "combined":
+        if not metadata:
+            raise ValueError("combined grouping requires session, device, or receiver metadata.")
+        selected_groups = np.asarray(list(zip(*(np.asarray(x).tolist() for x in metadata))), dtype=str)
+    elif group_by == "device" and device_ids is not None:
+        selected_groups = np.asarray(device_ids)
+    elif group_by == "receiver" and receiver_ids is not None:
+        selected_groups = np.asarray(receiver_ids)
+    elif session_ids is not None:
+        selected_groups = np.asarray(session_ids)
+    elif device_ids is not None:
+        selected_groups = np.asarray(device_ids)
+    elif receiver_ids is not None:
+        selected_groups = np.asarray(receiver_ids)
+    else:
+        selected_groups = None
+
+    if selected_groups is not None:
+        unique_groups, inverse = np.unique(selected_groups, axis=0, return_inverse=True) if selected_groups.ndim > 1 else np.unique(selected_groups, return_inverse=True)
+        order = rng.permutation(len(unique_groups))
+        n_test_groups = max(1, int(len(order) * test_size)) if test_size > 0 else 0
+        remaining = len(order) - n_test_groups
+        n_val_groups = max(1, int(remaining * val_size)) if val_size > 0 and remaining else 0
+        test_groups = set(order[:n_test_groups].tolist())
+        val_groups = set(order[n_test_groups:n_test_groups + n_val_groups].tolist())
+        test_mask = np.isin(inverse, list(test_groups))
+        val_mask = np.isin(inverse, list(val_groups))
+        result = {
+            "train": np.flatnonzero(~(test_mask | val_mask)),
             "val": np.flatnonzero(val_mask),
             "test": np.flatnonzero(test_mask),
         }
+        _validate_split_sizes(result, n, test_size, val_size)
+        return result
 
     if labels is None:
         idx = rng.permutation(n)
@@ -66,9 +120,10 @@ def split_indices(
         n_val = int(rem.shape[0] * val_size)
         val_idx = rem[:n_val]
         train_idx = rem[n_val:]
-        return {"train": train_idx, "val": val_idx, "test": test_idx}
+        result = {"train": train_idx, "val": val_idx, "test": test_idx}
+        _validate_split_sizes(result, n, test_size, val_size)
+        return result
 
-    labels = np.asarray(labels)
     train_parts = []
     val_parts = []
     test_parts = []
@@ -88,7 +143,17 @@ def split_indices(
     train_idx = rng.permutation(np.concatenate(train_parts))
     val_idx = rng.permutation(np.concatenate(val_parts))
     test_idx = rng.permutation(np.concatenate(test_parts))
-    return {"train": train_idx, "val": val_idx, "test": test_idx}
+    result = {"train": train_idx, "val": val_idx, "test": test_idx}
+    _validate_split_sizes(result, n, test_size, val_size)
+    return result
+
+
+def _validate_split_sizes(splits: Dict[str, np.ndarray], n: int, test_size: float, val_size: float) -> None:
+    """Reject requested partitions that rounded down to empty arrays."""
+    if len(splits["train"]) == 0 or (test_size > 0 and len(splits["test"]) == 0) or (val_size > 0 and len(splits["val"]) == 0):
+        raise ValueError("Requested split produced an empty partition; increase n or adjust split sizes.")
+    if sum(len(indices) for indices in splits.values()) != n:
+        raise ValueError("Splits do not cover each input sample exactly once.")
 
 
 def apply_phase_jitter(
@@ -221,6 +286,13 @@ def augment_iq(
     Returns:
         Augmented waveform.
     """
+    iq = np.asarray(iq)
+    if iq.ndim != 1 or iq.shape[0] == 0 or not np.iscomplexobj(iq):
+        raise ValueError("iq must be a non-empty one-dimensional complex array.")
+    if not 0.0 <= aug_prob <= 1.0:
+        raise ValueError("aug_prob must be between 0 and 1.")
+    if rng is not None and seed is not None:
+        raise ValueError("Pass either seed or rng, not both.")
     if rng is None:
         rng = np.random.default_rng(seed)
     out = iq.astype(np.complex64, copy=True)
@@ -249,6 +321,8 @@ class IQDataset(Dataset):
             iq: Complex waveforms with shape ``[N, T]``.
             device_id: Device labels with shape ``[N]``.
         """
+        if iq.ndim != 2 or iq.shape[1] <= 0 or not np.iscomplexobj(iq) or device_id.ndim != 1 or len(iq) != len(device_id):
+            raise ValueError("iq must be [N, T] and device_id must align with it.")
         self.iq = iq.astype(np.complex64)
         self.device_id = device_id.astype(np.int64)
 
@@ -273,15 +347,25 @@ class IQDataset(Dataset):
 class TwoViewIQDataset(Dataset):
     """Contrastive dataset that yields two augmented views per sample."""
 
-    def __init__(self, iq: np.ndarray, cfg: RFConfig):
+    def __init__(self, iq: np.ndarray, cfg: RFConfig, seed: Optional[int] = None):
         """Initialize two-view dataset.
 
         Args:
             iq: Complex waveforms with shape ``[N, T]``.
             cfg: Runtime config with augmentation settings.
         """
+        if iq.ndim != 2 or iq.shape[1] <= 0 or not np.iscomplexobj(iq):
+            raise ValueError("iq must be a non-empty complex array with shape [N, T].")
         self.iq = iq.astype(np.complex64)
         self.cfg = cfg
+        self.seed = cfg.seed if seed is None else seed
+        self.epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        """Set the epoch component of deterministic augmentation randomness."""
+        if epoch < 0:
+            raise ValueError("epoch must be non-negative.")
+        self.epoch = epoch
 
     def __len__(self) -> int:
         """Return number of samples."""
@@ -297,7 +381,10 @@ class TwoViewIQDataset(Dataset):
             Tuple ``(view1_tensor, view2_tensor)``.
         """
         base = self.iq[index]
-        rng = np.random.default_rng()
+        # Derive randomness from seed and index so repeated reads are stable,
+        # including when a DataLoader changes worker assignment.
+        seed_sequence = np.random.SeedSequence([self.seed, self.epoch, int(index)])
+        child_seeds = seed_sequence.spawn(2)
         aug_kwargs = dict(
             noise_std=self.cfg.noise_std,
             phase_jitter_rad=self.cfg.phase_jitter_rad,
@@ -305,8 +392,31 @@ class TwoViewIQDataset(Dataset):
             cfo_jitter_rad=self.cfg.cfo_jitter_rad,
             amplitude_jitter=self.cfg.amplitude_jitter,
             aug_prob=self.cfg.aug_prob,
-            rng=rng,
         )
-        v1 = augment_iq(base, **aug_kwargs)
-        v2 = augment_iq(base, **aug_kwargs)
+        v1 = augment_iq(base, rng=np.random.default_rng(child_seeds[0]), **aug_kwargs)
+        v2 = augment_iq(base, rng=np.random.default_rng(child_seeds[1]), **aug_kwargs)
         return torch.from_numpy(v1), torch.from_numpy(v2)
+
+
+def seeded_dataloader(dataset: Dataset, cfg: RFConfig, shuffle: bool = False) -> DataLoader:
+    """Build a reproducibly shuffled DataLoader for an RF dataset.
+
+    The helper is additive: existing callers can keep constructing DataLoaders
+    directly, while experiments that need repeatable ordering can use this.
+    """
+    generator = torch.Generator()
+    generator.manual_seed(cfg.seed)
+
+    def seed_worker(worker_id: int) -> None:
+        worker_seed = cfg.seed + worker_id
+        np.random.seed(worker_seed)
+        torch.manual_seed(worker_seed)
+
+    return DataLoader(
+        dataset,
+        batch_size=cfg.batch_size,
+        shuffle=shuffle,
+        num_workers=cfg.num_workers,
+        worker_init_fn=seed_worker if cfg.num_workers else None,
+        generator=generator,
+    )

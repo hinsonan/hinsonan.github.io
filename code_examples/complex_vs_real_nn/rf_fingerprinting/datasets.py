@@ -442,3 +442,46 @@ class TwoViewLabeledIQDataset(Dataset):
         v1, v2 = self.inner[index]
         y = torch.tensor(self.device_id[index], dtype=torch.long)
         return v1, v2, y
+
+
+class AugmentedIQDataset(Dataset):
+    """Supervised dataset that yields one deterministically augmented view.
+
+    Used for augmented fine-tuning: each epoch re-derives per-sample
+    augmentation randomness from ``(seed, epoch, index)`` so runs are
+    reproducible while epochs still see fresh augmentations.
+    """
+
+    def __init__(self, iq: np.ndarray, device_id: np.ndarray, cfg: RFConfig,
+                 seed: Optional[int] = None):
+        if iq.ndim != 2 or iq.shape[1] <= 0 or not np.iscomplexobj(iq) or device_id.ndim != 1 or len(iq) != len(device_id):
+            raise ValueError("iq must be [N, T] and device_id must align with it.")
+        self.iq = iq.astype(np.complex64)
+        self.device_id = device_id.astype(np.int64)
+        self.cfg = cfg
+        self.seed = cfg.seed if seed is None else seed
+        self.epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        """Set the epoch component of deterministic augmentation randomness."""
+        if epoch < 0:
+            raise ValueError("epoch must be non-negative.")
+        self.epoch = epoch
+
+    def __len__(self) -> int:
+        return self.iq.shape[0]
+
+    def __getitem__(self, index: int):
+        seed_sequence = np.random.SeedSequence([self.seed, self.epoch, int(index)])
+        rng = np.random.default_rng(seed_sequence)
+        view = augment_iq(
+            self.iq[index],
+            noise_std=self.cfg.noise_std,
+            phase_jitter_rad=self.cfg.phase_jitter_rad,
+            time_shift=self.cfg.time_shift,
+            cfo_jitter_rad=self.cfg.cfo_jitter_rad,
+            amplitude_jitter=self.cfg.amplitude_jitter,
+            aug_prob=self.cfg.aug_prob,
+            rng=rng,
+        )
+        return torch.from_numpy(view), torch.tensor(self.device_id[index], dtype=torch.long)

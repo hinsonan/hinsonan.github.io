@@ -96,6 +96,8 @@ class RFConfig:
     impairment_ablation: Optional[str] = None
     device_impairments: DeviceImpairments = field(default_factory=DeviceImpairments)
     nuisance_impairments: NuisanceImpairments = field(default_factory=NuisanceImpairments)
+    known_device_count: Optional[int] = None
+    unknown_min_separation: float = 0.0
 
     def __post_init__(self) -> None:
         """Reject dimensions and probabilities that cannot produce a dataset."""
@@ -118,6 +120,10 @@ class RFConfig:
         """Validate nested impairment settings after notebook overrides."""
         device = self.device_impairments
         nuisance = self.nuisance_impairments
+        if self.known_device_count is not None and not 1 <= self.known_device_count < self.n_devices:
+            raise ValueError("known_device_count must be in [1, n_devices).")
+        if self.unknown_min_separation < 0:
+            raise ValueError("unknown_min_separation must be non-negative.")
         for name, value in (
             ("iq_gain_std", device.iq_gain_std),
             ("iq_skew_std_rad", device.iq_skew_std_rad),

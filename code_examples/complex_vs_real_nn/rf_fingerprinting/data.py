@@ -152,6 +152,94 @@ def _apply_channel(x: np.ndarray, channel: Dict[str, np.ndarray], session: int,
     return x * np.complex64(1.0 + rng.normal(0.0, 0.025))
 
 
+def _uniform_std(bounds) -> float:
+    """Standard deviation of a uniform range, floored for degenerate ranges."""
+    return max((float(bounds[1]) - float(bounds[0])) / float(np.sqrt(12.0)), 1e-12)
+
+
+def _standardized_device_matrix(params: Dict[str, np.ndarray], impairments) -> np.ndarray:
+    """Return per-device impairment vectors scaled by their sampling spread.
+
+    Distances in this space are measured in impairment-standard-deviation
+    units, which makes a single separation threshold meaningful across the
+    different impairment profiles.
+    """
+    cols = [
+        np.asarray(params["i_gain"], dtype=np.float64) / max(impairments.iq_gain_std, 1e-12),
+        np.asarray(params["q_gain"], dtype=np.float64) / max(impairments.iq_gain_std, 1e-12),
+        np.asarray(params["iq_skew"], dtype=np.float64) / max(impairments.iq_skew_std_rad, 1e-12),
+        np.asarray(params["cfo"], dtype=np.float64) / _uniform_std(impairments.cfo_range_rad),
+        np.asarray(params["phase_noise"], dtype=np.float64) / _uniform_std(impairments.phase_noise_range),
+        np.asarray(params["pa"], dtype=np.float64) / _uniform_std(impairments.pa_range),
+        np.asarray(params["memory"], dtype=np.float64) / _uniform_std(impairments.memory_range),
+    ]
+    if impairments.dc_offset:
+        cols.append(np.asarray(params["dc"], dtype=np.complex128).real / max(impairments.dc_std, 1e-12))
+        cols.append(np.asarray(params["dc"], dtype=np.complex128).imag / max(impairments.dc_std, 1e-12))
+    return np.stack([np.atleast_1d(col) for col in cols], axis=1)
+
+
+def _draw_single_device_params(rng: np.random.Generator, impairments) -> Dict[str, np.ndarray]:
+    """Draw one device's persistent impairment parameters."""
+    return {
+        "i_gain": np.float64(1.0 + impairments.iq_gain_std * rng.standard_normal()),
+        "q_gain": np.float64(1.0 + impairments.iq_gain_std * rng.standard_normal()),
+        "iq_skew": np.float64(impairments.iq_skew_std_rad * rng.standard_normal()),
+        "cfo": np.float64(rng.uniform(*impairments.cfo_range_rad)),
+        "phase_noise": np.float64(rng.uniform(*impairments.phase_noise_range)),
+        "pa": np.float64(rng.uniform(*impairments.pa_range)),
+        "memory": np.float64(rng.uniform(*impairments.memory_range)),
+        "dc": np.complex64(impairments.dc_std * (rng.standard_normal() + 1j * rng.standard_normal())),
+    }
+
+
+def _enforce_unknown_separation(device: Dict[str, np.ndarray], rng: np.random.Generator,
+                                impairments, known_count: int, min_separation: float,
+                                max_retries: int = 500) -> Dict[str, np.ndarray]:
+    """Rejection-sample unknown devices away from known impairment space.
+
+    Unknown devices (index >= ``known_count``) are redrawn until their
+    standardized impairment vector is at least ``min_separation`` from every
+    known device. This keeps the open-set benchmark well-posed: without the
+    constraint, an unknown device can land arbitrarily close to a known one
+    and become structurally impossible to reject.
+    """
+    n_devices = len(device["cfo"])
+    known = {name: values[:known_count] for name, values in device.items()}
+    known_mat = _standardized_device_matrix(known, impairments)
+    for unknown_idx in range(known_count, n_devices):
+        for _ in range(max_retries):
+            candidate = _draw_single_device_params(rng, impairments)
+            cand_vec = _standardized_device_matrix(candidate, impairments)[0]
+            if np.linalg.norm(known_mat - cand_vec[None, :], axis=1).min() >= min_separation:
+                for name, value in candidate.items():
+                    device[name][unknown_idx] = value
+                break
+        else:
+            raise ValueError(
+                f"Could not sample unknown device index {unknown_idx} with min separation "
+                f"{min_separation} after {max_retries} retries; lower "
+                "unknown_min_separation or widen the device impairment ranges."
+            )
+    return device
+
+
+def _nearest_known_distances(device: Dict[str, np.ndarray], impairments,
+                             known_count: int) -> np.ndarray:
+    """Return per-device distance to the nearest known device in std units.
+
+    Known devices report the distance to the nearest *other* known device so
+    the array is a direct indicator of how packed the enrolled devices are.
+    """
+    mat = _standardized_device_matrix(device, impairments)
+    known = mat[:known_count]
+    dists = np.zeros(mat.shape[0], dtype=np.float64)
+    for idx in range(mat.shape[0]):
+        reference = np.delete(known, idx, axis=0) if idx < known_count else known
+        dists[idx] = np.linalg.norm(reference - mat[idx], axis=1).min() if len(reference) else 0.0
+    return dists
+
+
 def _apply_receiver(x: np.ndarray, receiver: Dict[str, np.ndarray], receiver_id: int,
                     rng: np.random.Generator, quantization_scale: float = 2.0,
                     quantization_bits: int = 10, impairments=None) -> tuple[np.ndarray, float]:
@@ -190,6 +278,12 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
     Device parameters are sampled once per device and therefore remain stable
     across sessions and receiver conditions.  Session and receiver parameters
     are independent nuisance factors and are returned as metadata.
+
+    When ``cfg.known_device_count`` is set, devices with index greater or
+    equal to it are treated as unknown: they may be rejection-sampled to
+    keep ``cfg.unknown_min_separation`` impairment-std distance from every
+    known device, and a per-sample ``dist_to_nearest_known`` metadata column
+    is populated for open-set reporting.
     """
     rng = np.random.default_rng(cfg.seed)
     device_impairments = cfg.device_impairments
@@ -208,6 +302,16 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
         "memory": rng.uniform(*device_impairments.memory_range, cfg.n_devices),
         "dc": (device_impairments.dc_std * (rng.standard_normal(cfg.n_devices) + 1j * rng.standard_normal(cfg.n_devices))).astype(np.complex64),
     }
+    per_device_dist = None
+    if cfg.known_device_count is not None:
+        if not 1 <= cfg.known_device_count < cfg.n_devices:
+            raise ValueError("known_device_count must be in [1, n_devices).")
+        if cfg.unknown_min_separation > 0:
+            device = _enforce_unknown_separation(
+                device, rng, device_impairments, cfg.known_device_count,
+                cfg.unknown_min_separation,
+            )
+        per_device_dist = _nearest_known_distances(device, device_impairments, cfg.known_device_count)
     session_channel = {
         "taps": (nuisance_impairments.session_tap_scale * (rng.standard_normal((cfg.n_sessions, 5)) + 1j * rng.standard_normal((cfg.n_sessions, 5)))).astype(np.complex64),
         "phase": rng.uniform(-np.pi, np.pi, cfg.n_sessions),
@@ -238,6 +342,7 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
         "channel_id": np.zeros(n, dtype=np.int64),
         "waveform_id": np.zeros(n, dtype=np.int64),
         "snr_db": np.zeros(n, dtype=np.float32),
+        "dist_to_nearest_known": np.zeros(n, dtype=np.float32),
     }
     row = 0
     for device_id, count in enumerate(counts):
@@ -263,6 +368,9 @@ def generate_synthetic_rf_data(cfg: RFConfig) -> Dict[str, np.ndarray]:
             output["channel_id"][row] = channel_id
             output["waveform_id"][row] = waveform_id
             output["snr_db"][row] = snr_db
+            output["dist_to_nearest_known"][row] = (
+                per_device_dist[device_id] if per_device_dist is not None else np.nan
+            )
             row += 1
 
     perm = rng.permutation(n)

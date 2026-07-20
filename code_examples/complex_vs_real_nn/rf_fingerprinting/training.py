@@ -17,9 +17,11 @@ from torch.utils.data import DataLoader
 
 try:  # Support both ``import training`` and package imports.
     from .config import RFConfig
+    from .datasets import augment_iq
     from .models import EncoderClassifier, ProjectionHead
 except ImportError:  # pragma: no cover - exercised by notebook-style imports.
     from config import RFConfig
+    from datasets import augment_iq
     from models import EncoderClassifier, ProjectionHead
 
 
@@ -299,7 +301,9 @@ def finetune_classifier(
     best_val = -1.0
     best_state = None
 
-    for _ in range(cfg.finetune_epochs):
+    for epoch in range(cfg.finetune_epochs):
+        if hasattr(train_dataset, "set_epoch"):
+            train_dataset.set_epoch(epoch)
         model.train()
         running = running_ce = running_sup = 0.0
         count = 0
@@ -340,6 +344,94 @@ def finetune_classifier(
     return model, history
 
 
+def outlier_exposure_finetune(
+    model: nn.Module,
+    train_dataset,
+    unknown_dataset,
+    cfg: RFConfig,
+    device: torch.device,
+    oe_weight: float = 1.0,
+    epochs: int = 2,
+    lr_scale: float = 1.0,
+    encoder_lr_scale: float = 0.0,
+) -> nn.Module:
+    """Fine-tune the classifier head for open-set scoring with outlier exposure.
+
+    Keeps the encoder frozen and optimizes cross-entropy on known samples
+    plus a uniform-softmax objective on unlabeled unknown samples (KL from
+    the uniform distribution to the predicted softmax). Closed-set training
+    otherwise makes logits maximally confident near known class centers --
+    exactly where look-alike unknown devices land -- which drives
+    max-softmax/energy AUROC below chance. When ``encoder_lr_scale > 0``
+    the encoder is also adapted at a reduced LR, which reshapes the
+    embedding space around the calibration unknowns instead of only
+    recalibrating the head. The returned copy is intended for logit-based
+    open-set scores only; the input model is left untouched.
+
+    Args:
+        model: Trained :class:`EncoderClassifier`.
+        train_dataset: Labeled known-device dataset.
+        unknown_dataset: Unlabeled unknown-device dataset (calibration split).
+        cfg: Runtime config.
+        device: Compute device.
+        oe_weight: Weight on the uniform-softmax objective.
+        epochs: Fine-tune epochs over the paired loaders.
+        lr_scale: Multiplier on ``cfg.lr`` for the head optimizer.
+        encoder_lr_scale: Additional multiplier on the head LR for the
+            encoder parameter group. Zero (default) freezes the encoder.
+
+    Returns:
+        A new model with a calibrated head for logit-based open-set scoring.
+    """
+    if len(train_dataset) == 0 or len(unknown_dataset) == 0:
+        raise ValueError("outlier exposure requires non-empty known and unknown datasets")
+    if oe_weight < 0:
+        raise ValueError("oe_weight must be non-negative")
+    if epochs < 1:
+        raise ValueError("epochs must be at least 1")
+    if encoder_lr_scale < 0:
+        raise ValueError("encoder_lr_scale must be non-negative")
+    oe_model = copy.deepcopy(model).to(device)
+    tune_encoder = encoder_lr_scale > 0
+    if tune_encoder:
+        opt = torch.optim.Adam(
+            [
+                {"params": oe_model.encoder.parameters(), "lr": cfg.lr * lr_scale * encoder_lr_scale},
+                {"params": oe_model.head.parameters(), "lr": cfg.lr * lr_scale},
+            ],
+            weight_decay=cfg.weight_decay,
+        )
+    else:
+        for param in oe_model.encoder.parameters():
+            param.requires_grad = False
+        opt = torch.optim.Adam(oe_model.head.parameters(), lr=cfg.lr * lr_scale,
+                               weight_decay=cfg.weight_decay)
+    known_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
+    unknown_loader = DataLoader(unknown_dataset, batch_size=cfg.batch_size, shuffle=True)
+    criterion = nn.CrossEntropyLoss()
+    for _ in range(epochs):
+        if tune_encoder:
+            oe_model.train()
+        else:
+            oe_model.head.train()
+            oe_model.encoder.eval()
+        for (x_known, y_known), (x_unknown, _) in zip(known_loader, unknown_loader):
+            x_known = x_known.to(device)
+            y_known = y_known.to(device)
+            x_unknown = x_unknown.to(device)
+            known_logits = oe_model(x_known)
+            unknown_logits = oe_model(x_unknown)
+            log_probs = F.log_softmax(unknown_logits, dim=1)
+            uniform = torch.full_like(log_probs, 1.0 / log_probs.shape[1])
+            loss = criterion(known_logits, y_known) + oe_weight * F.kl_div(
+                log_probs, uniform, reduction="batchmean"
+            )
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+    return oe_model
+
+
 @torch.no_grad()
 def extract_embeddings(
     encoder: nn.Module, dataset, device: torch.device
@@ -364,6 +456,57 @@ def extract_embeddings(
         feats.append(z)
         labels.append(y.numpy())
     return np.concatenate(feats, axis=0), np.concatenate(labels, axis=0)
+
+
+@torch.no_grad()
+def _encode_array(encoder: nn.Module, iq: np.ndarray, device: torch.device,
+                  batch_size: int = 256) -> np.ndarray:
+    """Encode a complex IQ array in batches."""
+    feats = []
+    for start in range(0, iq.shape[0], batch_size):
+        x = torch.from_numpy(iq[start:start + batch_size]).to(device)
+        feats.append(encoder(x).cpu().numpy())
+    return np.concatenate(feats, axis=0)
+
+
+@torch.no_grad()
+def extract_embeddings_tta(
+    encoder: nn.Module,
+    iq_samples: np.ndarray,
+    cfg: RFConfig,
+    device: torch.device,
+    k_views: int = 4,
+    seed: Optional[int] = None,
+) -> np.ndarray:
+    """Average L2-normalized embeddings over several augmented views.
+
+    Test-time augmentation smooths noise realization effects, which
+    stabilizes prototype-cosine and Mahalanobis open-set scores at low SNR.
+    With ``k_views=1`` this reduces to encoding a single augmented view.
+    """
+    if k_views < 1:
+        raise ValueError("k_views must be at least 1")
+    iq = np.asarray(iq_samples, dtype=np.complex64)
+    if iq.ndim != 2 or iq.shape[1] <= 0:
+        raise ValueError("iq_samples must have shape [N, T] with T > 0")
+    rng = np.random.default_rng(cfg.seed if seed is None else seed)
+    encoder = encoder.to(device)
+    encoder.eval()
+    aug_kwargs = dict(
+        noise_std=cfg.noise_std,
+        phase_jitter_rad=cfg.phase_jitter_rad,
+        time_shift=cfg.time_shift,
+        cfo_jitter_rad=cfg.cfo_jitter_rad,
+        amplitude_jitter=cfg.amplitude_jitter,
+        aug_prob=cfg.aug_prob,
+    )
+    accumulated = None
+    for _ in range(k_views):
+        views = np.stack([augment_iq(x, rng=rng, **aug_kwargs) for x in iq])
+        embeddings = _encode_array(encoder, views, device).astype(np.float64)
+        embeddings = embeddings / np.maximum(np.linalg.norm(embeddings, axis=1, keepdims=True), 1e-12)
+        accumulated = embeddings if accumulated is None else accumulated + embeddings
+    return accumulated / float(k_views)
 
 
 def run_linear_probe(
@@ -695,6 +838,71 @@ def prototype_scores(
     prototypes /= np.maximum(np.linalg.norm(prototypes, axis=1, keepdims=True), 1e-12)
     query /= np.maximum(np.linalg.norm(query, axis=1, keepdims=True), 1e-12)
     return np.max(query @ prototypes.T, axis=1)
+
+
+def mahalanobis_scores(
+    train_embeddings: np.ndarray,
+    train_labels: np.ndarray,
+    embeddings: np.ndarray,
+    shrinkage: float = 0.1,
+) -> np.ndarray:
+    """Return negative minimum Mahalanobis distance to known-class Gaussians.
+
+    Fits class means and a shared covariance (shrunk toward its diagonal) on
+    the training embeddings. Higher scores indicate greater known-device
+    confidence, matching the orientation of :func:`prototype_scores`.
+    """
+    reference = np.asarray(train_embeddings, dtype=np.float64)
+    labels = np.asarray(train_labels).reshape(-1)
+    query = np.asarray(embeddings, dtype=np.float64)
+    if reference.ndim != 2 or query.ndim != 2 or reference.shape[1] != query.shape[1]:
+        raise ValueError("embedding arrays must be two-dimensional with matching widths")
+    if labels.shape[0] != reference.shape[0] or reference.shape[0] == 0:
+        raise ValueError("train_labels must align with non-empty train_embeddings")
+    if not np.isfinite(reference).all() or not np.isfinite(query).all():
+        raise ValueError("embedding arrays must be finite")
+    if not 0.0 <= shrinkage <= 1.0:
+        raise ValueError("shrinkage must be between 0 and 1")
+    classes = np.unique(labels)
+    means = np.stack([reference[labels == cls].mean(axis=0) for cls in classes])
+    class_index = np.searchsorted(classes, labels)
+    centered = reference - means[class_index]
+    cov = centered.T @ centered / max(reference.shape[0] - 1, 1)
+    cov = (1.0 - shrinkage) * cov + shrinkage * np.diag(np.diag(cov))
+    cov += 1e-6 * np.eye(cov.shape[0])
+    precision = np.linalg.pinv(cov)
+    diff = query[:, None, :] - means[None, :, :]
+    dist2 = np.einsum("ncd,de,nce->nc", diff, precision, diff)
+    return -np.sqrt(np.maximum(dist2, 0.0)).min(axis=1)
+
+
+def knn_scores(
+    train_embeddings: np.ndarray,
+    embeddings: np.ndarray,
+    k: int = 10,
+) -> np.ndarray:
+    """Return mean cosine similarity to the k nearest train embeddings.
+
+    Unlike prototype cosine, kNN scoring respects local, potentially
+    multi-modal cluster structure. Higher scores indicate greater
+    known-device confidence.
+    """
+    reference = np.asarray(train_embeddings, dtype=np.float64)
+    query = np.asarray(embeddings, dtype=np.float64)
+    if reference.ndim != 2 or query.ndim != 2 or reference.shape[1] != query.shape[1]:
+        raise ValueError("embedding arrays must be two-dimensional with matching widths")
+    if reference.shape[0] == 0 or query.shape[0] == 0:
+        raise ValueError("embedding arrays must be non-empty")
+    if not np.isfinite(reference).all() or not np.isfinite(query).all():
+        raise ValueError("embedding arrays must be finite")
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    k = min(k, reference.shape[0])
+    reference = reference / np.maximum(np.linalg.norm(reference, axis=1, keepdims=True), 1e-12)
+    query = query / np.maximum(np.linalg.norm(query, axis=1, keepdims=True), 1e-12)
+    similarity = query @ reference.T
+    top_k = np.partition(similarity, -k, axis=1)[:, -k:]
+    return top_k.mean(axis=1)
 
 
 def calibrate_rejection_threshold(

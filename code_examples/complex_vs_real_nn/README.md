@@ -4,8 +4,8 @@ This workspace now contains two related modules:
 
 - `modulation_classification/` — existing rotation-invariant modulation
   classification project comparing complex-valued and real-valued models.
-- `rf_fingerprinting/` — new SimCLR-style RF fingerprinting project with
-  real vs complex encoder comparisons.
+- `rf_fingerprinting/` — a small TorchSig emitter-identification example
+  comparing real and complex CNNs.
 
 ## Quick Start
 

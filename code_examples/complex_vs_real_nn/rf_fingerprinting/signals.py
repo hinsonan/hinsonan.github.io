@@ -7,7 +7,7 @@ from copy import deepcopy
 
 import numpy as np
 from torchsig.datasets.datasets import TorchSigIterableDataset
-from torchsig.transforms.transforms import CarrierPhaseNoise, IQImbalance, NonlinearAmplifier
+from torchsig.transforms.transforms import CarrierPhaseNoise, NonlinearAmplifier
 from torchsig.utils.defaults import TorchSigDefaults
 
 
@@ -75,15 +75,24 @@ def _generator(length: int, seed: int) -> TorchSigIterableDataset:
     return TorchSigIterableDataset(signal_generators=["qpsk"], seed=seed, **metadata)
 
 
+def apply_iq_imbalance(iq: np.ndarray, gain_db: float, phase_rad: float) -> np.ndarray:
+    """Apply differential I/Q gain and quadrature phase imbalance.
+
+    TorchSig 2.1.1 applies its amplitude setting equally to I and Q. Reciprocal
+    gains make this a true imbalance while avoiding an irrelevant common gain.
+    The resulting real-linear map is equivalently alpha*x + beta*conj(x).
+    """
+    gain_ratio = 10 ** (gain_db / 20.0)
+    i_gain = np.sqrt(gain_ratio)
+    q_gain = 1 / i_gain
+    i = i_gain * iq.real * np.exp(-0.5j * phase_rad)
+    q = q_gain * iq.imag * np.exp(1j * (np.pi / 2 + 0.5 * phase_rad))
+    return (i + q).astype(np.complex64)
+
+
 def _apply_fingerprint(signal, emitter: Emitter, seed: int) -> np.ndarray:
+    signal.data = apply_iq_imbalance(signal.data, emitter.iq_gain_db, emitter.iq_phase_rad)
     transforms = (
-        IQImbalance(
-            amplitude_imbalance=(emitter.iq_gain_db,) * 2,
-            phase_imbalance=(emitter.iq_phase_rad,) * 2,
-            dc_offset_db=(-60.0, -60.0),
-            dc_offset_rads=(0.0, 0.0),
-            seed=seed,
-        ),
         CarrierPhaseNoise(phase_noise_degrees=(emitter.phase_noise_deg,) * 2, seed=seed + 1),
         NonlinearAmplifier(
             gain_range=(1.0, 1.0),

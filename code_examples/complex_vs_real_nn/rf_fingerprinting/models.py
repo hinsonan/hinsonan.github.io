@@ -37,35 +37,88 @@ class RealEncoder(nn.Module):
 
 
 class ComplexConv1d(nn.Module):
-    """Native complex-valued convolution."""
+    """Native complex convolution with optional conjugate processing."""
 
-    def __init__(self, in_channels: int, out_channels: int, kernel: int):
+    def __init__(self, in_channels: int, out_channels: int, kernel: int, widely_linear: bool = False):
         super().__init__()
         scale = 1 / math.sqrt(2 * in_channels * kernel)
         self.weight = nn.Parameter(
             scale * torch.randn(out_channels, in_channels, kernel, dtype=torch.complex64)
         )
+        self.conjugate_weight = (
+            nn.Parameter(scale * torch.randn(out_channels, in_channels, kernel, dtype=torch.complex64))
+            if widely_linear
+            else None
+        )
         self.bias = nn.Parameter(torch.zeros(out_channels, dtype=torch.complex64))
         self.padding = kernel // 2
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return F.conv1d(x, self.weight, self.bias, stride=2, padding=self.padding)
+        output = F.conv1d(x, self.weight, self.bias, stride=2, padding=self.padding)
+        if self.conjugate_weight is not None:
+            output = output + F.conv1d(
+                x.conj(), self.conjugate_weight, stride=2, padding=self.padding
+            )
+        return output
+
+
+class ComplexBatchNorm1d(nn.Module):
+    """Whiten each complex channel using its 2-by-2 I/Q covariance."""
+
+    def __init__(self, channels: int, eps: float = 1e-5, momentum: float = 0.1):
+        super().__init__()
+        self.eps = eps
+        self.momentum = momentum
+        self.register_buffer("running_mean", torch.zeros(channels, dtype=torch.complex64))
+        self.register_buffer("running_covariance", torch.eye(2).repeat(channels, 1, 1))
+        self.weight_rr = nn.Parameter(torch.ones(channels))
+        self.weight_ii = nn.Parameter(torch.ones(channels))
+        self.weight_ri = nn.Parameter(torch.zeros(channels))
+        self.bias = nn.Parameter(torch.zeros(channels, dtype=torch.complex64))
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        if self.training:
+            mean = z.mean(dim=(0, 2))
+            centered = z - mean[None, :, None]
+            pair = torch.stack((centered.real, centered.imag), dim=-1)
+            covariance = torch.einsum("bcli,bclj->cij", pair, pair) / (z.shape[0] * z.shape[2])
+            with torch.no_grad():
+                self.running_mean.lerp_(mean.detach(), self.momentum)
+                self.running_covariance.lerp_(covariance.detach(), self.momentum)
+        else:
+            mean = self.running_mean
+            covariance = self.running_covariance
+            centered = z - mean[None, :, None]
+            pair = torch.stack((centered.real, centered.imag), dim=-1)
+
+        covariance = covariance + self.eps * torch.eye(2, device=z.device)[None]
+        eigenvalues, eigenvectors = torch.linalg.eigh(covariance)
+        inverse_sqrt = eigenvectors @ torch.diag_embed(eigenvalues.rsqrt()) @ eigenvectors.transpose(-2, -1)
+        pair = torch.einsum("cij,bclj->bcli", inverse_sqrt, pair)
+        affine = torch.stack(
+            (
+                torch.stack((self.weight_rr, self.weight_ri), dim=-1),
+                torch.stack((self.weight_ri, self.weight_ii), dim=-1),
+            ),
+            dim=-2,
+        )
+        pair = torch.einsum("cij,bclj->bcli", affine, pair)
+        return torch.complex(pair[..., 0], pair[..., 1]) + self.bias[None, :, None]
 
 
 class ComplexBlock(nn.Module):
     """Complex convolution followed by magnitude-preserving normalization."""
 
-    def __init__(self, in_channels: int, out_channels: int, kernel: int):
+    def __init__(
+        self, in_channels: int, out_channels: int, kernel: int, widely_linear: bool = False
+    ):
         super().__init__()
-        self.conv = ComplexConv1d(in_channels, out_channels, kernel)
-        self.norm = nn.BatchNorm1d(2 * out_channels)
-        self.threshold = nn.Parameter(torch.zeros(out_channels))
+        self.conv = ComplexConv1d(in_channels, out_channels, kernel, widely_linear)
+        self.norm = ComplexBatchNorm1d(out_channels)
+        self.threshold = nn.Parameter(torch.full((out_channels,), -0.1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = self.conv(x)
-        pair = self.norm(torch.cat((z.real, z.imag), dim=1))
-        real, imag = pair.chunk(2, dim=1)
-        z = torch.complex(real, imag)
+        z = self.norm(self.conv(x))
         magnitude = torch.abs(z)
         return F.relu(magnitude + self.threshold[None, :, None]) * z / (magnitude + 1e-8)
 
@@ -77,7 +130,7 @@ class ComplexEncoder(nn.Module):
         super().__init__()
         channels = (20, 30, 40)
         self.features = nn.Sequential(
-            ComplexBlock(1, channels[0], 7),
+            ComplexBlock(1, channels[0], 7, widely_linear=True),
             ComplexBlock(channels[0], channels[1], 5),
             ComplexBlock(channels[1], channels[2], 5),
         )

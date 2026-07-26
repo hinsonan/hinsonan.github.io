@@ -317,7 +317,7 @@ the whole circle removes that collapse but it still does not match the moment mo
 
 At 0 dB and below, all models are at the four-class chance level of 25%.
 
-Some items that are worth pointing out is how some models do better at 10db than 20db. This is due to having the models train at 10db so it has learned that noise pattern better than the others. All the models take a hit at 5db for multiple reasons. The models are trained at 10db for one and 5db is difficult since the signal blends in with the noise.
+A few notes that are worth pointing out is how some models do better at 10db than 20db. This is due to having the models train at 10db so it has learned that noise pattern better than the others. All the models take a hit at 5db for multiple reasons. The models are trained at 10db for one and 5db is difficult since the signal blends in with the noise.
 
 The sweep also shows that rotation invariance and noise robustness are separate
 problems. The moment model is strongest at the 10 dB condition it trained on,
@@ -332,44 +332,22 @@ while the full-rotation real model holds up better at 5 dB.
 ### Explaining the Results
 
 Our hypothesis was that complex models generalize better from less data. The
-results support a sharper version of that claim, and it is worth being precise
-about it.
+results support this but that isn't the full
 
-The win did not come from complex arithmetic by itself. The plain complex model
-managed only 81% mean accuracy, worse in its own training band than the real
-model at 97.1%. What won was **building the symmetry into the architecture**.
-The moment model uses complex layers to construct features whose magnitude does
-not change when the whole burst rotates, so a rotation it has never seen is not
-a new input as far as the classifier is concerned. Complex layers were the
-convenient vehicle for expressing that invariance, not the source of the gain.
+While the complex model performed better at generalization when compared to the real narrow model this does not mean that the complex math was the end all be all. The real gains came from the moment model that built a structure to capture the symmetry. Calculating this phase angles and averaging them helped to provide the best model for generalizing beyond the trained 15 degrees of rotation.
 
-The real narrow model shows the other side of this clearly. It is the best
-model in the world at 0 degrees because that is where it trained. Push it 90
-degrees and it drops to 72.2%; at its worst angle it hits 45.9%. It learned the
-band, not the symmetry, so it has nothing to fall back on outside that band.
-
-This does not mean real models cannot learn these relationships. `real_full`
-proves they can. Show a real model the full circle and its curve flattens out
-completely. But it buys that invariance with data and capacity rather than
-getting it for free from structure, and at 60,964 parameters against the moment
-model's 60,487 it still lands about 26 points lower on mean accuracy. The
-trade-off shows up again at 5 dB, where `real_full` is the strongest model,
-most likely because full-circle augmentation is a broader form of
-regularization than the moment head provides.
+This does not mean a real model trained on the full range of degrees could not also learn this. The full real model does the best at 5db potentially due to be trained on the full degrees. The complex versions are able to generalize with less training and on a smaller degree of rotation.
 
 The SNR sweep is measuring a different axis entirely. Lower SNR makes the
 signal harder to separate from the noise since it blends into it, which is a
-robustness problem rather than a symmetry problem. The two do not have to move
-together, and here they don't.
+robustness problem rather than a symmetry problem.
 
 ### Limitations
 
 Keep in mind that this problem in the real world is harder. Signals come faded, contain frequency offsets, timing offsets, imbalances and more. Our example proves out the idea for how we can better utilize our data and training efficiency by building known symmetries into the model.
 
 This is also a single seed at a single training SNR, and the data is generated
-with TorchSig rather than captured off the air. The 26-point gap between the
-moment model and `real_full` is far too large to be seed noise, but the smaller
-differences in the SNR table should not be read too closely.
+with TorchSig rather than captured off the air.
 
 ## RF Fingerprinting
 
@@ -578,10 +556,7 @@ Both the Real and Complex models contain almost the same amount of params.
 <p><strong>Closed-set confusion matrices.</strong> Rows are the true emitter identities and columns are predicted identities for the held-out captures.</p>
 <img src="{{ '/assets/images/rf_fingerprint_confusion_matrices.png' | relative_url }}" alt="Real and complex CNN confusion matrices for four synthetic RF emitters" style="width:100%;height:auto;border-radius:6px;">
 
-The models performed well at different noise levels. Each point in this sweep
-uses 50 fresh captures per emitter, so 200 samples per cell. That resolution is
-coarse enough that the small gaps between the two models here are not
-meaningful.
+The models also perform well at different noise levels as seen below.
 
 | Model | 6 dB SNR | 10 dB SNR | 14 dB SNR | 18 dB SNR | 22 dB SNR |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -604,9 +579,9 @@ The open-set test used two emitters the models had never seen before. Both model
 
 ### Explaining the Results
 
-For modulation classification the rotation-invariant complex model clearly won. Here the real and complex models are effectively tied, and that difference is the interesting part.
+For modulation classification the rotation-invariant complex model clearly won. Here the real and complex models are effectively tied, and that difference lies in the geometry and task.
 
-The modulation task had a symmetry worth exploiting: a global carrier phase rotation changes the input but not the label. RF fingerprinting has no equivalent. The label is a set of arbitrary device-specific distortions, and there is no clean geometric transformation the architecture can be made invariant to. Without a symmetry to build in, complex layers have no structural advantage left to offer.
+The modulation task had a symmetry worth exploiting: a global carrier phase rotation changes the input but not the label. RF fingerprinting is not the same. The label is a set of arbitrary device-specific distortions, and there is no clean geometric transformation the architecture can be made invariant to. Without a symmetry to build in, complex layers don't offer the help that they did for modulation classification.
 
 - Both models receive the same full IQ waveform. A real CNN can learn relationships between I and Q when they are supplied as two channels.
 - The hardware fingerprints are arbitrary device-specific distortions, not a simple global-rotation symmetry where complex-valued processing has a built-in advantage.
@@ -623,6 +598,10 @@ This experiment only trains on 4 emitters, which is very small, and all of the d
 
 We have taken our knowledge of Wirtinger derivatives and applied them with complex models to test how they compare with real models. The gist of it is that when a problem has a global geometric symmetry, complex layers give you a natural way to build that symmetry into the architecture, and you get generalization the real model has to buy with data. They are not always the best. For fingerprinting there are so many device-specific modifications that you lose that advantage entirely, because there is no global geometric structure left to capture.
 
-The sharper lesson from the modulation experiment is that complex arithmetic on its own was not enough. The plain complex model lost to the real model inside its training band. The gain came from the invariant pooling head built on top of those complex features. Complex layers make that kind of head easy to express, which is the real reason to reach for them.
+The modulation experiment shows that complex arithmetic on its own was not enough. The plain complex model lost to the real model inside its training band. The gain came from the invariant pooling head built on top of those complex features. Complex layers make that kind of head easy to express.
 
-The important part is understanding when a problem actually has a symmetry worth encoding, and recognizing that when it doesn't, a well-built real model will do just fine.
+The important part is understanding when a problem actually has a symmetry worth encoding, and recognizing that when it doesn't, a well-built real model will do fine.
+
+[Modulation Classification Notebook](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/complex_vs_real_nn/modulation_classification/complex_vs_real_nn.ipynb)
+
+[RF Fingerprinting Notebook](https://github.com/hinsonan/hinsonan.github.io/blob/master/code_examples/complex_vs_real_nn/rf_fingerprinting/rf_fingerprint.ipynb)

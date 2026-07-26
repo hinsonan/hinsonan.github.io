@@ -9,10 +9,6 @@ It's time to process some signals and compare "real" neural networks and "comple
 
 The goal now is to test some complex and real models on the same problem and see what happens.
 
-Both experiments in this post are single-seed runs. Treat the large gaps as real
-and the small ones as noise. The code for both lives in
-`code_examples/complex_vs_real_nn/`.
-
 ## Modulation Classification
 
 Our task is to take in received bursts of IQ data. Once we receive these bursts we want to classify them into their modulation.
@@ -26,7 +22,7 @@ The modulations we are looking at is BPSK, QPSK, 8PSK, and 16QAM. These are the 
 
 If you remember from part 1 these rotations are why we want to test some complex layers. We should be able to learn these natural rotational relationships easier with complex layers.
 
-This interactive demo shows the types of signal data we are going to be looking at. The left shows the constellation plot and the right shows the IQ data broken out into in phase and quadrature.
+This interactive plot shows the types of signal data we are going to be looking at. The left shows the constellation plot and the right shows the IQ data broken out into in phase and quadrature.
 
 <div id="modclass-signal-demo" style="max-width:900px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;">
   <canvas id="modclass-signal-canvas" width="860" height="400" style="width:100%;height:auto;display:block;border-radius:6px;background:#10161d;"></canvas>
@@ -170,10 +166,8 @@ This interactive demo shows the types of signal data we are going to be looking 
 
 Our goal is to see if we can only train on a 15 degree rotation band and see if the models generalize after that. There is a real model that is trained on the full rotation degrees just to compare and see what happens.
 
-All four models are capacity-matched. Counted as real scalar parameters they
-land within about 2 percent of each other: 60,487 for the moment model, 61,655
-for the plain complex model, and 60,964 for both real models. Whatever
-differences show up below are not a parameter-count advantage.
+All four models have similar layers and params. 60,487 for the moment model, 61,655
+for the plain complex model, and 60,964 for both real models.
 
 Our models trained on 15 degrees rotation are:
 
@@ -288,10 +282,10 @@ Model trained on the full rotation range:
 
 ### Results
 
-The notebook evaluates each saved checkpoint with a full-circle rotation sweep
+Model checkpoints are evaluated with a full-circle rotation sweep
 in 5 degree steps, a per-modulation rotation sweep, a full-circle SNR sweep,
-and confusion matrices at 0 and 90 degrees. Rotation results use 10 dB SNR and
-2,000 generated test bursts at each angle. SNR results use 4,000 bursts at each
+and confusion matrices at 0 and 90 degrees. Rotations use 10 dB SNR and
+2,000 generated test bursts at each angle. SNR use 4,000 bursts at each
 noise level.
 
 | Model | Training rotations | Accuracy at 0 degrees | Accuracy at 90 degrees | Lowest accuracy across 360 degrees | Mean accuracy across 360 degrees |
@@ -302,15 +296,11 @@ noise level.
 | Real full | +/-180 degrees | 72.0% | 72.2% | 70.6% | 72.0% |
 
 The moment model stays nearly flat over every unseen rotation. The narrow real
-model is the most accurate model of all at 0 degrees, right where it trained,
-and then falls apart as the burst rotates away from that band: 97.1% at 0
+model is most accurate at 0 degrees where it trained,
+and then crumbles as the burst rotates away from that band: 97.1% at 0
 degrees, 72.2% at 90 degrees, and 45.9% at its worst angle. It memorized the
 band it saw instead of learning the symmetry. Training the real model across
-the whole circle removes that collapse and makes its curve flat, but it pays
-for the coverage everywhere, and it still does not match the moment model.
-
-Notice also that the plain complex model sits at 81% flat. Complex layers alone
-did not win this. More on that below.
+the whole circle removes that collapse but it still does not match the moment model.
 
 <p><strong>Overall rotation accuracy.</strong> The notebook evaluates every 5 degrees from -180 to +180 degrees.</p>
 <img src="{{ '/assets/images/modclass_rotation_generalization.png' | relative_url }}" alt="Classification accuracy versus carrier phase rotation for all four models" style="width:100%;height:auto;border-radius:6px;">
@@ -327,13 +317,7 @@ did not win this. More on that below.
 
 At 0 dB and below, all models are at the four-class chance level of 25%.
 
-Two things in this table are worth calling out. First, every model scores
-slightly *worse* at 20 dB than at 10 dB. That is not a mistake. All four models
-were trained at exactly 10 dB, so they are mildly tuned to that specific noise
-level and lose a little when the channel gets cleaner than anything they saw.
-Second, the drop from 10 dB to 5 dB is a cliff rather than a slope, for the
-same reason: 5 dB is well outside the training condition. A model trained
-across a range of SNRs would degrade far more gracefully.
+Some items that are worth pointing out is how some models do better at 10db than 20db. This is due to having the models train at 10db so it has learned that noise pattern better than the others. All the models take a hit at 5db for multiple reasons. The models are trained at 10db for one and 5db is difficult since the signal blends in with the noise.
 
 The sweep also shows that rotation invariance and noise robustness are separate
 problems. The moment model is strongest at the 10 dB condition it trained on,

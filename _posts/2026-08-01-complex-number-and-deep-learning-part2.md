@@ -13,14 +13,14 @@ The goal now is to test some complex and real models on the same problem and see
 
 Our task is to take in received bursts of IQ data. Once we receive these bursts we want to classify them into their modulation.
 
-The modulations we are looking at is BPSK, QPSK, 8PSK, and 16QAM. These are the four class labels we want to try and classify. Signals do not come in clean. In the real world signals will contain a lot of noise. Every signal is rotated and additive white gaussian noise is applied to these signals. These types of rotations are what you would see in the real world and in many cases you would have to deal with many other outside influences.
+The modulations we are looking at are BPSK, QPSK, 8PSK, and 16QAM. These are the four class labels we want to try and classify. Signals do not come in clean. In the real world signals will contain a lot of noise. Every signal is rotated and additive white Gaussian noise is applied to these signals. These types of rotations are what you would see in the real world and in many cases you would have to deal with many other outside influences.
 
 - **BPSK (Binary Phase Shift Keying):** Uses two phase states to represent one bit per symbol. It is a robust choice for weak or noisy links, including satellite and GPS signals.
 - **QPSK (Quadrature Phase Shift Keying):** Uses four phase states to represent two bits per symbol. It is common in satellite communication, cellular systems, and Wi-Fi control channels.
 - **8PSK (8-Phase Shift Keying):** Uses eight phase states to represent three bits per symbol. It increases data rate over QPSK but needs a cleaner channel because its points are closer together.
 - **16QAM (16-Quadrature Amplitude Modulation):** Uses both amplitude and phase to represent four bits per symbol. It is used in higher-throughput Wi-Fi, LTE, 5G, and cable-modem links when signal conditions are good.
 
-If you remember from part 1 these rotations are why we want to test some complex layers. We should be able to learn these natural rotational relationships easier with complex layers.
+If you remember from part 1, these rotations are why we want to test some complex layers. We should be able to learn these natural rotational relationships easier with complex layers. That is the hypothesis. The experiment will show whether complex math alone is enough.
 
 This interactive plot shows the types of signal data we are going to be looking at. The left shows the constellation plot and the right shows the IQ data broken out into in phase and quadrature.
 
@@ -172,7 +172,7 @@ for the plain complex model, and 60,964 for both real models.
 Our models trained on 15 degrees rotation are:
 
 * **Complex:** Processes I and Q together as one complex-valued signal. It learns complex features, then pools their magnitudes so its prediction does not change under one overall signal rotation.
-* **Complex with moments:** Uses the same complex feature extractor, then adds phase moments at orders 2, 4, and 8. A phase moment first ignores a point's distance from the origin and keeps only its angle. It then multiplies that angle by 2, 4, or 8 and averages the result across the burst. Points that repeat at a matching spacing reinforce each other: BPSK has a two-way pattern, QPSK has a four-way pattern, and 8PSK has an eight-way pattern. We keep only the size of that average, so rotating the entire constellation does not change the feature.
+* **Complex with moments:** Uses the same complex feature extractor, then adds phase moments at orders 2, 4, and 8 on the final learned feature maps. This works by taking a point, ignore how far it is from the origin, keep the angle, multiply that angle by 2, 4, or 8, and average across the burst. Points that repeat at a matching spacing reinforce each other: BPSK has a two-way pattern, QPSK has a four-way pattern, and 8PSK has an eight-way pattern. We keep the size of that average, so rotating the entire signal does not change the feature.
 * **Real Value:** Splits the signal into separate I and Q channels and processes them with a standard real-valued convolutional network. It has to learn rotation invariance from the examples it sees.
 
 Model trained on the full rotation range:
@@ -186,7 +186,7 @@ Model trained on the full rotation range:
     <button type="button" data-model="real" style="padding:0.3rem 0.65rem;border:1px solid #666;border-radius:4px;background:transparent;color:#ddd;cursor:pointer;">Split-real</button>
   </div>
   <div id="modclass-architecture-note" style="margin:0 0 0.8rem;color:#b9c7d1;font-size:0.88rem;"></div>
-  <div id="modclass-architecture-flow" style="display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:0.7rem;"></div>
+  <div id="modclass-architecture-flow" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:0.7rem;"></div>
   <p id="modclass-architecture-detail" style="margin:0.75rem 0 0;color:#b9c7d1;font-size:0.9rem;line-height:1.5;"></p>
 </div>
 
@@ -285,8 +285,10 @@ Model trained on the full rotation range:
 Model checkpoints are evaluated with a full-circle rotation sweep
 in 5 degree steps, a per-modulation rotation sweep, a full-circle SNR sweep,
 and confusion matrices at 0 and 90 degrees. Rotations use 10 dB SNR and
-2,000 generated test bursts at each angle. SNR use 4,000 bursts at each
+2,000 generated test bursts at each angle. SNR evaluations use 4,000 bursts at each
 noise level.
+
+<div style="overflow-x:auto;" markdown="1">
 
 | Model | Training rotations | Accuracy at 0 degrees | Accuracy at 90 degrees | Lowest accuracy across 360 degrees | Mean accuracy across 360 degrees |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -295,18 +297,22 @@ noise level.
 | Real narrow | +/-15 degrees | 97.1% | 72.2% | 45.9% | 63.5% |
 | Real full | +/-180 degrees | 72.0% | 72.2% | 70.6% | 72.0% |
 
-The moment model stays nearly flat over every unseen rotation. The narrow real
-model is most accurate at 0 degrees where it trained,
-and then crumbles as the burst rotates away from that band: 97.1% at 0
-degrees, 72.2% at 90 degrees, and 45.9% at its worst angle. It memorized the
-band it saw instead of learning the symmetry. Training the real model across
-the whole circle removes that collapse but it still does not match the moment model.
+</div>
+
+The moment model stays nearly flat over every rotation. The narrow real model
+does well near 0 degrees where it trained, then crumbles outside that band
+and a few symmetry-friendly angles: 97.1% at 0 degrees, 72.2% at 90 degrees,
+and 45.9% at its worst angle. It learned the band it saw instead of learning the
+symmetry. Training the real model across the whole circle removes that collapse
+but it still does not match the moment model.
 
 <p><strong>Overall rotation accuracy.</strong> The notebook evaluates every 5 degrees from -180 to +180 degrees.</p>
 <img src="{{ '/assets/images/modclass_rotation_generalization.png' | relative_url }}" alt="Classification accuracy versus carrier phase rotation for all four models" style="width:100%;height:auto;border-radius:6px;">
 
 <p><strong>Accuracy by modulation type.</strong> These panels show where each modulation contributes to the narrow real model's rotation sensitivity.</p>
 <img src="{{ '/assets/images/modclass_rotation_per_modulation.png' | relative_url }}" alt="Per-modulation classification accuracy versus carrier phase rotation" style="width:100%;height:auto;border-radius:6px;">
+
+<div style="overflow-x:auto;" markdown="1">
 
 | Model | 20 dB SNR | 10 dB SNR | 5 dB SNR | 0 dB SNR |
 | --- | ---: | ---: | ---: | ---: |
@@ -315,9 +321,15 @@ the whole circle removes that collapse but it still does not match the moment mo
 | Real narrow | 57.2% | 62.7% | 29.8% | 25.0% |
 | Real full | 68.5% | 71.5% | **44.6%** | 25.0% |
 
+</div>
+
 At 0 dB and below, all models are at the four-class chance level of 25%.
 
-A few notes that are worth pointing out is how some models do better at 10db than 20db. This is due to having the models train at 10db so it has learned that noise pattern better than the others. All the models take a hit at 5db for multiple reasons. The models are trained at 10db for one and 5db is difficult since the signal blends in with the noise.
+A few notes that are worth pointing out is how some models do better at 10 dB
+than 20 dB. This is because the models were trained at 10 dB, so they match that
+noise level better. All the models take a hit at 5 dB for
+multiple reasons. The models are trained at 10 dB for one, and 5 dB is hard
+since the signal starts blending into the noise.
 
 The sweep also shows that rotation invariance and noise robustness are separate
 problems. The moment model is strongest at the 10 dB condition it trained on,
@@ -331,41 +343,66 @@ while the full-rotation real model holds up better at 5 dB.
 
 ### Explaining the Results
 
-Our hypothesis was that complex models generalize better from less data. The
-results support this but that isn't the full
+My hypothesis was that complex models generalize better from a narrower range
+of rotations. The results support this, but that is not the full picture.
 
-While the complex model performed better at generalization when compared to the real narrow model this does not mean that the complex math was the end all be all. The real gains came from the moment model that built a structure to capture the symmetry. Calculating this phase angles and averaging them helped to provide the best model for generalizing beyond the trained 15 degrees of rotation.
+While the plain complex model generalized better than the real narrow model,
+this does not mean the complex math was the reason for all the gains. Most of our performance is from the moment model that built a way capture the symmetry. Calculating
+those phase moments on the learned features and averaging them gave the best
+model for generalizing beyond the trained 15 degrees of rotation.
 
-This does not mean a real model trained on the full range of degrees could not also learn this. The full real model does the best at 5db potentially due to be trained on the full degrees. The complex versions are able to generalize with less training and on a smaller degree of rotation.
+This does not mean a real model trained on the full range of degrees could not
+also learn this. The full real model does the best at 5 dB in this run. The
+complex versions are able to generalize with a smaller degree of rotation, not
+with fewer examples. They saw the same amount of training data, just over a
+narrower rotation band.
 
-The SNR sweep is measuring a different axis entirely. Lower SNR makes the
+The SNR sweep is measuring a different problem entirely. Lower SNR makes the
 signal harder to separate from the noise since it blends into it, which is a
 robustness problem rather than a symmetry problem.
 
 ### Limitations
 
-Keep in mind that this problem in the real world is harder. Signals come faded, contain frequency offsets, timing offsets, imbalances and more. Our example proves out the idea for how we can better utilize our data and training efficiency by building known symmetries into the model.
+Keep in mind that this problem in the real world is harder. Signals come faded,
+contain frequency offsets, timing offsets, imbalances and more. Our example
+shows how building known symmetries into the model can help you get more out of
+a narrower training rotation range.
 
 This is also a single seed at a single training SNR, and the data is generated
-with TorchSig rather than captured off the air.
+with TorchSig rather than captured over the air (OTA).
 
 ## RF Fingerprinting
 
-The next task we will tackle is a bit more challenging. We will try to do RF fingerprinting, which is where you try to tell which emitter sent the signal. Even if two emitters send the same signal, no manufacturer produces an antenna and apparatus to be exactly the same. They are allowed a margin of error. Our task is to detect the exact emitter that sent a signal even when two emitters send the same message.
+The next task we will tackle is a bit more challenging. We will try to do RF
+fingerprinting, which is where you try to tell which emitter sent the signal.
+Even if two emitters send the same signal, no manufacturer produces an antenna
+and apparatus to be exactly the same. They are allowed a margin of error. Our
+task is to detect the exact emitter that sent a signal even when two emitters
+send the same message.
 
-In this experiment, every emitter sends QPSK. The information in the message is
-not the label. Instead, the label is the small and repeatable distortion added
-by the transmitter hardware: I/Q imbalance, oscillator phase noise, and power
-amplifier nonlinearity. Gain, carrier phase, and channel noise change for every
-received capture, so the classifier must learn the transmitter rather than the
-channel.
+In this experiment, every emitter sends QPSK. The emitter ID is the class
+label, while the message content changes between segments. Each model must
+identify the emitter from repeatable hardware distortions such as I/Q imbalance,
+oscillator phase noise, and power-amplifier nonlinearity.
+
+<div style="overflow-x:auto;" markdown="1">
+
+| Model | Input | Output |
+| --- | --- | --- |
+| Real CNN | One 256-sample IQ capture, split into two real channels: I and Q | Four scores, one for each emitter class |
+| Complex CNN | The same 256-sample IQ capture represented as one complex-valued channel | Four scores, one for each emitter class |
+
+</div>
+
+Gain, carrier phase, and channel noise change for every signal, so the
+classifier has to learn the transmitter rather than the channel.
 
 <div id="rf-fingerprint-demo" style="max-width:960px;margin:1rem auto;padding:0.9rem;border:1px solid #444;border-radius:10px;background:#10161d;color:#ddd;">
   <canvas id="rf-fingerprint-canvas" width="920" height="390" style="width:100%;height:auto;display:block;border-radius:6px;background:#10161d;"></canvas>
   <div style="margin-top:0.7rem;display:flex;gap:0.7rem;flex-wrap:wrap;align-items:center;font-size:0.85rem;">
     <label style="display:flex;gap:0.35rem;align-items:center;">channel phase
-      <input id="rf-fingerprint-phase" type="range" min="-180" max="180" step="5" value="25" style="width:105px;">
-      <span id="rf-fingerprint-phase-value" style="min-width:3.5em;">25°</span>
+      <input id="rf-fingerprint-phase" type="range" min="-3" max="3" step="0.1" value="1.5" style="width:105px;">
+      <span id="rf-fingerprint-phase-value" style="min-width:3.5em;">1.5°</span>
     </label>
     <label style="display:flex;gap:0.35rem;align-items:center;">SNR
       <input id="rf-fingerprint-snr" type="range" min="0" max="30" step="1" value="18" style="width:90px;">
@@ -373,7 +410,7 @@ channel.
     </label>
     <button id="rf-fingerprint-regenerate" type="button" style="padding:0.25rem 0.6rem;border:1px solid #4db0ff;border-radius:4px;background:transparent;color:#4db0ff;cursor:pointer;">new shared message</button>
   </div>
-  <p style="margin:0.65rem 0 0;color:#aaa;font-size:0.82rem;">Both panels begin with the same QPSK symbols. The small, persistent differences are the synthetic transmitter fingerprints; the global rotation and noise are channel effects that change each capture.</p>
+  <p style="margin:0.65rem 0 0;color:#aaa;font-size:0.82rem;">Both panels begin with the same QPSK symbols. The small, persistent differences are the synthetic transmitter fingerprints; the phase rotation and noise are channel effects that change each capture. This demo shows two emitters for clarity. The experiment below uses four.</p>
 </div>
 
 <script>
@@ -496,7 +533,7 @@ channel.
     <button type="button" data-model="real" style="padding:0.3rem 0.65rem;border:1px solid #ff8370;border-radius:4px;background:#3a2523;color:#fff;cursor:pointer;">Real CNN</button>
     <button type="button" data-model="complex" style="padding:0.3rem 0.65rem;border:1px solid #666;border-radius:4px;background:transparent;color:#ddd;cursor:pointer;">Complex CNN</button>
   </div>
-  <div id="rf-fingerprint-architecture-flow" style="display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:0.7rem;"></div>
+  <div id="rf-fingerprint-architecture-flow" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:0.7rem;"></div>
 </div>
 
 <script>
@@ -546,27 +583,37 @@ channel.
 
 ### Results
 
-Both the Real and Complex models contain almost the same amount of params.
+Both the real and complex models contain almost the same amount of params.
+
+<div style="overflow-x:auto;" markdown="1">
 
 | Model | Real scalar parameters | Test accuracy | Worst-emitter accuracy |
 | --- | ---: | ---: | ---: |
 | Real CNN | 34,476 | 100.0% | 100.0% |
 | Complex CNN | 34,964 | 99.8% | 99.2% |
 
+</div>
+
 <p><strong>Closed-set confusion matrices.</strong> Rows are the true emitter identities and columns are predicted identities for the held-out captures.</p>
 <img src="{{ '/assets/images/rf_fingerprint_confusion_matrices.png' | relative_url }}" alt="Real and complex CNN confusion matrices for four synthetic RF emitters" style="width:100%;height:auto;border-radius:6px;">
 
 The models also perform well at different noise levels as seen below.
+
+<div style="overflow-x:auto;" markdown="1">
 
 | Model | 6 dB SNR | 10 dB SNR | 14 dB SNR | 18 dB SNR | 22 dB SNR |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Real CNN | 98.0% | 100.0% | 100.0% | 100.0% | 100.0% |
 | Complex CNN | 96.5% | 99.5% | 99.5% | 100.0% | 100.0% |
 
+</div>
+
 <p><strong>Noise sweep.</strong> The trained models are evaluated on newly generated captures at each SNR without retraining.</p>
 <img src="{{ '/assets/images/rf_fingerprint_snr_sweep.png' | relative_url }}" alt="RF fingerprinting accuracy at different signal-to-noise ratios for real and complex CNNs" style="width:100%;height:auto;border-radius:6px;">
 
-The open-set test used two emitters the models had never seen before. Both models scored similar and the complex model just edged out a higher score, but not enough to draw any major conclusions.
+The open-set test used two emitters the models had never seen before. Both
+models scored similar and the complex model just edged out a higher score, but
+not enough to draw any major conclusions.
 
 | Model | Unknown-emitter AUROC |
 | --- | ---: |
@@ -579,9 +626,17 @@ The open-set test used two emitters the models had never seen before. Both model
 
 ### Explaining the Results
 
-For modulation classification the rotation-invariant complex model clearly won. Here the real and complex models are effectively tied, and that difference lies in the geometry and task.
+For modulation classification the moment model clearly won. Here the real and
+complex models are effectively tied, and that difference lies in the geometry
+and task.
 
-The modulation task had a symmetry worth exploiting: a global carrier phase rotation changes the input but not the label. RF fingerprinting is not the same. The label is a set of arbitrary device-specific distortions, and there is no clean geometric transformation the architecture can be made invariant to. Without a symmetry to build in, complex layers don't offer the help that they did for modulation classification.
+The modulation task had a symmetry worth squeezing all that juice out of: a global carrier phase
+rotation changes the input but not the label. RF fingerprinting is not the same.
+The label is the emitter ID. The hardware distortions are the clues used to
+identify that emitter. Gain, phase, and noise still change every capture, but
+there is no geometric trick that captures all the device-specific
+crap in this setup. Without that kind of symmetry, complex layers
+do not offer the same help they did for modulation classification.
 
 - Both models receive the same full IQ waveform. A real CNN can learn relationships between I and Q when they are supplied as two channels.
 - The hardware fingerprints are arbitrary device-specific distortions, not a simple global-rotation symmetry where complex-valued processing has a built-in advantage.
@@ -590,13 +645,32 @@ The modulation task had a symmetry worth exploiting: a global carrier phase rota
 
 ### Limitations
 
-This RF fingerprint example is heavily simplified compared to the real world. This problem may show a different story if we took the time to make it more intricate and more realistic. RF fingerprinting is challenging and there are many ways to scale this experiment to include more distortions and expand the open and closed set of emitters.
+This RF fingerprint example is heavily simplified compared to the real world.
+This problem may show a different story if we took the time to make it more
+intricate and more realistic. RF fingerprinting is challenging and there are
+many ways to scale this experiment to include more distortions and expand the
+open and closed set of emitters.
 
-This experiment only trains on 4 emitters, which is very small, and all of the data is synthetic, generated with `torchsig`. Real emitters will not play as neat and tidy as our examples. There are real RF fingerprinting datasets out there, but for this blog post we emulated the problem instead. There are many distortions we have not applied, and no doppler shifting or frequency offsets. These results are here to show that complex models are not automatically better than real models. You have to understand the problem and know when to reach for them.
+This experiment only trains on 4 emitters, which is very small, and all of the
+data is synthetic, generated with `torchsig`. Real emitters will not play as
+neat and tidy as our examples. There are real RF fingerprinting datasets out
+there, but for this blog post we emulated the problem instead. There are many
+distortions we have not applied, and no Doppler shifting or frequency offsets.
+This is also a single run, the open-set test only has two unknown emitters, and
+the gaps between models are tiny. These results are here to show that complex
+models are not automatically better than real models. You have to understand
+the problem and know when to reach for them.
 
 ## Conclusion
 
-We have taken our knowledge of Wirtinger derivatives and applied them with complex models to test how they compare with real models. The gist of it is that when a problem has a global geometric symmetry, complex layers give you a natural way to build that symmetry into the architecture, and you get generalization the real model has to buy with data. They are not always the best. For fingerprinting there are so many device-specific modifications that you lose that advantage entirely, because there is no global geometric structure left to capture.
+We have taken our knowledge of Wirtinger derivatives and applied them with
+complex models to test how they compare with real models. The gist of it is
+that when a problem has a global geometric symmetry, complex layers give you a
+natural way to build that symmetry into the architecture. In this experiment
+that meant generalizing from a narrower rotation range instead of needing full
+circle augmentation. They are not always the best. For fingerprinting there are
+so many device-specific modifications that you lose that advantage, because
+there is no single clean geometric structure left to capture.
 
 The modulation experiment shows that complex arithmetic on its own was not enough. The plain complex model lost to the real model inside its training band. The gain came from the invariant pooling head built on top of those complex features. Complex layers make that kind of head easy to express.
 

@@ -15,10 +15,16 @@ Our task is to take in received bursts of IQ data. Once we receive these bursts 
 
 The modulations we are looking at are BPSK, QPSK, 8PSK, and 16QAM. These are the four class labels we want to try and classify. Signals do not come in clean. In the real world signals will contain a lot of noise. Every signal is rotated and additive white Gaussian noise is applied to these signals. These types of rotations are what you would see in the real world and in many cases you would have to deal with many other outside influences.
 
-- **BPSK (Binary Phase Shift Keying):** Uses two phase states to represent one bit per symbol. It is a robust choice for weak or noisy links, including satellite and GPS signals.
-- **QPSK (Quadrature Phase Shift Keying):** Uses four phase states to represent two bits per symbol. It is common in satellite communication, cellular systems, and Wi-Fi control channels.
-- **8PSK (8-Phase Shift Keying):** Uses eight phase states to represent three bits per symbol. It increases data rate over QPSK but needs a cleaner channel because its points are closer together.
-- **16QAM (16-Quadrature Amplitude Modulation):** Uses both amplitude and phase to represent four bits per symbol. It is used in higher-throughput Wi-Fi, LTE, 5G, and cable-modem links when signal conditions are good.
+<div style="overflow-x:auto;" markdown="1">
+
+| Modulation | Phase states | Bits per symbol | Use Cases |
+| --- | ---: | ---: | --- |
+| **BPSK** (Binary Phase Shift Keying) | 2 | 1 | Satellite links, GPS, and other weak or noisy links that need a robust signal. |
+| **QPSK** (Quadrature Phase Shift Keying) | 4 | 2 | Satellite communication, cellular systems, and Wi-Fi control channels. |
+| **8PSK** (8-Phase Shift Keying) | 8 | 3 | Higher-data-rate links where the channel is clean enough for the crowded constellation. |
+| **16QAM** (16-Quadrature Amplitude Modulation) | 16 | 4 | High-throughput Wi-Fi, LTE, 5G, and cable-modem links when signal conditions are good. |
+
+</div>
 
 If you remember from part 1, these rotations are why we want to test some complex layers. We should be able to learn these natural rotational relationships easier with complex layers. That is the hypothesis. The experiment will show whether complex math alone is enough.
 
@@ -331,10 +337,6 @@ noise level better. All the models take a hit at 5 dB for
 multiple reasons. The models are trained at 10 dB for one, and 5 dB is hard
 since the signal starts blending into the noise.
 
-The sweep also shows that rotation invariance and noise robustness are separate
-problems. The moment model is strongest at the 10 dB condition it trained on,
-while the full-rotation real model holds up better at 5 dB.
-
 <p><strong>Noise sweep.</strong> Each point uses rotations uniformly distributed across the full circle.</p>
 <img src="{{ '/assets/images/modclass_snr_sweep.png' | relative_url }}" alt="Full-circle modulation classification accuracy at different SNR values" style="width:100%;height:auto;border-radius:6px;">
 
@@ -344,7 +346,7 @@ while the full-rotation real model holds up better at 5 dB.
 ### Explaining the Results
 
 My hypothesis was that complex models generalize better from a narrower range
-of rotations. The results support this, but that is not the full picture.
+of rotations. The results support this (I was finally right but also kind of wrong), but that is not the full picture.
 
 While the plain complex model generalized better than the real narrow model,
 this does not mean the complex math was the reason for all the gains. Most of our performance is from the moment model that built a way capture the symmetry. Calculating
@@ -626,7 +628,7 @@ not enough to draw any major conclusions.
 
 ### Explaining the Results
 
-For modulation classification the moment model clearly won. Here the real and
+For modulation classification the moment model clearly blasted its way to victory. The real and
 complex models are effectively tied, and that difference lies in the geometry
 and task.
 
@@ -638,10 +640,10 @@ there is no geometric trick that captures all the device-specific
 crap in this setup. Without that kind of symmetry, complex layers
 do not offer the same help they did for modulation classification.
 
-- Both models receive the same full IQ waveform. A real CNN can learn relationships between I and Q when they are supplied as two channels.
-- The hardware fingerprints are arbitrary device-specific distortions, not a simple global-rotation symmetry where complex-valued processing has a built-in advantage.
-- Differential I/Q imbalance has a conjugate structure that the complex model can represent directly, but a sufficiently capable real CNN can represent the same transformation.
-- Both models are capacity-matched at roughly 34.5k real scalar parameters, and this controlled 4-emitter task is close to an accuracy ceiling, so there is little headroom for either to separate.
+- Both models see the exact same IQ waveform. Hand a real CNN I and Q as two channels and it figures out the relationship between them.
+- These fingerprints are random device-specific garbage, not a clean rotation symmetry. Complex layers have a built-in edge for rotations; here they have nothing special to grab onto.
+- The I/Q imbalance does have a conjugate structure the complex model can write down directly. But a real CNN with enough capacity can learn the same transform, it just has to grind it out of the data.
+- Both models sit at roughly 34.5k params, and with only 4 emitters everyone is near perfect anyway. No headroom left for either one to separate.
 
 ### Limitations
 
@@ -654,8 +656,10 @@ open and closed set of emitters.
 This experiment only trains on 4 emitters, which is very small, and all of the
 data is synthetic, generated with `torchsig`. Real emitters will not play as
 neat and tidy as our examples. There are real RF fingerprinting datasets out
-there, but for this blog post we emulated the problem instead. There are many
-distortions we have not applied, and no Doppler shifting or frequency offsets.
+there, but for this blog post we emulated the problem instead. 
+
+There are many
+distortions we have not applied, and no doppler shifting or frequency offsets.
 This is also a single run, the open-set test only has two unknown emitters, and
 the gaps between models are tiny. These results are here to show that complex
 models are not automatically better than real models. You have to understand

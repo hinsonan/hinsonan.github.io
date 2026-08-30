@@ -43,3 +43,28 @@ This whole idea washes over all the work that people have done. The people sayin
 
 I understand the sentiment but it's just not true. It is only true if you are doing something you have done before and know how to do. Yes these models can generate code faster than I can type. This is useful for many things but this idea that the job was never about coding or coding was the easy part is not true.
 
+Imagine if an artist said it was never about the paint or brush it's about how the painting looks...How you going to make the painting without thinking about the paint and brush? I swear our industry deserves to be culled. Maybe these layoffs are justified and the real reason is as a whole we have lost our minds.
+
+## Software Factories ran by Stupid People
+
+We are going lights out dark thirty on our super smart automated software factories where you only turn the lights on for a quick glance and then let the agents works and automate the entire programming/architecture of a product. This is the new buzz term. We are making labor camps for our agents to work in 24/7.
+
+The only issue is these factories are glued together and on fire. The worst part is they are being built to create garbage. I can't wait for the next Jira clone from your super impressive factory. Or maybe you are extra meta and your factory is building and maintaining other factories. You are a very smart human and making great choices in life.
+
+All this work just to not read...
+
+Surely we can be like other fields and design strict test frameworks so this can be possible? Let's check up on how the man who wrote the book Clean Code is handling this.
+
+Uncle Bob needs no introduction and has shaped many peoples opinions on programming. This is not a clean code rant so I will not be getting into that. Instead he has tried very hard to stop reading the code and use elaborate testing methods to control these agents.
+
+Agents are chaos and have fatal flaws in their design that make it very hard to work with in code bases. They can be helpful and extremely frustrating. So Uncle Bob has claimed that if you write all the tests known to man then agents will obey and you can get good results.
+
+<blockquote class="twitter-tweet" data-theme="dark"><p lang="en" dir="ltr">Neither. I don’t read the code AI produces, and I test and constrain it so thoroughly that I don’t have to pray.</p>&mdash; Uncle Bob Martin (@unclebobmartin) <a href="https://x.com/unclebobmartin/status/2079905095890637058?ref_src=twsrc%5Etfw">July 22, 2026</a></blockquote> <script async src="https://platform.x.com/widgets.js" charset="utf-8"></script>
+
+<blockquote class="twitter-tweet" data-theme="dark"><p lang="en" dir="ltr">My agents write the unit tests. I don&#39;t read them. The agents write the gherkin, and I read or spot check them. The agents write the QA procedures and I either read or spot check them.</p>&mdash; Uncle Bob Martin (@unclebobmartin) <a href="https://x.com/unclebobmartin/status/2082856671823450482?ref_src=twsrc%5Etfw">July 30, 2026</a></blockquote> <script async src="https://platform.x.com/widgets.js" charset="utf-8"></script>
+
+Now I will be fair and say he admits this is a ton of work to even attempt this. We can't read the code so we gotta let the tests try to make sure things are working because reading is hard. Also the AI writing tests for the code it wrote is many times not great.
+
+If anyone could pull this off then it is Uncle Bob. If there is a man on this planet to make a software factory then he might be the best candidate to try. There are some positives to this. We should be trying to make good testing frameworks that give us confidence that the systems we build are working in the way be expect them too. Testing just tells me that the system is not breaking in the ways I would expect it to break.
+
+The reason this doesn't work in 2026 is because there is no amount of testing to stop the fatal flaw of token generation for models that do not have any world state or encoded world space to play in. LLMs are not world models (some debate this) at least not a mature world. Until LLMs have a world model and state space to see into branching futures then the software factories will always collapse.

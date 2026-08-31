@@ -127,4 +127,6 @@ Now is the time to do the opposite of what others are saying. Embrace the chaos 
 
 ## Conclusion
 
-LEARN TO READ AND UNDERSTAND
+Programming with agents in 2026 requires even more knowledge than before in some ways. You have to understand how systems are built and interact. You have to think faster and harder about your decisions and be able to wrangle and run a few different implementations to see the best one. You have to be intimate and work hard to build anything with multiple agents.
+
+There may be a time in the future where we don't need to be as intimate and I think many people like Boris have done a good job in forcing people to see their vision. The vision is not reality in 2026. You need to wield these tools like a warrior and command them in the battlefield. You have to check their work and decisions. You can create wonderful new things as long as you put in the effort to learn and grow. Use agents as little or as much as you like but please **READ THE CODE AND MAKE IT BETTER**.

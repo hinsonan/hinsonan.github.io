@@ -59,9 +59,11 @@
   }
 }
 
-.post-card h3 {
+.post-card h2 {
   margin-top: 0;
   margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  line-height: 1.25;
   
   .post-link {
     text-decoration: none;
@@ -101,7 +103,7 @@
   .post-card {
     color: #e1e1e1;
     
-    h3 .post-link {
+    h2 .post-link {
       color: #e1e1e1;
       
       &:hover {
@@ -225,5 +227,142 @@
     tbody td:first-child {
       min-width: 100px;
     }
+  }
+}
+// Post topic label, series, related posts, and topic index page
+.post-topic-label {
+  display: inline-block;
+  margin-bottom: 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #2a7ae4;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.post-series {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 4px solid #2a7ae4;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  margin: 0 0 2rem;
+
+  .post-series-title {
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  ol {
+    margin: 0 0 0 1.25rem;
+  }
+}
+
+.post-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--card-border);
+}
+
+.related-posts {
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+  }
+
+  li {
+    margin-bottom: 1rem;
+
+    a {
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.post-source {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.taxonomy-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+
+  a {
+    text-decoration: none;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    font-size: 0.85rem;
+  }
+}
+
+.taxonomy-group {
+  margin-bottom: 2rem;
+
+  h2 {
+    scroll-margin-top: 1rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+  }
+
+  li {
+    margin-bottom: 0.75rem;
+
+    p {
+      margin: 0.2rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.taxonomy-date {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-left: 0.4rem;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+[data-theme="dark"] {
+  .post-topic-label {
+    color: #4da3ff;
+  }
+
+  .post-series {
+    border-left-color: #4da3ff;
+  }
+}
+
+.post-topic-inline {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
   }
 }

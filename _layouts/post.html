@@ -1,0 +1,76 @@
+---
+layout: default
+---
+<article class="post h-entry">
+
+  <header class="post-header">
+    {%- if page.topic %}
+    {%- assign topic_slug = page.topic | slugify %}
+    <a class="post-topic-label" href="{{ '/topics/' | relative_url }}#{{ topic_slug }}">{{ page.topic }}</a>
+    {%- endif %}
+    <h1 class="post-title p-name">{{ page.title | escape }}</h1>
+    <p class="post-meta">
+      {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+      <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: date_format }}</time>
+      {%- if page.last_modified_at %}
+        • Updated <time class="dt-updated" datetime="{{ page.last_modified_at | date_to_xmlschema }}">{{ page.last_modified_at | date: date_format }}</time>
+      {%- endif %}
+      {%- if page.author %}
+        • <span class="p-author h-card">{{ page.author }}</span>
+      {%- endif %}
+      {%- assign words = content | strip_html | number_of_words %}
+      • {{ words | divided_by: 230 | at_least: 1 }} min read
+    </p>
+  </header>
+
+  {%- if page.series %}
+  {%- assign series_posts = site.posts | where: "series", page.series | reverse %}
+  <nav class="post-series" aria-label="Series">
+    <p class="post-series-title">Series: {{ page.series }}</p>
+    <ol>
+      {%- for p in series_posts %}
+      <li>{% if p.url == page.url %}<strong>{{ p.title }}</strong>{% else %}<a href="{{ p.url | relative_url }}">{{ p.title }}</a>{% endif %}</li>
+      {%- endfor %}
+    </ol>
+  </nav>
+  {%- endif %}
+
+  <div class="post-content e-content">
+    {{ content }}
+  </div>
+
+  <footer class="post-footer">
+    {%- assign related = "" | split: "" %}
+    {%- for p in site.posts %}
+      {%- if p.url == page.url %}{% continue %}{% endif %}
+      {%- if page.series and p.series == page.series %}{% continue %}{% endif %}
+      {%- if page.topic and p.topic == page.topic %}
+        {%- assign related = related | push: p %}
+      {%- endif %}
+    {%- endfor %}
+    {%- if related.size > 0 %}
+    <section class="related-posts">
+      <h2>Related posts</h2>
+      <ul>
+        {%- for p in related limit: 3 %}
+        <li>
+          <a href="{{ p.url | relative_url }}">{{ p.title | escape }}</a>
+          {%- if p.description %}<p>{{ p.description | escape }}</p>{% endif %}
+        </li>
+        {%- endfor %}
+      </ul>
+    </section>
+    {%- endif %}
+
+    <p class="post-source">
+      <a href="https://github.com/{{ site.github_username }}/{{ site.github_username }}.github.io/blob/master/{{ page.path }}">View this post's markdown source</a>
+      • <a href="{{ '/feed.xml' | relative_url }}">Subscribe via RSS</a>
+    </p>
+  </footer>
+
+  {%- if site.disqus.shortname -%}
+    {%- include disqus_comments.html -%}
+  {%- endif -%}
+
+  <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+</article>

@@ -2,7 +2,12 @@
 layout: post
 title: "A Well Balanced Dataset Doesn't Exist: Handling Imbalances in Data"
 date: 2025-07-25
+last_modified_at: 2026-10-31
 categories: ML
+topic: Machine Learning
+description: "Handling imbalanced datasets with undersampling, oversampling, SMOTE, and combined methods, using a credit card fraud dataset and imbalanced-learn."
+image: /assets/images/social/data-imbalances.png
+math: true
 ---
 
 They say a well balanced diet is healthy but all I see are fat people. This is how I feel when all your textbooks and classrooms give you this nice clean dataset to start with. This does not happen often in the real world. Let's address some ways to handle imbalances.
@@ -115,9 +120,9 @@ The correlation coefficient has these important characteristics:
 
 Here are plots showing top 10 correlations and correlations of every feature.
 
-![top10](/assets/images/top_10_correlations.png)
+![Bar chart of the 10 features most correlated with the fraud class in the credit card dataset](/assets/images/top_10_correlations.png)
 
-![correlations](/assets/images/correlations.png)
+![Correlation heatmap of every feature in the credit card fraud dataset](/assets/images/correlations.png){: loading="lazy"}
 
 Based on these plots features `V14` and `V17` have the highest correlation with the fraud class
 
@@ -141,9 +146,9 @@ The two easiest ways are random oversampling and random undersampling.
 
 Both of these methods can be tuned to where you do not have to have a perfect balance. Let's apply these to our dataset and see what happens
 
-![over_under_sampling](/assets/images/over_under_sampling.png)
+![Class counts after random undersampling and random oversampling of the fraud dataset](/assets/images/over_under_sampling.png){: loading="lazy"}
 
-![over_under_comparison](/assets/images/over_under_comparisons.png)
+![Comparison of model results trained on original, undersampled, and oversampled data](/assets/images/over_under_comparisons.png){: loading="lazy"}
 
 
 ```markdown
@@ -219,9 +224,9 @@ Duplication strategies have their issues and this method can be a great tool to 
 
 In order to help visualize this I will use PCA to reduce this dataset down to two features just so it appears neatly on a plot. You could choose only 2 or 3 of the features to plot but when you run PCA with two components the plot looks nice and you can see the effects of SMOTE
 
-![SMOTE_DATA](/assets/images/smote_comparison.png)
+![PCA scatter plot of the fraud dataset before and after SMOTE oversampling](/assets/images/smote_comparison.png){: loading="lazy"}
 
-![SMOTE_FEATURE_COMPARISON](/assets/images/smote_features.png)
+![Feature distributions of real and SMOTE-generated synthetic fraud samples](/assets/images/smote_features.png){: loading="lazy"}
 
 ```
 === TOP 5 FEATURES WITH LARGEST DIFFERENCES ===

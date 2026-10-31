@@ -3,6 +3,10 @@ layout: post
 title: "Complex Numbers and Deep Learning Part 2"
 date: 2026-08-01
 categories: ML
+topic: Signal Processing
+series: Complex Numbers and Deep Learning
+description: "Complex-valued versus real-valued neural networks on modulation classification and RF fingerprinting, with results and when complex layers help."
+image: /assets/images/social/complex-number-and-deep-learning-part2.png
 ---
 
 It's time to process some signals and compare "real" neural networks and "complex" neural networks. First off let's explain what in the world we are going to attempt. [Part 1]({% post_url 2026-07-01-complex-number-and-deep-learning-part1 %}) was all about setting up the foundation for how complex numbers work. We learned how to use Wirtinger derivatives to backprop and train models. We learned that complex layers should be able to capture rotations and natural relationships a bit more efficiently than real numbers.
@@ -313,10 +317,10 @@ symmetry. Training the real model across the whole circle removes that collapse
 but it still does not match the moment model.
 
 <p><strong>Overall rotation accuracy.</strong> The notebook evaluates every 5 degrees from -180 to +180 degrees.</p>
-<img src="{{ '/assets/images/modclass_rotation_generalization.png' | relative_url }}" alt="Classification accuracy versus carrier phase rotation for all four models" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/modclass_rotation_generalization.png' | relative_url }}" alt="Classification accuracy versus carrier phase rotation for all four models" style="width:100%;height:auto;border-radius:6px;">
 
 <p><strong>Accuracy by modulation type.</strong> These panels show where each modulation contributes to the narrow real model's rotation sensitivity.</p>
-<img src="{{ '/assets/images/modclass_rotation_per_modulation.png' | relative_url }}" alt="Per-modulation classification accuracy versus carrier phase rotation" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/modclass_rotation_per_modulation.png' | relative_url }}" alt="Per-modulation classification accuracy versus carrier phase rotation" style="width:100%;height:auto;border-radius:6px;">
 
 <div style="overflow-x:auto;" markdown="1">
 
@@ -338,10 +342,10 @@ multiple reasons. The models are trained at 10 dB for one, and 5 dB is hard
 since the signal starts blending into the noise.
 
 <p><strong>Noise sweep.</strong> Each point uses rotations uniformly distributed across the full circle.</p>
-<img src="{{ '/assets/images/modclass_snr_sweep.png' | relative_url }}" alt="Full-circle modulation classification accuracy at different SNR values" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/modclass_snr_sweep.png' | relative_url }}" alt="Full-circle modulation classification accuracy at different SNR values" style="width:100%;height:auto;border-radius:6px;">
 
 <p><strong>Confusion matrices.</strong> Rows are true modulation labels and columns are predicted labels. The 90 degree column is outside the narrow training band.</p>
-<img src="{{ '/assets/images/modclass_confusion_in_vs_ood.png' | relative_url }}" alt="Confusion matrices comparing in-distribution and out-of-distribution carrier-phase rotations" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/modclass_confusion_in_vs_ood.png' | relative_url }}" alt="Confusion matrices comparing in-distribution and out-of-distribution carrier-phase rotations" style="width:100%;height:auto;border-radius:6px;">
 
 ### Explaining the Results
 
@@ -572,7 +576,7 @@ classifier has to learn the transmitter rather than the channel.
 - **Test split:** 120 held-out captures per emitter, 480 total, at 20 dB SNR.
 
 <p><strong>Hardware-impaired constellations.</strong> Two of the four emitters. The same QPSK waveform develops different point-cloud shapes after each emitter's fixed hardware effects and capture variation.</p>
-<img src="{{ '/assets/images/rf_fingerprint_constellations.png' | relative_url }}" alt="Constellations from two synthetic QPSK emitters with different hardware fingerprints" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/rf_fingerprint_constellations.png' | relative_url }}" alt="Constellations from two synthetic QPSK emitters with different hardware fingerprints" style="width:100%;height:auto;border-radius:6px;">
 
 #### Training Params
 
@@ -597,7 +601,7 @@ Both the real and complex models contain almost the same amount of params.
 </div>
 
 <p><strong>Closed-set confusion matrices.</strong> Rows are the true emitter identities and columns are predicted identities for the held-out captures.</p>
-<img src="{{ '/assets/images/rf_fingerprint_confusion_matrices.png' | relative_url }}" alt="Real and complex CNN confusion matrices for four synthetic RF emitters" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/rf_fingerprint_confusion_matrices.png' | relative_url }}" alt="Real and complex CNN confusion matrices for four synthetic RF emitters" style="width:100%;height:auto;border-radius:6px;">
 
 The models also perform well at different noise levels as seen below.
 
@@ -611,7 +615,7 @@ The models also perform well at different noise levels as seen below.
 </div>
 
 <p><strong>Noise sweep.</strong> The trained models are evaluated on newly generated captures at each SNR without retraining.</p>
-<img src="{{ '/assets/images/rf_fingerprint_snr_sweep.png' | relative_url }}" alt="RF fingerprinting accuracy at different signal-to-noise ratios for real and complex CNNs" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/rf_fingerprint_snr_sweep.png' | relative_url }}" alt="RF fingerprinting accuracy at different signal-to-noise ratios for real and complex CNNs" style="width:100%;height:auto;border-radius:6px;">
 
 The open-set test used two emitters the models had never seen before. Both
 models scored similar and the complex model just edged out a higher score, but
@@ -623,7 +627,7 @@ not enough to draw any major conclusions.
 | Complex CNN | 0.699 |
 
 <p><strong>Learned embeddings.</strong> The 64-value encoder outputs are projected to two dimensions with PCA; color identifies the true emitter.</p>
-<img src="{{ '/assets/images/rf_fingerprint_embeddings.png' | relative_url }}" alt="PCA projections of real and complex RF fingerprint encoder embeddings" style="width:100%;height:auto;border-radius:6px;">
+<img loading="lazy" src="{{ '/assets/images/rf_fingerprint_embeddings.png' | relative_url }}" alt="PCA projections of real and complex RF fingerprint encoder embeddings" style="width:100%;height:auto;border-radius:6px;">
 
 
 ### Explaining the Results

@@ -3,6 +3,9 @@ layout: post
 title: "Roller Coaster Tycoon: Program Control Flow"
 date: 2025-07-16 11:30:00 -0500
 categories: tech
+topic: Software Engineering
+description: "Deep abstraction layers make code hard to follow. How to keep program control flow readable, testable, and easy for teammates to change."
+image: /assets/images/social/roller-coaster-tycoon-program-control-flow.png
 ---
 
 You just got done sprint planning and you feel depressed. The boss needs this new feature cranked out on the pronto so you get busy. You get your coffee and open up your editor only to be confused on where to begin coding. You thought this system would be quick to figure out for the team knew roughly where to begin but alas it's up to you to figure it all out again. This is the 900th maze you have had to navigate this year.

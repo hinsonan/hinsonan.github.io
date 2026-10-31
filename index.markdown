@@ -1,6 +1,6 @@
 ---
-# Feel free to add content and custom Front Matter to this file.
-# To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
-
 layout: home
+title: "Machine Learning, GPU Programming, and Software Engineering"
+heading: "Latest posts"
+description: "Gradient Rage is a blog about machine learning, GPU programming in Python, and software engineering, with real code, benchmarks, and honest opinions."
 ---

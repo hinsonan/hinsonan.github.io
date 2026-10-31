@@ -3,6 +3,9 @@ layout: post
 title: "Object Oriented Programming: The 4 Flimsy Pillars"
 date: 2025-08-02
 categories: ML
+topic: Software Engineering
+description: "The 4 pillars of OOP are not unique to OOP. Encapsulation, inheritance, polymorphism, and abstraction compared with C, composition, and ECS."
+image: /assets/images/social/object-oriented-programming-4-pillars.png
 ---
 
 This will be a quick dive into how everything these ivory tower professors taught you is false about OOP. Most professors in CS departments beat it into your head that these 4 pillars of OOP opened the third eye of programmers and allowed for programming to change and become the way to design systems and solve problems.

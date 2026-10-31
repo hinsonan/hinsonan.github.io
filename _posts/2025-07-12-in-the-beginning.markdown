@@ -3,6 +3,9 @@ layout: post
 title: "Welcome to Gradient Rage and the World of ML/Software Insanity"
 date: 2025-07-12 14:30:00 -0500
 categories: introduction
+topic: Introduction
+description: "Why this blog exists: the gap between ML research and real software, why ML work is hard to estimate, and the topics Gradient Rage will cover."
+image: /assets/images/social/in-the-beginning.png
 ---
 
 Another day, another standup, another new JavaScript library, another broken agent-based framework, another non-existing dataset, another failed training experiment. This is the world we live in. At times this industry feels like a complete mess, other times you hit your stride and feel like a problem-solving guru. We are going to learn how to become better at our skills as we navigate this crazy world.

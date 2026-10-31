@@ -2,7 +2,13 @@
 layout: post
 title: "GPU Programming in Python Part 1: Who is this CUDA you speak of"
 date: 2025-10-24
+last_modified_at: 2026-10-31
 categories: ML
+topic: GPU Programming
+series: GPU Programming in Python
+description: "Run Python on the GPU with CuPy and Numba. Benchmarks of CuPy against NumPy and SciPy, and writing custom CUDA kernels with Numba."
+image: /assets/images/social/gpu-programming-in-python-part-1.png
+mermaid: true
 ---
 
 We all know Python is slow, but everyone knows the secret to Python programming is to try and avoid Python at all costs and call a C/Rust binding beneath the hood.
@@ -249,7 +255,7 @@ Size            NumPy (ms)      CuPy (ms)       Speedup (x times faster)
 ```
 
 
-![Cupy_vs_Numpy](/assets/images/cupy_vs_numpy_benchmark.png)
+[![Benchmark chart of CuPy versus NumPy run times and speedups across array sizes](/assets/images/cupy_vs_numpy_benchmark.webp){: loading="lazy"}](/assets/images/cupy_vs_numpy_benchmark.png)
 
 Clearly, for these operations, you get some good speedups when using the GPU. You always have to weigh the viability of these benchmarks. Perhaps in your use case, these speedups are not worth adding another dependency to your codebase. Another issue is you introduce complexity of managing whether the servers or users have a GPU or not.
 
@@ -401,7 +407,7 @@ Size            SciPy (ms)      CuPy (ms)       Speedup (x times faster)
 2048            591.56          237.68          2.49              
 ```
 
-![Cupy_vs_Scipy](/assets/images/scipy_vs_cupy_benchmark.png)
+[![Benchmark chart of CuPy versus SciPy run times and speedups across operations](/assets/images/scipy_vs_cupy_benchmark.webp){: loading="lazy"}](/assets/images/scipy_vs_cupy_benchmark.png)
 
 ><span style="color: yellow; font-weight: bold;">Values above 1 mean the GPU is faster. Below 1 means the CPU is faster.</span>
 

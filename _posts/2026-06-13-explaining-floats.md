@@ -3,6 +3,10 @@ layout: post
 title: "Explaining Floats: TF32, BF16, FP8, FP4, Huh?"
 date: 2026-06-13
 categories: ML
+topic: Machine Learning
+description: "IEEE 754 floats explained, then TF32, BF16, FP16, FP8, and FP4 for deep learning: bit layouts, ranges, GPU support, and when to use each."
+image: /assets/images/social/explaining-floats.png
+mermaid: true
 ---
 
 There are too many floats now and no one knows what they are. Everyone knows about 64- and 32-bit floats but over the past 10 years all these "new" types have emerged. You start mentioning brain floats to someone and you have lost the audience. If you work in ML or even if you primarily work on serving models for inference you need to understand these data types. Grab hold of your exponents and let's see where the mantissa takes us.

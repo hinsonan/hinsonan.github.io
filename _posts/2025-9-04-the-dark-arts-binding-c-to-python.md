@@ -3,6 +3,9 @@ layout: post
 title: "Mastering the Dark Arts: Binding C to Python"
 date: 2025-09-04
 categories: ML
+topic: GPU Programming
+description: "Binding C and C++ to Python with the C API, ctypes, CFFI, SWIG, Boost.Python, and pybind11, with timing results and when each is worth it."
+image: /assets/images/social/the-dark-arts-binding-c-to-python.png
 ---
 
 So you want to dabble in the dark arts and gain the sweet performance boost of `C/C++` while still using `python`. I've got some news for you, buddy: this road is paved with dead corpses and you should turn back now. The only problem is your company dropped you off here and that one crucial program written in python is too slow for your needs. No matter how much you pray to the JIT compiler and spam `numba` decorators your program is slower than your dead tortoise.

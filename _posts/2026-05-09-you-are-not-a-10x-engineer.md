@@ -3,6 +3,9 @@ layout: post
 title: "You and Your Agents Are Not 10x Engineers"
 date: 2026-05-09
 categories: ML
+topic: Opinion
+description: "AI agents do not make you a 10x engineer. Why vibe-coded software breaks, why the productivity gains are overstated, and why skills still matter."
+image: /assets/images/social/you-are-not-a-10x-engineer.png
 ---
 
 You all have destroyed this industry. You are a token addict and need to be admitted into a mental institution. You woke up and started prompting with your 3-5 different AI subscriptions. It feels good, like a drug straight to the veins. You begin making all these things that would have taken you months to research and create. You just made a landing page in React, and you don't even know what the DOM is. It feels powerful, all this "productivity," and for only $20 a month. You feel the voice in your head. You are unstoppable. You have ascended and become a 10x engineer.

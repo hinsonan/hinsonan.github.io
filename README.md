@@ -1,76 +1,36 @@
-# hinsonan.github.io
-Machine Learning and Software Development Blog
+# Gradient Rage
 
-A Jekyll-powered blog hosted on GitHub Pages, covering topics in machine learning, software development, and technical tutorials.
+Source for [gradientrage.com](https://gradientrage.com), a Jekyll blog about machine learning, GPU programming, and software engineering. Hosted on GitHub Pages.
 
-## Development Setup
+## Run locally
 
-This project uses Docker Compose to provide a consistent Jekyll development environment without requiring local Ruby installation.
-
-### Prerequisites
-
-- Docker
-- Docker Compose
-
-### Initial Site Creation
-
-If you're setting up the site from scratch:
+Docker is the only requirement. No local Ruby needed.
 
 ```bash
-# Create new Jekyll site
-docker-compose run --rm init
-
-# Install dependencies
-docker-compose run --rm bundle
+docker compose up jekyll      # serve at http://localhost:4000 with live reload
+docker compose down           # stop
 ```
 
-### Development Workflow
-
-#### Starting the Development Server
+Jekyll hides posts dated in the future. To preview them before they go live:
 
 ```bash
-# Start Jekyll development server with live reload
-docker-compose up jekyll
+JEKYLL_EXTRA_ARGS="--future" docker compose up jekyll
 ```
 
-The site will be available at:
-- **Local site**: http://localhost:4000
-- **Live reload**: Automatically refreshes when files change
-
-#### Installing Dependencies
+Other common commands:
 
 ```bash
-# Install gems after updating Gemfile
-docker-compose run --rm bundle
-
-# Update gems to latest versions
-docker-compose run --rm bundle bundle update
+docker compose run --rm bundle                  # install gems after a Gemfile change
+docker compose run --rm jekyll jekyll build     # build to _site, no server
+docker compose run --rm jekyll jekyll build --future   # build including future posts
+docker compose run --rm jekyll sh               # shell in the container
 ```
 
-#### Stopping the Server
+`_site/` is a build artifact. It is gitignored, often stale, and not a source of truth.
 
-```bash
-# Stop the development server
-Ctrl+C (or Cmd+C on Mac)
+## Write a post
 
-# Or stop all services
-docker-compose down
-```
-
-### Docker Compose Services
-
-- **`jekyll`**: Main development server with live reload
-- **`bundle`**: Runs bundle commands for dependency management  
-- **`init`**: Creates new Jekyll site (used once during setup)
-
-### Writing Posts
-
-Create new blog posts in the `_posts/` directory using the format:
-```
-YYYY-MM-DD-title.md
-```
-
-Every post needs this front matter so search engines, social previews, and `llms.txt` work:
+Add `_posts/YYYY-MM-DD-title.md`. The date in the file name is the publish date.
 
 ```yaml
 ---
@@ -78,78 +38,57 @@ layout: post
 title: "Post Title"
 date: 2026-11-01
 categories: ML                # part of the URL, never change it after publishing
-topic: Software Engineering   # one of the topics on /topics/
+topic: Software Engineering   # Machine Learning, GPU Programming, Signal Processing,
+                              # Software Engineering, Opinion, Introduction
 tags: [documentation, llm]    # 3 to 6 lowercase, hyphenated tags
 description: "One sentence, 120 to 160 characters, stating what the post teaches or claims."
-image: /assets/images/social/title.png
+image: /assets/images/social/post-slug.png
 math: true                    # only if the post uses LaTeX
 mermaid: true                 # only if the post uses <div class="mermaid">
 series: Series Name           # only for multi-part posts
 ---
 ```
 
-Topics in use: Machine Learning, GPU Programming, Signal Processing, Software Engineering, Opinion, Introduction.
+Before publishing:
 
-After writing a post:
+1. Run `python scripts/make_social_cards.py` to generate the 1200x630 preview image.
+2. For an image over 300 KB, run `python scripts/optimize_images.py path/to/image.png` and link the `.webp`.
+3. Give every image descriptive alt text and add `{: loading="lazy"}` after all but the first.
+4. Push to `master`. GitHub Pages builds automatically.
+5. After it is live, run `scripts/indexnow.sh <post-url>` to notify Bing and other IndexNow engines.
 
-1. Add its metadata to `META` in `scripts/add_front_matter.py` and run it, or write the front matter by hand.
-2. Run `python scripts/make_social_cards.py` to generate the 1200x630 preview image.
-3. For any PNG over 300 KB, run `python scripts/optimize_images.py path/to/image.png` and link the `.webp` in the post.
-4. Give every image descriptive alt text. Add `{: loading="lazy"}` after every image except the first.
-5. After the post is live, run `scripts/indexnow.sh <post-url>` to notify Bing and other IndexNow engines.
+`scripts/add_front_matter.py` holds the metadata for existing posts and can rewrite it. The `META` dict is the source of truth for descriptions and tags.
 
-Do not change a published post's `categories`, `date`, or file slug. All three are part of the URL.
+Never change a published post's `categories`, `date`, or file slug. Each one is part of the URL.
 
-### Search and AI discoverability
+## How the site works
 
-- `robots.txt`: allows search engines, AI search crawlers, and AI training crawlers.
-- `llms.txt`: plain-text index of every post for LLMs and agents, generated from post front matter.
-- `/topics/` and `/tags/`: index pages generated from `topic` and `tags`.
-- `_layouts/post.html`: adds topic and tag links, series navigation, related posts, and a link to the markdown source.
-- `_includes/head.html`: `jekyll-seo-tag` handles title, description, Open Graph, Twitter, and `BlogPosting` JSON-LD. The file adds `Blog` JSON-LD on the home page, `ProfilePage` on the about page, and article tags. MathJax and Mermaid load only on posts that set `math` or `mermaid`.
-- `4796d92e7308419356ccae94fea9d4be.txt`: IndexNow key file. Keep it at the site root.
+| Path | Purpose |
+| --- | --- |
+| `_config.yml` | Site settings, pinned permalink format, nav pages, plugins |
+| `_layouts/post.html` | Post page: read time, topic and tag links, series nav, related posts, source link |
+| `_layouts/home.html` | Home page post cards |
+| `_includes/head.html` | Meta tags, JSON-LD, conditional MathJax and Mermaid |
+| `topics.html`, `tags.html` | Generated topic and tag index pages |
+| `llms.txt` | Plain-text post index for LLMs and agents |
+| `robots.txt` | Crawler rules, generated by Jekyll |
+| `scripts/` | Front matter, social cards, image optimization, IndexNow |
 
-### Deployment
+Plugins: `jekyll-feed`, `jekyll-seo-tag`, `jekyll-sitemap`, `jekyll-remote-theme`. Nothing else, because GitHub Pages only allows its own plugin list.
 
-This site automatically deploys to GitHub Pages when changes are pushed to the main branch. No manual deployment is required.
+Deployment is a push to `master`. A future-dated post stays hidden until a build runs on or after its date, so pushing early is safe but it will not appear at publish time unless another build happens then.
 
-### Useful Commands
-
-```bash
-# Install dependencies
-docker-compose run --rm bundle
-
-# Start development server
-docker-compose up jekyll
-
-# Build site for production (optional)
-docker-compose run --rm jekyll jekyll build
-
-# Access container shell for debugging
-docker-compose run --rm jekyll sh
-```
-
-## Project Structure
+## Layout
 
 ```
-├── _posts/              # Blog posts
-├── _config.yml          # Jekyll configuration
-├── _layouts/            # Page templates
-├── _includes/           # Reusable components
-├── assets/              # CSS, JS, images
-├── docker-compose.yml   # Docker development setup
-├── Gemfile              # Ruby dependencies
-└── index.md             # Homepage
+_posts/        posts (23)
+_layouts/      post and home templates
+_includes/     head, header, footer
+_data/         author info
+assets/        CSS, JS, MathJax, images, social cards
+scripts/       maintenance scripts
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test locally using `docker-compose up jekyll`
-5. Submit a pull request
 
 ## License
 
-This project is open source and available under the [MIT License](LICENSE).
+MIT. See [LICENSE](LICENSE).

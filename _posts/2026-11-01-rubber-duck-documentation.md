@@ -3,6 +3,9 @@ layout: post
 title: "Rubber Duck Documentation"
 date: 2026-11-01
 categories: ML
+topic: Software Engineering
+description: "Bad docs waste tokens and confuse teammates and agents. Write direct, concise documentation that explains the system and how to use it."
+image: /assets/images/social/rubber-duck-documentation.png
 ---
 
 Why do developers of systems, algorithms, programs, CLIs, UIs, and Infra suck so much at documentation in the age of 2026?

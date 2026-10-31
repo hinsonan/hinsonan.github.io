@@ -70,10 +70,44 @@ Create new blog posts in the `_posts/` directory using the format:
 YYYY-MM-DD-title.md
 ```
 
-Example:
+Every post needs this front matter so search engines, social previews, and `llms.txt` work:
+
+```yaml
+---
+layout: post
+title: "Post Title"
+date: 2026-11-01
+categories: ML                # part of the URL, never change it after publishing
+topic: Software Engineering   # one of the topics on /topics/
+tags: [documentation, llm]    # 3 to 6 lowercase, hyphenated tags
+description: "One sentence, 120 to 160 characters, stating what the post teaches or claims."
+image: /assets/images/social/title.png
+math: true                    # only if the post uses LaTeX
+mermaid: true                 # only if the post uses <div class="mermaid">
+series: Series Name           # only for multi-part posts
+---
 ```
-_posts/2025-07-11-my-first-post.md
-```
+
+Topics in use: Machine Learning, GPU Programming, Signal Processing, Software Engineering, Opinion, Introduction.
+
+After writing a post:
+
+1. Add its metadata to `META` in `scripts/add_front_matter.py` and run it, or write the front matter by hand.
+2. Run `python scripts/make_social_cards.py` to generate the 1200x630 preview image.
+3. For any PNG over 300 KB, run `python scripts/optimize_images.py path/to/image.png` and link the `.webp` in the post.
+4. Give every image descriptive alt text. Add `{: loading="lazy"}` after every image except the first.
+5. After the post is live, run `scripts/indexnow.sh <post-url>` to notify Bing and other IndexNow engines.
+
+Do not change a published post's `categories`, `date`, or file slug. All three are part of the URL.
+
+### Search and AI discoverability
+
+- `robots.txt`: allows search engines, AI search crawlers, and AI training crawlers.
+- `llms.txt`: plain-text index of every post for LLMs and agents, generated from post front matter.
+- `/topics/` and `/tags/`: index pages generated from `topic` and `tags`.
+- `_layouts/post.html`: adds topic and tag links, series navigation, related posts, and a link to the markdown source.
+- `_includes/head.html`: `jekyll-seo-tag` handles title, description, Open Graph, Twitter, and `BlogPosting` JSON-LD. The file adds `Blog` JSON-LD on the home page, `ProfilePage` on the about page, and article tags. MathJax and Mermaid load only on posts that set `math` or `mermaid`.
+- `4796d92e7308419356ccae94fea9d4be.txt`: IndexNow key file. Keep it at the site root.
 
 ### Deployment
 
@@ -89,7 +123,7 @@ docker-compose run --rm bundle
 docker-compose up jekyll
 
 # Build site for production (optional)
-docker-compose run --rm jekyll bundle exec jekyll build
+docker-compose run --rm jekyll jekyll build
 
 # Access container shell for debugging
 docker-compose run --rm jekyll sh

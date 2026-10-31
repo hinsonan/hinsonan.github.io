@@ -1,0 +1,31 @@
+---
+layout: page
+title: Topics
+permalink: /topics/
+description: "All Gradient Rage posts grouped by topic: machine learning, GPU programming, signal processing, software engineering, and opinion."
+---
+{%- assign topics = site.posts | group_by: "topic" | sort: "name" %}
+<p class="taxonomy-intro">Browse every post by topic, or see <a href="{{ '/tags/' | relative_url }}">all tags</a>.</p>
+
+<nav class="taxonomy-index" aria-label="Topics">
+  {%- for topic in topics %}
+  {%- if topic.name == "" %}{% continue %}{% endif %}
+  <a href="#{{ topic.name | slugify }}">{{ topic.name }} ({{ topic.size }})</a>
+  {%- endfor %}
+</nav>
+
+{%- for topic in topics %}
+{%- if topic.name == "" %}{% continue %}{% endif %}
+<section class="taxonomy-group">
+  <h2 id="{{ topic.name | slugify }}">{{ topic.name }}</h2>
+  <ul>
+    {%- for post in topic.items %}
+    <li>
+      <a href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+      <span class="taxonomy-date">{{ post.date | date: "%b %-d, %Y" }}</span>
+      {%- if post.description %}<p>{{ post.description | escape }}</p>{% endif %}
+    </li>
+    {%- endfor %}
+  </ul>
+</section>
+{%- endfor %}

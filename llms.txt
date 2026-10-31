@@ -1,0 +1,27 @@
+---
+layout: null
+permalink: /llms.txt
+sitemap: false
+---
+# {{ site.title }}
+
+> {{ site.description | strip_newlines | strip }}
+
+Gradient Rage is a technical blog by {{ site.author }} about machine learning, GPU programming in Python, signal processing with complex-valued neural networks, and software engineering practice. Posts include runnable code, benchmarks, and links to notebooks in the GitHub repository.
+
+- Author: {{ site.author }} ({{ "/about/" | absolute_url }})
+- RSS feed: {{ "/feed.xml" | absolute_url }}
+- Sitemap: {{ "/sitemap.xml" | absolute_url }}
+- Topics index: {{ "/topics/" | absolute_url }}
+- Source and code examples: https://github.com/{{ site.github_username }}/{{ site.github_username }}.github.io
+
+Each post below links to its HTML page. The raw markdown for a post is available at the "markdown" link.
+{% assign topics = site.posts | group_by: "topic" | sort: "name" %}
+{%- for topic in topics %}
+{%- if topic.name == "" %}{% continue %}{% endif %}
+
+## {{ topic.name }}
+{% for post in topic.items %}
+- [{{ post.title }}]({{ post.url | absolute_url }}): {{ post.description | default: post.excerpt | strip_html | strip_newlines | truncate: 200 }} ({{ post.date | date: "%Y-%m-%d" }}, [markdown](https://raw.githubusercontent.com/{{ site.github_username }}/{{ site.github_username }}.github.io/master/{{ post.path }}))
+{%- endfor %}
+{%- endfor %}

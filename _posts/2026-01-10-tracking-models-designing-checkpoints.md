@@ -3,6 +3,10 @@ layout: post
 title: "Tracking ML Models: Designing Good Checkpoints"
 date: 2026-01-10
 categories: ML
+topic: Machine Learning
+tags: [mlops, pytorch, checkpoints, mlflow, reproducibility]
+description: "What a good PyTorch checkpoint saves: model, optimizer, scheduler, GradScaler, and RNG states, plus tracking checkpoints with MLflow."
+image: /assets/images/social/tracking-models-designing-checkpoints.png
 ---
 
 I've got sweat pouring down my face. My arms are heavy, knees weak, and the model ain't ready. This is how it feels when tasked with recreating or modifying an experiment. I go to load the model and the doom sets in as I notice none of the valuable information was stored in the checkpoint file and I cannot find it anywhere else in all of the stored artifacts for the experiment.

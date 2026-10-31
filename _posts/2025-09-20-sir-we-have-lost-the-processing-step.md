@@ -3,6 +3,10 @@ layout: post
 title: "Sir We Have Lost the Model: Tracking Pre/Post Processing for Production"
 date: 2025-09-20
 categories: ML
+topic: Machine Learning
+tags: [mlops, pytorch, torchscript, preprocessing, production, checkpoints]
+description: "Models break in production when pre- and post-processing drift. How to save processing steps with checkpoints, TorchScript, and baked-in pipelines."
+image: /assets/images/social/sir-we-have-lost-the-processing-step.png
 ---
 
 You're about to wrap up the feature or delivery and are sitting there waiting for the pipeline to finish all the stages and pump out those sweet green checkmarks so you can wrap this up and go home. It's nearing the end of the testing stage when BAM—you get hit with an error. Welcome to another hour of debugging and restarting the pipeline.

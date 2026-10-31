@@ -227,3 +227,138 @@
     }
   }
 }
+// Post taxonomy, series, related posts, and topic/tag index pages
+.post-taxonomy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: -0.5rem 0 1.5rem;
+  font-size: 0.85rem;
+
+  a {
+    text-decoration: none;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    color: inherit;
+
+    &:hover {
+      border-color: var(--card-border-hover);
+    }
+  }
+
+  .post-topic {
+    font-weight: 600;
+    border-color: #2a7ae4;
+  }
+}
+
+.post-series {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 4px solid #2a7ae4;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  margin: 0 0 2rem;
+
+  .post-series-title {
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  ol {
+    margin: 0 0 0 1.25rem;
+  }
+}
+
+.post-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--card-border);
+}
+
+.related-posts {
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+  }
+
+  li {
+    margin-bottom: 1rem;
+
+    a {
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.post-source {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.taxonomy-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+
+  a {
+    text-decoration: none;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    font-size: 0.85rem;
+  }
+}
+
+.taxonomy-group {
+  margin-bottom: 2rem;
+
+  h2 {
+    scroll-margin-top: 1rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+  }
+
+  li {
+    margin-bottom: 0.75rem;
+
+    p {
+      margin: 0.2rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.taxonomy-date {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-left: 0.4rem;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+[data-theme="dark"] {
+  .post-taxonomy .post-topic,
+  .post-series {
+    border-left-color: #4da3ff;
+  }
+}

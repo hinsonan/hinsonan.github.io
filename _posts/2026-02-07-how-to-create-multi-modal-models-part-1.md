@@ -3,6 +3,13 @@ layout: post
 title: "How to Create Multi Modal Models Part 1"
 date: 2026-02-07
 categories: ML
+topic: Machine Learning
+series: How to Create Multi Modal Models
+tags: [multi-modal, llm, projection-layers, cross-attention, vq-gan]
+description: "How multi-modal models understand images and audio: projection layers, cross attention, and VQ-GAN tokens, with their tradeoffs."
+image: /assets/images/social/how-to-create-multi-modal-models-part-1.png
+mermaid: true
+math: true
 ---
 
 Remember in Bloodborne how your character gains insight and you can start to see all these "hidden" creatures that were there the whole time? Well, in some ways those creatures were projected into a space in which you could begin to comprehend them. It may be a little stretch, but this is how you can make models "understand" multiple data modalities. Multi-modal models are very powerful and you need to understand how they work and how to create them.

@@ -3,6 +3,10 @@ layout: post
 title: "Spooky Productivity Rituals with Ghouls and Ghosts"
 date: 2026-10-01
 categories: ML
+topic: Opinion
+tags: [ai, productivity, code-review, burnout, software-engineering]
+description: "AI productivity pressure floods teams with unreviewed merge requests. How to push back and spend the time on deeper, better work instead."
+image: /assets/images/social/spooky-productivity.png
 ---
 
 The tech overlords have signed a demonic blood contract, and now our feet are being held to the fire. All this talk about productivity is unsettling when you realize how it manifests in your job. Everyone I know is working way harder than before AI. Demanding deadlines seem never-ending, and most large companies seem to be drinking the token-maxing Kool-Aid. The sad part is that there is some truth to this "boost" in productivity, but this boost is being misapplied by many. With Halloween coming up, let's explore the spooky side of this "AI or die" life we live now.

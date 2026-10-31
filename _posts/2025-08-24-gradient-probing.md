@@ -3,6 +3,10 @@ layout: post
 title: "Probing Gradients 👽"
 date: 2025-08-24
 categories: ML
+topic: Machine Learning
+tags: [deep-learning, gradients, debugging, pytorch, training]
+description: "Debug neural network training by probing gradients: detect vanishing and exploding gradients, measure gradient signal-to-noise ratio and variance."
+image: /assets/images/social/gradient-probing.png
 ---
 
 You wake up in a blurry haze. Zuck has unzipped his human flesh skin suit and you are face to face with the real lizard man. He begins to probe you for all your cringe posts on facebook. He wants all your information and he wont stop until you tell him everything. This is exactly what we are about to do to our neural networks. We are about to shine the light on them and make them confess to us why they refuse to learn.

@@ -1,26 +1,55 @@
-# robots.txt for gradientrage.com
-# Allow all crawlers by default
+---
+layout: null
+permalink: /robots.txt
+sitemap: false
+---
+# robots.txt for {{ site.url }}
+# Everything on this site is public. Search engines, AI search engines,
+# and AI training crawlers are all allowed.
+
 User-agent: *
 Allow: /
-Disallow: /assets/
-Disallow: /_site/
-Disallow: /.jekyll-cache/
 
-# Specific rules for AI/LLM crawlers
-User-agent: GPTBot
+# Search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# AI search and user-triggered fetchers (these cite and link to posts)
+User-agent: OAI-SearchBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# AI training crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
 User-agent: CCBot
 Allow: /
 
-User-agent: anthropic-ai
+User-agent: Google-Extended
 Allow: /
 
-User-agent: Claude-Web
+User-agent: Applebot-Extended
 Allow: /
 
-# Sitemap location
-Sitemap: https://gradientrage.com/sitemap.xml
+Sitemap: {{ "/sitemap.xml" | absolute_url }}

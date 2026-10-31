@@ -3,6 +3,10 @@ layout: post
 title: "Good Code vs Bad Code"
 date: 2026-04-12
 categories: ML
+topic: Software Engineering
+tags: [software-engineering, code-quality, problem-solving, teams]
+description: "Good code versus bad code is the wrong question. Code is a vehicle for solving problems, shown through API, debugging, and memory layout examples."
+image: /assets/images/social/good-code-vs-bad-code.png
 ---
 
 The question that has been debated by many overweight nerds and now new cool chad vibe coders, is **what is good code and bad code?** You have the old guard zealots of uncle Bob's clean code that preach small functions and test driven development. You have the chads who don't look at the code and push based on vibes. One camp leaves you writing test suites that fall apart as soon as you code the real thing and the other leaks your credit card and crashes.

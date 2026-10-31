@@ -2,7 +2,14 @@
 layout: post
 title: "How to Create Multi Modal Models Part 2"
 date: 2026-03-14
+last_modified_at: 2026-10-31
 categories: ML
+topic: Machine Learning
+series: How to Create Multi Modal Models
+tags: [multi-modal, llm, q-former, perceiver-resampler, pytorch]
+description: "Training an LLM to understand images with an MLP projection, Q-Former, and Perceiver Resampler, with attention maps and inference comparisons."
+image: /assets/images/social/how-to-create-multi-modal-models-part-2.png
+mermaid: true
 ---
 
 It's time to take the lessons from the [last blog post](https://gradientrage.com/ml/2026/02/07/how-to-create-multi-modal-models-part-1.html) and make ourselves a genuine multi modal model. This is all the rage these days. We are going to train 3 different projection layers and see how they allow the model to understand images. The reason we are going to do these different projection layers is this is an experiment that you can run locally if you have a decent gpu. Here are the three methods we will use.
@@ -225,12 +232,12 @@ Another metric we will use is **METEOR** (Metric for Evaluation of Translation w
 
 Let's see how the model does with no training.
 
-![coco_2](/assets/images/projection_layer_images/untrained/coco_2.png)
-![coco_15](/assets/images/projection_layer_images/untrained/coco_15.png)
-![coco_36](/assets/images/projection_layer_images/untrained/coco_36.png)
-![coco_53](/assets/images/projection_layer_images/untrained/coco_53.png)
-![coco_57](/assets/images/projection_layer_images/untrained/coco_57.png)
-![coco_60](/assets/images/projection_layer_images/untrained/coco_60.png)
+![Untrained model output on COCO validation image 2 for each projection layer](/assets/images/projection_layer_images/untrained/coco_2.webp)
+![Untrained model output on COCO validation image 15 for each projection layer](/assets/images/projection_layer_images/untrained/coco_15.webp){: loading="lazy"}
+![Untrained model output on COCO validation image 36 for each projection layer](/assets/images/projection_layer_images/untrained/coco_36.webp){: loading="lazy"}
+![Untrained model output on COCO validation image 53 for each projection layer](/assets/images/projection_layer_images/untrained/coco_53.webp){: loading="lazy"}
+![Untrained model output on COCO validation image 57 for each projection layer](/assets/images/projection_layer_images/untrained/coco_57.webp){: loading="lazy"}
+![Untrained model output on COCO validation image 60 for each projection layer](/assets/images/projection_layer_images/untrained/coco_60.webp){: loading="lazy"}
 
 As you can see this model has no idea how to process or understand images.
 
@@ -265,17 +272,17 @@ Each training took a few hours. While training, both the vision encoder and llm 
 
 Let's take a look at how the QFormer and Resampler "see" the image with their attention scores.
 
-![attention_grids](/assets/images/projection_layer_images/trained_attention_grids.png)
+[![Attention maps of the trained Q-Former and Perceiver Resampler over COCO images](/assets/images/projection_layer_images/trained_attention_grids.webp){: loading="lazy"}](/assets/images/projection_layer_images/trained_attention_grids.png)
 
-![attention_grids_gradients](/assets/images/projection_layer_images/trained_attention_model_comparison.png)
+[![Side-by-side attention comparison of the MLP projection, Q-Former, and Perceiver Resampler](/assets/images/projection_layer_images/trained_attention_model_comparison.webp){: loading="lazy"}](/assets/images/projection_layer_images/trained_attention_model_comparison.png)
 
 The QFormer seems to be spread out throughout the whole image with some hotspots and the Resampler seems to lock into certain areas.
 
 What's also neat is you can see the different queries and latents in the projection layer that focus on different areas.
 
-![queries](/assets/images/projection_layer_images/trained_attention_qformer_specialization.png)
+[![Q-Former query specialization: each learned query attends to a different image region](/assets/images/projection_layer_images/trained_attention_qformer_specialization.webp){: loading="lazy"}](/assets/images/projection_layer_images/trained_attention_qformer_specialization.png)
 
-![resampler](/assets/images/projection_layer_images/trained_attention_perceiver_specialization.png)
+[![Perceiver Resampler latent specialization: each latent attends to a different image region](/assets/images/projection_layer_images/trained_attention_perceiver_specialization.webp){: loading="lazy"}](/assets/images/projection_layer_images/trained_attention_perceiver_specialization.png)
 
 This can show you how your projection layer is focusing on certain aspects of the image. Now this training run was very small so all these results are not mature or conclusive. All this shows is that in a few hours we have started to add a new modality to a model.
 

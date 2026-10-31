@@ -2,7 +2,14 @@
 layout: post
 title: "GPU Programming in Python Part 2: Merging with the Green Machine using cuda-python"
 date: 2025-11-18
+last_modified_at: 2026-10-31
 categories: ML
+topic: GPU Programming
+series: GPU Programming in Python
+tags: [gpu, cuda, python, cuda-python, nvrtc, performance]
+description: "Write and launch CUDA kernels from Python with NVIDIA cuda-python, using both cuda.bindings and cuda.core, with a Gaussian blur and timing results."
+image: /assets/images/social/gpu-programming-in-python-part-2.png
+mermaid: true
 ---
 
 Have you ever wanted to escape the clutches of python and finally convince your team and managers that this language should not be used for real programming? Are you ready to commit to the world of C/C++ and write some performant code? Perhaps you want to write some CUDA and run at speeds unimaginable to man. Well I got a surprise for you. You ain't ever leaving this god-forsaken wasteland of python because now nvidia has exposed all of that CUDA goodness right into python. You can now write all the kernels you want in python. You can call the exact same bindings that you would in C/C++. You are stuck forever in this language. Yugi's Grandpa has banished us into the shadow realm and we are never leaving. It's time to get comfortable and get good with `cuda-python`.
@@ -1042,7 +1049,7 @@ graph TB
 
 I may have asked for a png image to be generated using shapes in the theme of Dragon Ball Z. This is currently SOTA shape creation so do not complain about artistic abilities. Once we launch our kernel we can finally see the results of our effort.
 
-![blur](/assets/images/gaussian_blur_comparison.png)
+![Original image next to the Gaussian blurred output from the CUDA kernel](/assets/images/gaussian_blur_comparison.png){: loading="lazy"}
 
 It worked we now have a blurry image. Now let's examine the same thing but using the higher level more pythonic library called cuda core
 
@@ -1263,7 +1270,7 @@ One benefit over cuda core is you do not have to manually clean up the memory li
 
 Again the image is the same
 
-![blur](/assets/images/gaussian_blur_comparison.png)
+![Original image next to the Gaussian blurred output from the CUDA kernel](/assets/images/gaussian_blur_comparison.png){: loading="lazy"}
 
 
 ## Timing Comparisons
@@ -1290,7 +1297,7 @@ AVERAGE PERFORMANCE ACROSS ALL SIZES:
   cuda.core:      0.67 ms  (34.31x speedup)
 ```
 
-![timings](/assets/images/cuda_python_timings.png)
+![Gaussian blur timings for CPU, cuda.bindings, and cuda.core](/assets/images/cuda_python_timings.png){: loading="lazy"}
 
 So we can see that cuda bindings and cuda core are much faster. The question is when do we choose to use PTX or CUBIN. The answer to this question is it depends on the amount of cold starts you think you will have in the system. If you think the first initial run being slower will have large issues in your system then CUBIN is the better option.
 
@@ -1308,7 +1315,7 @@ Cold-start time                     97.515          14.766          ms
 Warm per-launch                     4.386           4.395           µs
 ```
 
-![cold_start](/assets/images/cold_start_cuda_times.png)
+![Cold start and warm kernel launch times for cuda.bindings and cuda.core](/assets/images/cold_start_cuda_times.png){: loading="lazy"}
 
 When using CUBIN you dont have to use a JIT which takes a while on a cold start. Cold starts happen for a variety of reasons, new container/process, serverless function got invoked, services were rebooted, etc...
 

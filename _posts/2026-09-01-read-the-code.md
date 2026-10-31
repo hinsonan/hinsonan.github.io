@@ -3,6 +3,10 @@ layout: post
 title: "Read the Code"
 date: 2026-09-01
 categories: ML
+topic: Opinion
+tags: [ai, agents, vibe-coding, code-review, software-engineering]
+description: "Should you read the code your AI agents write? Yes. Why the hard part of software was never only the code, and why agents still need review."
+image: /assets/images/social/read-the-code.png
 ---
 
 Alright you have forced my hand. You people need to be removed from your computer and banned from the keyboards. We don't even deserve our own self-imposed title of "software engineer" or "AI engineer". All of you yapping your stupid opinions online as grains of wisdom have left you naked in the wind exposing yourselves.

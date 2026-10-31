@@ -3,6 +3,12 @@ layout: post
 title: "Complex Numbers and Deep Learning Part 1"
 date: 2026-07-01
 categories: ML
+topic: Signal Processing
+series: Complex Numbers and Deep Learning
+tags: [complex-numbers, deep-learning, wirtinger-calculus, signal-processing, math]
+description: "Complex numbers for deep learning, with interactive visuals: polar form, rotation, holomorphic functions, and Wirtinger calculus for backprop."
+image: /assets/images/social/complex-number-and-deep-learning-part1.png
+math: true
 ---
 
 No one knows what an imaginary number is. It's like asking ML people how this algorithm is meant to work outside of a notebook. That reality just does not exist. Imaginary numbers are very powerful for certain areas of engineering. Deep learning algorithms can also use imaginary numbers but often do not due to limitations of back propagation. There are ways to get around this and you can keep the natural relationship between real numbers and imaginary. Keeping this relationship together can have the model learn more efficiently and generalize better. Before we get into all that we need to understand what an imaginary number is and what a complex number is.

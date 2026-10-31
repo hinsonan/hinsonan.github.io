@@ -20,8 +20,9 @@
 
 title: Gradient Rage
 email: hinsonan@gmail.com
-favicon: "/favicon.ico"
+favicon: "/assets/images/favicon.ico"
 description: >- # this means to ignore newlines until "baseurl:"
+  Machine learning, GPU programming, and software engineering with real code and benchmarks.
   ML/Software Engineering is hard, people are dumb, and we're all just winging it with overpriced GPUs.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://gradientrage.com" # the base hostname & protocol for your site, e.g. http://example.com
@@ -29,7 +30,19 @@ twitter_username: hinsonan
 github_username:  hinsonan
 author: Andrew Hinson
 
+# Pin the URL format. This is Jekyll's default and matches every live URL.
+# Do not change it, and do not change a published post's categories, date, or slug.
+permalink: /:categories/:year/:month/:day/:title:output_ext
+
+# Shown in the nav bar, in this order
+header_pages:
+  - about.markdown
+  - topics.html
+  - tags.html
+
 # SEO and social media
+logo: "/assets/images/robot.png"
+lang: en
 twitter:
   username: hinsonan
   card: summary_large_image
@@ -38,11 +51,7 @@ twitter:
 linkedin:
   username: hinsonan
 
-# Open Graph defaults (works for Facebook, LinkedIn, WhatsApp, etc.)
-og:
-  image: "/assets/images/robot.png"
-  type: "website"
-
+# Author and social profiles
 social:
   name: Andrew Hinson
   links:
@@ -57,10 +66,7 @@ defaults:
       type: "posts"
     values:
       author: "Andrew Hinson"
-      image: "/assets/images/robot.png"
-
-mermaid:
-  src: 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'
+      image: "/assets/images/social/default.png"
 
 # Build settings
 # remote_theme: pages-themes/midnight
@@ -70,7 +76,10 @@ plugins:
   - jekyll-remote-theme
   - jekyll-sitemap
   - jekyll-seo-tag
-  - jekyll-mermaid
+
+# Include every post in /feed.xml, not just the latest 10
+feed:
+  posts_limit: 100
 
 # Syntax highlighting configuration
 highlighter: rouge
@@ -103,8 +112,10 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
-  - CLAUDE.md
   - docker-compose.yaml
   - README.md
   - assets/js/mathjax/README.md
   - code_examples/
+  - scripts/
+  - docs/
+  - .build/

@@ -2,7 +2,13 @@
 layout: post
 title: "Batch Normalization: I just want to fit in"
 date: 2025-10-01
+last_modified_at: 2026-10-31
 categories: ML
+topic: Machine Learning
+tags: [deep-learning, batch-normalization, optimization, training]
+description: "What batch normalization does, why internal covariate shift is not the real reason it works, and how smoother loss landscapes explain its benefits."
+image: /assets/images/social/batch-norm.png
+math: true
 ---
 
 What is going on with batch normalization in 2025? What is the purpose of this technique? Have we learned any lessons since its inception?
@@ -131,7 +137,7 @@ With this smoother gradient flow, the model is easier to train. This theory is a
 
 From the plots from this [paper](https://arxiv.org/pdf/1805.11604) we can see this proven out in some experiments:
 
-![batch norm](/assets/images/batch_norm.png)
+![Plots from Santurkar et al. 2018 showing smoother loss and gradients with batch normalization](/assets/images/batch_norm.png){: loading="lazy"}
 
 You can see the large delta between the smoothness from batch norm and standard training.
 

@@ -2,7 +2,13 @@
 layout: post
 title: "Traveling Loss Salesman: Visualizing Loss Landscapes "
 date: 2025-08-07
+last_modified_at: 2026-10-31
 categories: ML
+topic: Machine Learning
+tags: [deep-learning, loss-landscape, pytorch, visualization, training]
+description: "How to visualize the loss landscape of a neural network in PyTorch, compare initialized and trained weights, and track the loss path during training."
+image: /assets/images/social/visualizing-loss-gradient.png
+math: true
 ---
 
 Training your ML models is frustrating and sometimes it is difficult to know what is going on. Your loss is kinda trending down and your metrics still show a little improvement but you need to see more of the landscape. You might not have a solid understanding of the gradient plane and how the model is architected. Depending on the models layers you may find it easier to end up in a crappy local minima. Maybe your model is struggling to learn in general.
@@ -15,7 +21,7 @@ An important tool in the toolbox is opening your third eye and seeing the land t
 
 From the [original paper](https://arxiv.org/pdf/1712.09913) they show a ResNet-56 with and without skip connections
 
-![ResNet56](/assets/images/res-net-gradient.png)
+![Loss landscape of ResNet-56 with and without skip connections, from Li et al. 2018](/assets/images/res-net-gradient.png)
 
 The reason why skip connections are important for ResNet is because without them it's very hard to navigate through the plane with all the peaks and valleys. Imagine that the loss value has to cross to the opposite side. It has many areas where you could get stuck. The high peaks are areas where to loss is really high and therefore the model is performing badly. There are also all these pockets of local minima that you could get stuck in and never reach the global minima.
 
@@ -88,11 +94,11 @@ fig_init.show()
 
 ### Gradient Plane of Initialized Weights
 
-![inited_model](/assets/images/initialized_weights.png)
+![Loss landscape of a simple MNIST network at initialized weights](/assets/images/initialized_weights.png){: loading="lazy"}
 
 ### Gradient Plane of Trained Weights
 
-![trained_model](/assets/images/trained_weights.png)
+![Loss landscape of the same MNIST network after training](/assets/images/trained_weights.png){: loading="lazy"}
 
 
 What this shows in the simple model we are using is that the loss values did change between the initialized weights and trained weights. The wider width of this bowl suggest that small perturbations to the weights should not drastically alter performance.
@@ -107,7 +113,7 @@ In order to track the trajectory we need non random directions and the PCA appro
 
 When we track our simple model's loss we get this plot
 
-![trajectory](/assets/images/tracking_loss.png)
+![Loss trajectory of the MNIST model plotted over the loss landscape during training](/assets/images/tracking_loss.png){: loading="lazy"}
 
 
 What this shows is a smooth trajectory towards the deeper basin. This shows the loss continuing to travel downward is a pretty straight line. This is a good sign. Now that we have visualized the loss and the trajectory we have a better idea of how the model is learning. If a model was not learning well and we saw an odd trajectory or a chaotic loss plane then we could begin to either change optimizers, weight initializations, topology, etc...

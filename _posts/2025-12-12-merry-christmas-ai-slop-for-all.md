@@ -3,6 +3,10 @@ layout: post
 title: "Merry Christmas: Santa is Bringing AI Slop"
 date: 2025-12-12
 categories: ML
+topic: Opinion
+tags: [ai, career, tech-industry, layoffs, software-engineering]
+description: "AI slop, layoffs, and broken interviews in the tech industry, and practical advice for developers and students on how to get through it."
+image: /assets/images/social/merry-christmas-ai-slop-for-all.png
 ---
 
 Ho Ho Ho to all vibe coders and all those failing production pipelines. Santa is coming to town and this year he's checking his AI generated naughty and nice list and didn't review it beforehand. His fat self is sliding down your dirty chimney and your present this year is a toy that looks correct at a glance but the more you look at it you realize Santa just gave you Mrs. Claus's faulty elf action figure with 12 fingers and a message attached that says "LGTM I pushed this +500 changes through to prod. My agent workflow told me it was high quality". 

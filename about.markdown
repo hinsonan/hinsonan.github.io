@@ -2,6 +2,7 @@
 layout: page
 title: About
 permalink: /about/
+description: "About Andrew Hinson, the ML and software engineer behind Gradient Rage: radar simulation, web development, and years of production machine learning."
 ---
 
 <style>
@@ -137,7 +138,7 @@ permalink: /about/
 
 <div class="about-container">
   <div class="about-header">
-    <img src="/assets/images/robot.png" alt="Profile Photo" class="profile-image">
+    <img src="/assets/images/robot.png" alt="Gradient Rage robot avatar" width="200" height="200" class="profile-image">
     <p class="about-intro">
       This industry is a mess and I'm here to try and navigate through the chaos 
     </p>

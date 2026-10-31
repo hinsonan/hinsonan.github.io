@@ -27,9 +27,12 @@ layout: default
           {%- if post.author -%}
             • <span>{{ post.author }}</span>
           {%- endif -%}
+          {%- if post.topic %}
+            • <a class="post-topic-inline" href="{{ '/topics/' | relative_url }}#{{ post.topic | slugify }}">{{ post.topic }}</a>
+          {%- endif -%}
         </div>
         <div class="post-excerpt">
-          {{ post.excerpt | strip_html | truncate: 160 }}
+          {{ post.description | default: post.excerpt | strip_html | truncate: 160 }}
         </div>
         <a href="{{ post.url | relative_url }}" class="read-more">Continue reading →</a>
       </article>

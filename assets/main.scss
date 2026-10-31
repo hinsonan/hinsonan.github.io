@@ -357,8 +357,20 @@
 }
 
 [data-theme="dark"] {
-  .post-taxonomy .post-topic,
+  .post-taxonomy .post-topic {
+    border-color: #4da3ff;
+  }
+
   .post-series {
     border-left-color: #4da3ff;
+  }
+}
+
+.post-topic-inline {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
   }
 }

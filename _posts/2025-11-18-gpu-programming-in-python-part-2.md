@@ -6,7 +6,6 @@ last_modified_at: 2026-10-31
 categories: ML
 topic: GPU Programming
 series: GPU Programming in Python
-tags: [gpu, cuda, python, cuda-python, nvrtc, performance]
 description: "Write and launch CUDA kernels from Python with NVIDIA cuda-python, using both cuda.bindings and cuda.core, with a Gaussian blur and timing results."
 image: /assets/images/social/gpu-programming-in-python-part-2.png
 mermaid: true

@@ -5,7 +5,6 @@ date: 2026-08-01
 categories: ML
 topic: Signal Processing
 series: Complex Numbers and Deep Learning
-tags: [complex-numbers, deep-learning, rf, modulation-classification, rf-fingerprinting]
 description: "Complex-valued versus real-valued neural networks on modulation classification and RF fingerprinting, with results and when complex layers help."
 image: /assets/images/social/complex-number-and-deep-learning-part2.png
 ---

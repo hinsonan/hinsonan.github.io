@@ -4,7 +4,6 @@ title: "Explaining Floats: TF32, BF16, FP8, FP4, Huh?"
 date: 2026-06-13
 categories: ML
 topic: Machine Learning
-tags: [floating-point, gpu, mixed-precision, bf16, fp8, fp4]
 description: "IEEE 754 floats explained, then TF32, BF16, FP16, FP8, and FP4 for deep learning: bit layouts, ranges, GPU support, and when to use each."
 image: /assets/images/social/explaining-floats.png
 mermaid: true

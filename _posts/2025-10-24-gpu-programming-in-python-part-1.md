@@ -6,7 +6,6 @@ last_modified_at: 2026-10-31
 categories: ML
 topic: GPU Programming
 series: GPU Programming in Python
-tags: [gpu, cuda, python, cupy, numba, performance]
 description: "Run Python on the GPU with CuPy and Numba. Benchmarks of CuPy against NumPy and SciPy, and writing custom CUDA kernels with Numba."
 image: /assets/images/social/gpu-programming-in-python-part-1.png
 mermaid: true

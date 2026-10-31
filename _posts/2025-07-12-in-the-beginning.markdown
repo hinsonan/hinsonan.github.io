@@ -4,7 +4,6 @@ title: "Welcome to Gradient Rage and the World of ML/Software Insanity"
 date: 2025-07-12 14:30:00 -0500
 categories: introduction
 topic: Introduction
-tags: [machine-learning, software-engineering, career, teams]
 description: "Why this blog exists: the gap between ML research and real software, why ML work is hard to estimate, and the topics Gradient Rage will cover."
 image: /assets/images/social/in-the-beginning.png
 ---

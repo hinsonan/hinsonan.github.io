@@ -4,7 +4,6 @@ title: "Mastering the Dark Arts: Binding C to Python"
 date: 2025-09-04
 categories: ML
 topic: GPU Programming
-tags: [python, cpp, c, pybind11, ctypes, cffi, performance]
 description: "Binding C and C++ to Python with the C API, ctypes, CFFI, SWIG, Boost.Python, and pybind11, with timing results and when each is worth it."
 image: /assets/images/social/the-dark-arts-binding-c-to-python.png
 ---

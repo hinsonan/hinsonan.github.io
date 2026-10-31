@@ -4,7 +4,6 @@ title: "You and Your Agents Are Not 10x Engineers"
 date: 2026-05-09
 categories: ML
 topic: Opinion
-tags: [ai, agents, vibe-coding, productivity, career]
 description: "AI agents do not make you a 10x engineer. Why vibe-coded software breaks, why the productivity gains are overstated, and why skills still matter."
 image: /assets/images/social/you-are-not-a-10x-engineer.png
 ---

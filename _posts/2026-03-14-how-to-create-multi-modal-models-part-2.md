@@ -6,7 +6,6 @@ last_modified_at: 2026-10-31
 categories: ML
 topic: Machine Learning
 series: How to Create Multi Modal Models
-tags: [multi-modal, llm, q-former, perceiver-resampler, pytorch]
 description: "Training an LLM to understand images with an MLP projection, Q-Former, and Perceiver Resampler, with attention maps and inference comparisons."
 image: /assets/images/social/how-to-create-multi-modal-models-part-2.png
 mermaid: true

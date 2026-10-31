@@ -4,7 +4,6 @@ title: "Tracking ML Models: Designing Good Checkpoints"
 date: 2026-01-10
 categories: ML
 topic: Machine Learning
-tags: [mlops, pytorch, checkpoints, mlflow, reproducibility]
 description: "What a good PyTorch checkpoint saves: model, optimizer, scheduler, GradScaler, and RNG states, plus tracking checkpoints with MLflow."
 image: /assets/images/social/tracking-models-designing-checkpoints.png
 ---

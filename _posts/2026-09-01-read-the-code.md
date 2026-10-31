@@ -4,7 +4,6 @@ title: "Read the Code"
 date: 2026-09-01
 categories: ML
 topic: Opinion
-tags: [ai, agents, vibe-coding, code-review, software-engineering]
 description: "Should you read the code your AI agents write? Yes. Why the hard part of software was never only the code, and why agents still need review."
 image: /assets/images/social/read-the-code.png
 ---

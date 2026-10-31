@@ -4,7 +4,6 @@ title: "Good Code vs Bad Code"
 date: 2026-04-12
 categories: ML
 topic: Software Engineering
-tags: [software-engineering, code-quality, problem-solving, teams]
 description: "Good code versus bad code is the wrong question. Code is a vehicle for solving problems, shown through API, debugging, and memory layout examples."
 image: /assets/images/social/good-code-vs-bad-code.png
 ---

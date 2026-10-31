@@ -3,23 +3,23 @@ layout: default
 ---
 
 <div class="home">
-  {%- if page.title -%}
-    <h1 class="page-heading">{{ page.title }}</h1>
+  {%- assign heading = page.heading | default: page.title -%}
+  {%- if heading -%}
+    <h1 class="page-heading">{{ heading }}</h1>
   {%- endif -%}
 
   {{ content }}
 
   {%- if site.posts.size > 0 -%}
-    <h2 class="post-list-heading">{{ page.list_title | default: "Posts" }}</h2>
     <div class="post-grid">
       {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
       {%- for post in site.posts -%}
       <article class="post-card">
-        <h3>
+        <h2>
           <a class="post-link" href="{{ post.url | relative_url }}">
             {{ post.title | escape }}
           </a>
-        </h3>
+        </h2>
         <div class="post-meta">
           <time class="dt-published" datetime="{{ post.date | date_to_xmlschema }}">
             {{ post.date | date: date_format }}

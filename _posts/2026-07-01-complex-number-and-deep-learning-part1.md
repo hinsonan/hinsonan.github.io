@@ -5,7 +5,6 @@ date: 2026-07-01
 categories: ML
 topic: Signal Processing
 series: Complex Numbers and Deep Learning
-tags: [complex-numbers, deep-learning, wirtinger-calculus, signal-processing, math]
 description: "Complex numbers for deep learning, with interactive visuals: polar form, rotation, holomorphic functions, and Wirtinger calculus for backprop."
 image: /assets/images/social/complex-number-and-deep-learning-part1.png
 math: true

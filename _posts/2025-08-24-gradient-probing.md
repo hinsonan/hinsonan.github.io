@@ -4,7 +4,6 @@ title: "Probing Gradients 👽"
 date: 2025-08-24
 categories: ML
 topic: Machine Learning
-tags: [deep-learning, gradients, debugging, pytorch, training]
 description: "Debug neural network training by probing gradients: detect vanishing and exploding gradients, measure gradient signal-to-noise ratio and variance."
 image: /assets/images/social/gradient-probing.png
 ---

@@ -4,7 +4,6 @@ title: "Merry Christmas: Santa is Bringing AI Slop"
 date: 2025-12-12
 categories: ML
 topic: Opinion
-tags: [ai, career, tech-industry, layoffs, software-engineering]
 description: "AI slop, layoffs, and broken interviews in the tech industry, and practical advice for developers and students on how to get through it."
 image: /assets/images/social/merry-christmas-ai-slop-for-all.png
 ---

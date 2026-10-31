@@ -38,7 +38,6 @@ permalink: /:categories/:year/:month/:day/:title:output_ext
 header_pages:
   - about.markdown
   - topics.html
-  - tags.html
 
 # SEO and social media
 logo: "/assets/images/robot.png"

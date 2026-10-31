@@ -5,7 +5,6 @@ date: 2025-10-01
 last_modified_at: 2026-10-31
 categories: ML
 topic: Machine Learning
-tags: [deep-learning, batch-normalization, optimization, training]
 description: "What batch normalization does, why internal covariate shift is not the real reason it works, and how smoother loss landscapes explain its benefits."
 image: /assets/images/social/batch-norm.png
 math: true

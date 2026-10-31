@@ -5,7 +5,7 @@ permalink: /topics/
 description: "All Gradient Rage posts grouped by topic: machine learning, GPU programming, signal processing, software engineering, and opinion."
 ---
 {%- assign topics = site.posts | group_by: "topic" | sort: "name" %}
-<p class="taxonomy-intro">Browse every post by topic, or see <a href="{{ '/tags/' | relative_url }}">all tags</a>.</p>
+<p class="taxonomy-intro">Every post grouped by topic.</p>
 
 <nav class="taxonomy-index" aria-label="Topics">
   {%- for topic in topics %}

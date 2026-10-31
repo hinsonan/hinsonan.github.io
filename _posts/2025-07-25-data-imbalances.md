@@ -5,7 +5,6 @@ date: 2025-07-25
 last_modified_at: 2026-10-31
 categories: ML
 topic: Machine Learning
-tags: [machine-learning, imbalanced-data, smote, oversampling, undersampling, imbalanced-learn]
 description: "Handling imbalanced datasets with undersampling, oversampling, SMOTE, and combined methods, using a credit card fraud dataset and imbalanced-learn."
 image: /assets/images/social/data-imbalances.png
 math: true

@@ -5,7 +5,6 @@ date: 2026-02-07
 categories: ML
 topic: Machine Learning
 series: How to Create Multi Modal Models
-tags: [multi-modal, llm, projection-layers, cross-attention, vq-gan]
 description: "How multi-modal models understand images and audio: projection layers, cross attention, and VQ-GAN tokens, with their tradeoffs."
 image: /assets/images/social/how-to-create-multi-modal-models-part-1.png
 mermaid: true

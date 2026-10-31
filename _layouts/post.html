@@ -4,6 +4,10 @@ layout: default
 <article class="post h-entry">
 
   <header class="post-header">
+    {%- if page.topic %}
+    {%- assign topic_slug = page.topic | slugify %}
+    <a class="post-topic-label" href="{{ '/topics/' | relative_url }}#{{ topic_slug }}">{{ page.topic }}</a>
+    {%- endif %}
     <h1 class="post-title p-name">{{ page.title | escape }}</h1>
     <p class="post-meta">
       {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
@@ -17,17 +21,6 @@ layout: default
       {%- assign words = content | strip_html | number_of_words %}
       • {{ words | divided_by: 230 | at_least: 1 }} min read
     </p>
-    {%- if page.topic or page.tags %}
-    <p class="post-taxonomy">
-      {%- if page.topic %}
-      {%- assign topic_slug = page.topic | slugify %}
-      <a class="post-topic" href="{{ '/topics/' | relative_url }}#{{ topic_slug }}">{{ page.topic }}</a>
-      {%- endif %}
-      {%- for tag in page.tags %}
-      <a class="post-tag p-category" href="{{ '/tags/' | relative_url }}#{{ tag | slugify }}">#{{ tag }}</a>
-      {%- endfor %}
-    </p>
-    {%- endif %}
   </header>
 
   {%- if page.series %}
@@ -51,21 +44,10 @@ layout: default
     {%- for p in site.posts %}
       {%- if p.url == page.url %}{% continue %}{% endif %}
       {%- if page.series and p.series == page.series %}{% continue %}{% endif %}
-      {%- assign shared = 0 %}
-      {%- for tag in p.tags %}
-        {%- if page.tags contains tag %}{% assign shared = shared | plus: 1 %}{% endif %}
-      {%- endfor %}
-      {%- if shared >= 2 or p.topic == page.topic and shared >= 1 %}
+      {%- if page.topic and p.topic == page.topic %}
         {%- assign related = related | push: p %}
       {%- endif %}
     {%- endfor %}
-    {%- if related.size < 3 %}
-      {%- for p in site.posts %}
-        {%- if p.url == page.url or related contains p %}{% continue %}{% endif %}
-        {%- if page.series and p.series == page.series %}{% continue %}{% endif %}
-        {%- if p.topic == page.topic %}{% assign related = related | push: p %}{% endif %}
-      {%- endfor %}
-    {%- endif %}
     {%- if related.size > 0 %}
     <section class="related-posts">
       <h2>Related posts</h2>

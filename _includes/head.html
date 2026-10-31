@@ -4,14 +4,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {%- seo -%}
   <meta name="robots" content="max-image-preview:large">
-  {%- if page.tags and page.tags.size > 0 %}
-  <meta name="keywords" content="{{ page.tags | join: ', ' | escape }}">
-  {%- endif %}
   {%- if page.layout == 'post' %}
   <meta property="article:section" content="{{ page.topic | default: 'Machine Learning' | escape }}">
-  {%- for tag in page.tags %}
-  <meta property="article:tag" content="{{ tag | escape }}">
-  {%- endfor %}
   {%- endif %}
   <link rel="alternate" type="text/plain" title="LLM-friendly site index" href="{{ '/llms.txt' | relative_url }}">
 

@@ -5,7 +5,6 @@ date: 2025-08-07
 last_modified_at: 2026-10-31
 categories: ML
 topic: Machine Learning
-tags: [deep-learning, loss-landscape, pytorch, visualization, training]
 description: "How to visualize the loss landscape of a neural network in PyTorch, compare initialized and trained weights, and track the loss path during training."
 image: /assets/images/social/visualizing-loss-gradient.png
 math: true

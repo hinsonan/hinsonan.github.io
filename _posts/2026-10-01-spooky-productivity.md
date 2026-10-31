@@ -4,7 +4,6 @@ title: "Spooky Productivity Rituals with Ghouls and Ghosts"
 date: 2026-10-01
 categories: ML
 topic: Opinion
-tags: [ai, productivity, code-review, burnout, software-engineering]
 description: "AI productivity pressure floods teams with unreviewed merge requests. How to push back and spend the time on deeper, better work instead."
 image: /assets/images/social/spooky-productivity.png
 ---

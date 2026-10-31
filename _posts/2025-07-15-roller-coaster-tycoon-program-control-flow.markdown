@@ -4,7 +4,6 @@ title: "Roller Coaster Tycoon: Program Control Flow"
 date: 2025-07-16 11:30:00 -0500
 categories: tech
 topic: Software Engineering
-tags: [software-engineering, control-flow, abstraction, readability, refactoring]
 description: "Deep abstraction layers make code hard to follow. How to keep program control flow readable, testable, and easy for teammates to change."
 image: /assets/images/social/roller-coaster-tycoon-program-control-flow.png
 ---

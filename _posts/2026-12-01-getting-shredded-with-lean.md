@@ -5,24 +5,24 @@ date: 2026-12-01
 categories: ML
 topic: Software Engineering
 description: "Formal Verification is all the rage but does Lean actually solve this problem?"
-image: 
+image: /assets/images/social/getting-shredded-with-lean.png
 ---
 
 Lean is all the rage right now and the math community has finally emerged from their cave. Before AI started "solving" some of the hardest math problems on record nobody gave a crap about mathematicians and honestly there was very little engagement online within the STEM community. If you were not in their niche domain then you never heard anything from them.
 
 Now there has been an explosion of videos and talks online from multiple mathematicians all the way from the most famous to the graduate student. As of recently the Navier-Stokes and Riemann Hypothesis have been allegedly "solved". Now I say allegedly because the community is still verifying and gathering their information from these findings from AI. Many of these problems have nuance to them and in many cases the important parts are how can these findings be applied/explained/used.
 
-But at the heart of this is a programming language called [Lean](https://lean-lang.org/). Lean is a functional language and theorem prover built to formalize math theorems and provide formal verifications for theorems/functions. These LLMs have produced thousands of passing theorems written in Lean
+But at the heart of this is a programming language called [Lean](https://lean-lang.org/). Lean is a functional language and theorem prover built to formalize math theorems and provide formal verifications for theorems/functions. These LLMs have produced thousands of passing theorems written in Lean.
 
 We will talk about the absolute frantic behavior of the math community later. This article is going to focus on Lean and formal verification applied to the field of software/ML/algorithms.
 
 ## The Problem
 
-Coding agents are non-deterministic and using them to create large or complicated features can prove difficult at times. How do you maintain performance/architecture/features when agents just ripped a 10k git diff on your plate? How do you maintain control of the system and check your agents. Well since people are too scared to read the code we have to do something right?
+Coding agents are non-deterministic and using them to create large or complicated features can prove difficult at times. How do you maintain performance/architecture/features when agents just ripped a 10k git diff on your plate? How do you maintain control of the system and check your agents? Well since people are too scared to read the code we have to do something right?
 
 ## Formal Verification as the Solution
 
-Formal verification takes many shapes and forms. For example a type system (a real type system not python types) are a form of verification. You know that `float16 x = 1.5` is a 16 bit float. The compiler will enforce this. If LLMs can "solve" these hard problems through verification with Lean can it be used in other areas?
+Formal verification takes many shapes and forms. For example a type system (a real type system not python types) is a form of verification. You know that `float16 x = 1.5` is a 16 bit float. The compiler will enforce this. If LLMs can "solve" these hard problems through verification with Lean can it be used in other areas?
 
 Can `Lean` and other formal verification languages be used in software/ML/algorithm development? Let's attempt.
 
@@ -32,7 +32,7 @@ Let's rip some Lean on binary search. Binary Search can have off-by-one bugs and
 
 ### 1. The Implementation
 
-This function in `Lean` get compiled into C and then a binary. Here `(hhi : hi ≤ arr.size)` and `have hmid : mid < arr.size := by omega` show at compile time that `arr[mid]` can never go out of bounds. These proofs for this live in the `Props`
+This function in `Lean` gets compiled into C and then a binary. Here `(hhi : hi ≤ arr.size)` and `have hmid : mid < arr.size := by omega` show at compile time that `arr[mid]` can never go out of bounds. The proofs for this live in `Prop`.
 
 ```lean
 def searchLoop (arr : Array Nat) (target : Nat)
@@ -57,7 +57,7 @@ def binarySearch (arr : Array Nat) (target : Nat) : Option Nat :=
 
 ### 2. Defining What "Sorted" Means
 
-This `Prop` does not return a bool but states that every pair of valid indices is sorted and itemA is less than itemB
+This `Prop` does not return a bool but states that every pair of valid indices is sorted and itemA is less than or equal to itemB.
 
 ```lean
 def Sorted (arr : Array Nat) : Prop :=
@@ -65,9 +65,9 @@ def Sorted (arr : Array Nat) : Prop :=
     i ≤ j → arr[i] ≤ arr[j]
 ```
 
-### 3. Proving Soundness
+### 3. Proving Soundness (No False Positives)
 
-This proves that the search is sound and Tactics like omega, cases, and exact generate a low-level proof term that Lean's kernel verifies from scratch
+This proves that the search is sound and tactics like omega, cases, and exact generate a low-level proof term that Lean's kernel verifies from scratch.
 
 ```lean
 theorem searchLoop_sound (arr : Array Nat) (target : Nat)
@@ -96,7 +96,7 @@ theorem binarySearch_sound (arr : Array Nat) (target idx : Nat)
 
 ### 4. Proving Completeness (No Off-By-One Misses)
 
-Proving the algorithm is sound is not enough you could return `None` and that would be valid. we also need to make sure the algorithm is complete. This code proves that the search is done and the result of that search is a sorted array 
+Proving the algorithm is sound is not enough, you could just return `none` and that would be valid. We also need to make sure the algorithm is complete. This code proves that if the array is sorted and the target is in it, the search will actually find it.
 
 ```lean
 theorem searchLoop_complete (arr : Array Nat) (target : Nat)
@@ -146,7 +146,7 @@ theorem binarySearch_complete (arr : Array Nat) (target : Nat)
 
 ### 5. Putting It Together (Exactness)
 
-Now we can put it all together with the soundness and complete version of the proof to create the Binary Sort algorithm in `Lean`. Now the original defined `searchLoop` was pretty short but now we have all these extra lines of code for the theorem. As you can see even for something simple like this you get a lot of "bloat".
+Now we can put it all together with the soundness and complete version of the proof to create the Binary Search algorithm in `Lean`. Now the original defined `searchLoop` was pretty short but now we have all these extra lines of code for the theorem. As you can see even for something simple like this you get a lot of "bloat".
 
 ```lean
 theorem binarySearch_none_iff (arr : Array Nat) (target : Nat)
@@ -275,13 +275,13 @@ if __name__ == "__main__":
 
 ## Did this solve our problem?
 
-This code works and is correct so does this mean the process of using `Lean` is good enough for us to start letting coding agents rip huge features? Not at all and lets look at the flaws.
+This code works and is correct so does this mean the process of using `Lean` is good enough for us to start letting coding agents rip huge features? Not at all and let's look at the flaws.
 
-This code matches the spec and the spec only. In fact for performance this implementation does not use tail recursion. Tail recursion is used to optimize the callstack memory. Our current python code adds a new stack frame on every recursive step.
+This code matches the spec and the spec only. In fact for performance this implementation does not optimize tail recursion. Tail recursion is used to optimize the callstack memory, but our current python code adds a new stack frame on every recursive step.
 
 The other big issue is Python has **no tail-call optimization**.
 
-A tail-recursive function in `Lean` is compiled down to a flat C loop with `O(1)` stack space. Since Python has no tail-call optimization the direct 1-to-1 translation from Lean grows the call stack on every step which gives a `RecursionError`:
+A tail-recursive function in `Lean` is compiled down to a flat C loop with `O(1)` stack space. Since Python has no tail-call optimization the direct 1-to-1 translation from Lean grows the call stack on every step. For a linear recursive function this gives a `RecursionError`:
 
 ```lean
 -- Lean: tail-recursive sum compiles to a flat O(1)-stack loop
@@ -299,7 +299,7 @@ def sum_tail(xs: list[int], idx: int = 0, acc: int = 0) -> int:
     return sum_tail(xs, idx + 1, acc + xs[idx])  # Crashes with RecursionError at ~1,000 elements
 ```
 
-To get the same `O(1)` stack behavior in Python for our binary search, we have to rewrite `search_loop` into an iterative `while` loop. Now we have drifted from the `Lean` spec. We are no longer 1-to-1 with `Lean`
+To get the same `O(1)` stack behavior in Python for our binary search, we have to rewrite `search_loop` into an iterative `while` loop. Now we have drifted from the `Lean` spec. We are no longer 1-to-1 with `Lean`.
 
 ```python
 def binary_search_iterative(arr: Sequence[int], target: int) -> Optional[int]:
@@ -324,6 +324,6 @@ This just continues to get worse for other problems when translated to real syst
 
 ## Conclusion
 
-`Lean` and other languages like `TLA+` are still helpful. They are great for thinking through your design. It forces you to think before you command agents to pump out garbage. It also provide a reference check agents can use. This can help account for certain edge cases.
+`Lean` and other languages like `TLA+` are still helpful. They are great for thinking through your design. It forces you to think before you command agents to pump out garbage. It also provides a reference check agents can use. This can help account for certain edge cases.
 
 These are helpful tools to use but to be more effective you need other tools used in tandem (lint rules, static analysis, multi-stage agent reviews, etc...). Also you need to be reading your code and especially the difficult and critical parts. Reading the code is still the best way and you should be reading a lot of code.

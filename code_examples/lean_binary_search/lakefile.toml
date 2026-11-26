@@ -1,0 +1,10 @@
+name = "lean_binary_search"
+version = "0.1.0"
+defaultTargets = ["BinarySearch", "binary_search"]
+
+[[lean_lib]]
+name = "BinarySearch"
+
+[[lean_exe]]
+name = "binary_search"
+root = "Main"
